@@ -6,13 +6,13 @@ import {
   getDashboardData,
   getTodayWorkout,
   getLoadHistory,
-  getWeeklyTemplate,
+  getCurrentWeekWorkouts,
   getHrvRhrHistory,
   getAvailabilityHistory,
   getUpcomingBlocks,
 } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
-import { WeeklyGrid } from "@/components/WeeklyGrid";
+import { WeekList } from "@/components/WeekList";
 import { HrvRhrChart } from "@/components/HrvRhrChart";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
 import { PhaseTimeline } from "@/components/PhaseTimeline";
@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData(session.user.id);
   const todayWorkout = await getTodayWorkout(session.user.id);
   const loadHistory = await getLoadHistory(session.user.id);
-  const weeklyTemplate = await getWeeklyTemplate(session.user.id);
+  const currentWeekWorkouts = await getCurrentWeekWorkouts(session.user.id);
   const availability = await calculateAvailability(session.user.id);
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -102,9 +102,9 @@ export default async function DashboardPage() {
           Semana actual
         </div>
         <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "14px" }}>
-          Tu plantilla configurada — ★ marca días de calidad
+          Entrenamientos generados para esta semana
         </div>
-        <WeeklyGrid slots={weeklyTemplate} />
+        <WeekList workouts={currentWeekWorkouts} />
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>

@@ -75,6 +75,42 @@ export async function getWeeklyTemplate(athleteId: string) {
   return slots;
 }
 
+/**
+ * Los entrenamientos REALES ya generados para la semana actual (domingo a
+ * sábado), con blocksJson incluido — a diferencia de getWeeklyTemplate,
+ * que solo trae la plantilla genérica (tipo de día, sin intervalos). Se
+ * usa para el bloque "Semana actual" del dashboard, que muestra un mini
+ * gráfico de intervalos por día como en Intervals.icu.
+ */
+export async function getCurrentWeekWorkouts(athleteId: string) {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const workouts = await prisma.generatedWorkout.findMany({
+    where: { athleteId, date: { gte: startOfWeek, lte: endOfWeek } },
+    orderBy: { date: "asc" },
+    select: {
+      id: true,
+      date: true,
+      workoutLibraryKey: true,
+      status: true,
+      estimatedTss: true,
+      blocksJson: true,
+    },
+  });
+
+  return workouts.map((w) => ({
+    ...w,
+    date: w.date.toISOString(),
+    blocksJson: w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[],
+  }));
+}
+
 export async function getHrvRhrHistory(athleteId: string, days: number = 7) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const records = await prisma.wellness.findMany({
