@@ -1,0 +1,372 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?
+  emailVerified     DateTime?
+  image             String?
+  accounts          Account[]
+  sessions          Session[]
+  createdAt         DateTime @default(now())
+
+  coachId           String?
+  coach             User?    @relation("CoachedAthletes", fields: [coachId], references: [id])
+  athletesCoached   User[]   @relation("CoachedAthletes")
+
+  intervalsAthleteId     String?
+  intervalsApiKeyEncrypted String?
+  intervalsLastSyncAt    DateTime?
+  intervalsFullHistorySyncedAt DateTime?
+
+  dataSources       DataSource[]
+
+  weight            Float?
+  ftp               Int?
+  ftpUpdatedAt      DateTime?
+
+  trainingBackground String? @db.Text
+  currentStateNote    String? @db.Text
+  currentStateUpdatedAt DateTime?
+  preferences          String? @db.Text
+
+  activities        Activity[]
+  wellnessRecords   Wellness[]
+  dailyCheckins     DailyCheckin[]
+  weeklyTemplate    TrainingTemplateSlot[]
+  trainingBlocks    TrainingBlock[]
+  goals             AthleteGoal[]
+  thresholds        AthleteThresholds?
+  baseline          AthleteBaseline?
+  responseProfiles  AthleteResponseProfile[]
+  generatedWorkouts GeneratedWorkout[]
+  chatMessages      ChatMessage[]
+  weeklyReviews     WeeklyReview[]
+}
+
+model DataSource {
+  id           String   @id @default(cuid())
+  athleteId    String
+  athlete      User     @relation(fields: [athleteId], references: [id])
+  name         String
+  fieldsAvailable String[]
+  isValidatedInstrument Boolean @default(false)
+  active       Boolean  @default(true)
+}
+
+model Activity {
+  id                String   @id @default(cuid())
+  athleteId         String
+  athlete           User     @relation(fields: [athleteId], references: [id])
+  intervalsActivityId String @unique
+
+  date              DateTime
+  type              String
+  name              String?
+  durationSec       Int
+  distanceM         Float?
+
+  avgPower          Float?
+  normalizedPower   Float?
+  avgHr             Float?
+  maxHr             Float?
+  avgCadence        Float?
+  kilojoules        Float?
+  tss               Float?
+  intensityFactor   Float?
+  elevationGainM    Float?
+  powerBalanceLeft  Float?
+  decouplingPct     Float?
+
+  hrLoad            Float?
+  trimp             Float?
+  efficiencyFactor  Float?
+  variabilityIndex  Float?
+  polarizationIndex Float?
+  hrrValue          Float?
+
+  generatedWorkoutId String?
+  generatedWorkout   GeneratedWorkout? @relation(fields: [generatedWorkoutId], references: [id])
+
+  plannedTss        Float?
+  deviationFlag     DeviationFlag @default(NONE)
+  deviationNotes    String?
+
+  rawStreamsJson     Json?
+
+  createdAt         DateTime @default(now())
+}
+
+enum DeviationFlag {
+  NONE
+  HARDER_THAN_PLANNED
+  EASIER_THAN_PLANNED
+}
+
+model Wellness {
+  id           String   @id @default(cuid())
+  athleteId    String
+  athlete      User     @relation(fields: [athleteId], references: [id])
+  date         DateTime @unique
+
+  hrv          Float?
+  restingHr    Float?
+  sleepScore   Float?
+  sleepHours   Float?
+  steps        Int?
+  spo2         Float?
+  stressScore  Float?
+
+  ctl          Float?
+  atl          Float?
+  rampRate     Float?
+
+  source       String   @default("intervals_sync")
+}
+
+model DailyCheckin {
+  id              String   @id @default(cuid())
+  athleteId       String
+  athlete         User     @relation(fields: [athleteId], references: [id])
+  date            DateTime @unique
+
+  sleepQuality    Int?
+  fatigue         Int?
+  stress          Int?
+  muscleSoreness  Int?
+  mood            Int?
+
+  freeText        String?
+  aiSummary       String?
+
+  createdAt       DateTime @default(now())
+}
+
+model TrainingTemplateSlot {
+  id           String   @id @default(cuid())
+  athleteId    String
+  athlete      User     @relation(fields: [athleteId], references: [id])
+
+  dayOfWeek    Int
+  stimulusType String
+  isQualityDay Boolean  @default(false)
+  targetDurationMin Int?
+
+  appliesInPhases String[]
+
+  @@unique([athleteId, dayOfWeek])
+}
+
+model AthleteGoal {
+  id           String   @id @default(cuid())
+  athleteId    String
+  athlete      User     @relation(fields: [athleteId], references: [id])
+
+  goalType     GoalType @default(EVENT)
+  name         String
+  eventDate    DateTime?
+  priority     GoalPriority
+
+  metric       String?
+  baselineValue Float?
+  targetValue  Float?
+
+  notes        String?
+}
+
+enum GoalType {
+  EVENT
+  PERFORMANCE
+}
+
+enum GoalPriority {
+  A
+  B
+  C
+}
+
+model AthleteThresholds {
+  id                 String  @id @default(cuid())
+  athleteId          String  @unique
+  athlete            User    @relation(fields: [athleteId], references: [id])
+
+  maxCtlRampPerWeek  Float   @default(5.0)
+  hrvDropAlertPct    Float   @default(7.5)
+  minTsb             Float   @default(-25)
+  maxConsecutiveBadSleepDays Int @default(2)
+  weeksBetweenFtpTest Int    @default(5)
+  ftpTestProtocol    String  @default("20min")
+  deloadRatio        String  @default("4:1")
+}
+
+model AthleteBaseline {
+  id                String   @id @default(cuid())
+  athleteId         String   @unique
+  athlete           User     @relation(fields: [athleteId], references: [id])
+
+  calibrationStartedAt DateTime @default(now())
+  calibrationComplete  Boolean  @default(false)
+
+  hrvMean7d          Float?
+  hrvCV              Float?
+  hrvSWC             Float?
+
+  restingHrMean      Float?
+  restingHrSD        Float?
+
+  lastRecalculatedAt DateTime @updatedAt
+}
+
+model AthleteResponseProfile {
+  id                    String   @id @default(cuid())
+  athleteId             String
+  athlete               User     @relation(fields: [athleteId], references: [id])
+  stimulusType          String
+
+  avgHrvImpactNextDayPct Float?
+  avgRecoveryHours       Float?
+  sessionsCount          Int     @default(0)
+
+  lastUpdatedAt          DateTime @updatedAt
+
+  @@unique([athleteId, stimulusType])
+}
+
+model TrainingBlock {
+  id            String   @id @default(cuid())
+  athleteId     String
+  athlete       User     @relation(fields: [athleteId], references: [id])
+
+  name          String
+  objective     String
+  startDate     DateTime
+  endDate       DateTime
+  plannedWeeklyTssProgression Json
+
+  weeklyReviews WeeklyReview[]
+}
+
+model WeeklyReview {
+  id                String   @id @default(cuid())
+  athleteId         String
+  athlete           User     @relation(fields: [athleteId], references: [id])
+  trainingBlockId   String
+  trainingBlock     TrainingBlock @relation(fields: [trainingBlockId], references: [id])
+
+  weekStartDate     DateTime
+
+  plannedTss        Float
+  actualTss         Float
+  fidelityIndexPct  Float
+
+  fidelityStatus    FidelityStatus
+  adjustmentsApplied String?
+  escalatedToAthlete Boolean @default(false)
+}
+
+enum FidelityStatus {
+  GREEN
+  AMBER
+  RED
+}
+
+model WorkoutLibraryEntry {
+  key              String   @id
+  name             String
+  intensityPctFtpLow  Float?
+  intensityPctFtpHigh Float?
+  maxSessionsPerWeek  Int?
+  evidenceSource      String
+  notes               String?
+}
+
+model GeneratedWorkout {
+  id             String   @id @default(cuid())
+  athleteId      String
+  athlete        User     @relation(fields: [athleteId], references: [id])
+
+  date           DateTime
+  workoutLibraryKey String
+  status         WorkoutStatus @default(SUGGESTED)
+
+  blocksJson     Json
+
+  estimatedTss   Float?
+  estimatedKj    Float?
+  suggestedCarbsG Float?
+  suggestedCarbsGPerHour Float?
+  requiresMultipleCarbSources Boolean @default(false)
+
+  rationale      String?
+  approvedAt     DateTime?
+  sentToIntervalsAt DateTime?
+
+  activities     Activity[]
+
+  createdAt      DateTime @default(now())
+}
+
+enum WorkoutStatus {
+  PLANNED
+  SUGGESTED
+  EDITED
+  APPROVED
+  SENT_TO_INTERVALS
+  COMPLETED
+}
+
+model ChatMessage {
+  id               String   @id @default(cuid())
+  athleteId        String
+  athlete          User     @relation(fields: [athleteId], references: [id])
+
+  role             String
+  content          String
+
+  focusedEntityId  String?
+  focusedEntityType String?
+
+  createdAt        DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

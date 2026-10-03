@@ -1,0 +1,68 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+import { createEvent } from "@/lib/intervals-client";
+import { buildStructuredWorkout } from "@/lib/training-engine/workout-description";
+import { revalidatePath } from "next/cache";
+import { buildWorkoutName } from "@/lib/training-engine/workout-naming";
+
+export async function approveWorkout(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const workoutId = String(formData.get("workoutId"));
+  const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
+  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+
+  await prisma.generatedWorkout.update({
+    where: { id: workoutId },
+    data: { status: "APPROVED", approvedAt: new Date() },
+  });
+
+  revalidatePath("/dashboard");
+}
+
+export async function sendWorkoutToIntervals(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const workoutId = String(formData.get("workoutId"));
+  const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
+  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (workout.status !== "APPROVED") throw new Error("Aprobalo primero");
+
+  const apiKey = process.env.INTERVALS_API_KEY_DEV!;
+  const athleteIntervalsId = process.env.INTERVALS_ATHLETE_ID_DEV!;
+
+  const blocks = workout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
+  const totalDurationSec = blocks.reduce((s, b) => s + b.durationSec, 0);
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const description = buildStructuredWorkout(
+    blocks,
+    user!.ftp!,
+    {
+      totalKj: workout.estimatedKj ?? 0,
+      suggestedCarbsG: workout.suggestedCarbsG ?? 0,
+      suggestedCarbsGPerHour: workout.suggestedCarbsGPerHour ?? 0,
+      requiresMultipleCarbSources: workout.requiresMultipleCarbSources,
+    },
+    workout.rationale
+  );
+  const startDateLocal = new Date(workout.date).toISOString().split("T")[0] + "T07:00:00";
+
+  await createEvent(athleteIntervalsId, apiKey, {
+    external_id: workout.id,
+    name: buildWorkoutName(workout.workoutLibraryKey, blocks, user!.ftp!),
+    startDateLocal,
+    description,
+    movingTimeSec: totalDurationSec,
+  });
+
+  await prisma.generatedWorkout.update({
+    where: { id: workoutId },
+    data: { status: "SENT_TO_INTERVALS", sentToIntervalsAt: new Date() },
+  });
+
+  revalidatePath("/dashboard");
+}

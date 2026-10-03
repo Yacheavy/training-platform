@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Activity" ADD COLUMN     "efficiencyFactor" DOUBLE PRECISION,
+ADD COLUMN     "hrLoad" DOUBLE PRECISION,
+ADD COLUMN     "hrrValue" DOUBLE PRECISION,
+ADD COLUMN     "polarizationIndex" DOUBLE PRECISION,
+ADD COLUMN     "trimp" DOUBLE PRECISION,
+ADD COLUMN     "variabilityIndex" DOUBLE PRECISION;

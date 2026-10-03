@@ -1,0 +1,60 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { CalendarGrid } from "@/components/CalendarGrid";
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  const params = await searchParams;
+  const today = new Date();
+  const year = params.year ? parseInt(params.year, 10) : today.getFullYear();
+  const month = params.month ? parseInt(params.month, 10) : today.getMonth();
+
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
+
+  const workouts = await prisma.generatedWorkout.findMany({
+    where: { athleteId: session.user.id, date: { gte: startOfMonth, lte: endOfMonth } },
+    select: { id: true, date: true, workoutLibraryKey: true, status: true, estimatedTss: true, blocksJson: true },
+  });
+
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const prevMonth = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
+  const nextMonth = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
+
+  return (
+    <div style={{ padding: "24px 40px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h1 style={{ fontSize: "20px", fontWeight: 600 }}>
+          {monthNames[month]} {year}
+        </h1>
+        <div style={{ display: "flex", gap: "10px" }}>
+          
+            href={`/calendar?year=${prevMonth.year}&month=${prevMonth.month}`}
+            style={{ color: "var(--text-muted)", textDecoration: "none", fontFamily: "var(--font-mono)", fontSize: "13px" }}
+          >
+            ← anterior
+          </a>
+          
+            href={`/calendar?year=${nextMonth.year}&month=${nextMonth.month}`}
+            style={{ color: "var(--text-muted)", textDecoration: "none", fontFamily: "var(--font-mono)", fontSize: "13px" }}
+          >
+            siguiente →
+          </a>
+        </div>
+      </div>
+
+      <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "16px" }}>
+        Arrastrá una sesión a otro día para moverla — si ya estaba enviada a Intervals, se sincroniza automáticamente.
+      </div>
+
+      <CalendarGrid year={year} month={month} workouts={workouts.map((w) => ({ ...w, date: w.date.toISOString() }))} />
+    </div>
+  );
+}
