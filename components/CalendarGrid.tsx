@@ -87,14 +87,14 @@ export function CalendarGrid({
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "6px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "4px", marginBottom: "6px" }}>
         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((d) => (
           <div key={d} style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-dim)", textAlign: "center" }}>
             {d}
           </div>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "4px" }}>
         {cells.map((dayNumber, idx) => {
           if (dayNumber == null) return <div key={idx} />;
 

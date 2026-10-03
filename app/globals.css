@@ -36,3 +36,99 @@ body {
 a {
   color: inherit;
 }
+
+html, body {
+  overflow-x: hidden;
+}
+
+/* ---------------------------------------------------------------------
+   Helpers responsive — centralizan los patrones de grid/padding que se
+   repiten en las páginas (dashboard, calendar, settings, chat) para que
+   no haya que tocar cada inline style a mano cuando cambia un breakpoint.
+   ------------------------------------------------------------------- */
+
+.page-container {
+  padding: 24px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-container-narrow {
+  padding: 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Tarjetas de métricas (CTL/ATL/TSB/HRV/etc.) — se acomodan solas en vez
+   de forzar N columnas fijas que no entran en una pantalla de celular. */
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+/* Grillas de 2 columnas (gráficos, check-in + sesión del día, etc.) —
+   se apilan en una sola columna en mobile. */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+
+.grid-2col-b {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16px;
+}
+
+/* Filas de formulario con columnas de ancho fijo (settings) */
+.form-row-5 {
+  display: grid;
+  grid-template-columns: 100px 1fr 90px 100px auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 140px 1fr 80px;
+  gap: 10px;
+}
+
+.form-row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.form-row-3b {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .page-container {
+    padding: 16px;
+  }
+
+  .page-container-narrow {
+    padding: 16px;
+  }
+
+  .grid-2col,
+  .grid-2col-b {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row-5,
+  .form-row-3,
+  .form-row-3b {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .form-row-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}

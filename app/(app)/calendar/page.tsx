@@ -41,7 +41,7 @@ export default async function CalendarPage({
   const nextMonth = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
 
   return (
-    <div style={{ padding: "24px 40px", maxWidth: "1200px", margin: "0 auto" }}>
+    <div className="page-container">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h1 style={{ fontSize: "20px", fontWeight: 600 }}>
           {monthNames[month]} {year}

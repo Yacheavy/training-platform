@@ -15,7 +15,7 @@ export function WeeklyGrid({
   const slotByDay = new Map(slots.map((s) => [s.dayOfWeek, s]));
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" }}>
       {DAY_NAMES.map((name, dayOfWeek) => {
         const slot = slotByDay.get(dayOfWeek);
         const colors = TYPE_COLORS[slot?.stimulusType ?? "rest"];

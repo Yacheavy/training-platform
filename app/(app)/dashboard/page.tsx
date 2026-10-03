@@ -58,7 +58,7 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <div style={{ padding: "24px 40px", maxWidth: "1200px", margin: "0 auto" }}>
+    <div className="page-container">
       <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 600, letterSpacing: "-0.01em" }}>
@@ -74,10 +74,8 @@ export default async function DashboardPage() {
       </div>
 
       <div
+        className="grid-stats"
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, 1fr)",
-          gap: "12px",
           marginBottom: "16px",
         }}
       >
@@ -131,7 +129,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px", marginBottom: "16px" }}>
+      <div className="grid-2col" style={{ marginBottom: "16px" }}>
         {loadHistory.length > 0 && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
             <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
@@ -157,7 +155,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "16px", marginBottom: "16px" }}>
+      <div className="grid-2col-b" style={{ marginBottom: "16px" }}>
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
             Check-in de hoy
@@ -222,7 +220,7 @@ export default async function DashboardPage() {
               <MiniStat label="Carbos" value={`${todayWorkout.suggestedCarbsG ?? 0}g`} />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "16px", flex: 1 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "8px", marginBottom: "16px", flex: 1 }}>
               {rationaleItems.map((item, i) => (
                 <div
                   key={i}

@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const btnStyle = { background: "#4FD1C5", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", padding: "32px", fontFamily: "sans-serif", maxWidth: "900px", margin: "0 auto" }}>
+    <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "24px" }}>Configuración</h1>
 
       {/* Perfil del atleta */}
@@ -70,7 +70,7 @@ export default async function SettingsPage() {
         {DAYS.map((dayName, dayOfWeek) => {
           const slot = slotByDay.get(dayOfWeek);
           return (
-             <form action={saveTemplateSlot} key={dayOfWeek} style={{ display: "grid", gridTemplateColumns: "100px 1fr 90px 100px auto", gap: "10px", alignItems: "end", marginBottom: "10px" }}>
+             <form action={saveTemplateSlot} key={dayOfWeek} className="form-row-5" style={{ marginBottom: "10px" }}>
               <input type="hidden" name="dayOfWeek" value={dayOfWeek} />
               <div style={{ fontSize: "13px", paddingBottom: "8px" }}>{dayName}</div>
               <div>
@@ -99,7 +99,7 @@ export default async function SettingsPage() {
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Objetivos</h2>
         {goals.map((g) => (
-          <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #1E2731" }}>
+          <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", padding: "10px 0", borderBottom: "1px solid #1E2731" }}>
             <div>
               <span style={{ fontFamily: "monospace", fontSize: "11px", background: "#5C2A2E", color: "#E5636A", padding: "2px 8px", borderRadius: "6px", marginRight: "10px" }}>{g.priority}</span>
               <span style={{ fontFamily: "monospace", fontSize: "10px", background: "#242F3B", color: "#8A97A6", padding: "2px 8px", borderRadius: "6px", marginRight: "10px" }}>
@@ -118,7 +118,7 @@ export default async function SettingsPage() {
           </div>
         ))}
         <form action={addGoal} style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "14px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "140px 1fr 80px", gap: "10px" }}>
+          <div className="form-row-3">
             <select name="goalType" style={inputStyle}>
               <option value="EVENT">Evento</option>
               <option value="PERFORMANCE">Rendimiento</option>
@@ -130,7 +130,7 @@ export default async function SettingsPage() {
               <option value="C">C</option>
             </select>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px" }}>
+          <div className="form-row-4">
             <input name="eventDate" type="date" style={inputStyle} placeholder="Fecha (opcional en rendimiento)" />
             <input name="metric" placeholder="Métrica (ej. FTP, VO2max)" style={inputStyle} />
             <input name="baselineValue" type="number" step="0.1" placeholder="Valor actual" style={inputStyle} />
@@ -143,7 +143,7 @@ export default async function SettingsPage() {
       {/* Umbrales */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Umbrales y guardrails</h2>
-        <form action={saveThresholds} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+        <form action={saveThresholds} className="form-row-3b">
           <div>
             <label style={labelStyle}>Ramp rate máx CTL/sem</label>
             <input name="maxCtlRampPerWeek" type="number" step="0.1" defaultValue={thresholds?.maxCtlRampPerWeek ?? 5.0} style={inputStyle} />
