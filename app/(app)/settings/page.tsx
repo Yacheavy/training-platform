@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const btnStyle = { background: "#4FD1C5", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", padding: "32px", fontFamily: "sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", padding: "32px", fontFamily: "sans-serif", maxWidth: "900px", margin: "0 auto" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "24px" }}>Configuración</h1>
 
       {/* Perfil del atleta */}

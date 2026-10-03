@@ -58,7 +58,7 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <div style={{ padding: "24px 40px" }}>
+    <div style={{ padding: "24px 40px", maxWidth: "1200px", margin: "0 auto" }}>
       <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 600, letterSpacing: "-0.01em" }}>
