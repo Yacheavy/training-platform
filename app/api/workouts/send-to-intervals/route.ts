@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { createEvent } from "@/lib/intervals-client";
-import { buildEventDescription } from "@/lib/training-engine/workout-description";
+import { buildStructuredWorkout } from "@/lib/training-engine/workout-description";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -27,7 +27,18 @@ export async function POST(request: Request) {
 
   const blocks = workout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
   const totalDurationSec = blocks.reduce((s, b) => s + b.durationSec, 0);
-  const description = buildEventDescription(blocks, workout.rationale);
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const description = buildStructuredWorkout(
+    blocks,
+    user!.ftp!,
+    {
+      totalKj: workout.estimatedKj ?? 0,
+      suggestedCarbsG: workout.suggestedCarbsG ?? 0,
+      suggestedCarbsGPerHour: workout.suggestedCarbsGPerHour ?? 0,
+      requiresMultipleCarbSources: workout.requiresMultipleCarbSources,
+    },
+    workout.rationale
+  );
 
   const startDateLocal = new Date(workout.date).toISOString().split("T")[0] + "T07:00:00";
 
