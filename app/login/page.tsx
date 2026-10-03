@@ -6,7 +6,7 @@ export default function LoginPage() {
       <form
         action={async () => {
           "use server"
-          await signIn("google")
+          await signIn("google", { redirectTo: "/dashboard" })
         }}
       >
         <button type="submit" style={{ padding: "12px 24px", fontSize: "16px" }}>
