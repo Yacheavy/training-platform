@@ -70,7 +70,11 @@ export default async function CalendarPage({
         year={year}
         month={month}
         ftp={user?.ftp ?? 254}
-        workouts={workouts.map((w) => ({ ...w, date: w.date.toISOString() }))}
+        workouts={workouts.map((w) => ({
+          ...w,
+          date: w.date.toISOString(),
+          blocksJson: w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[],
+        }))}
       />
     </div>
   );

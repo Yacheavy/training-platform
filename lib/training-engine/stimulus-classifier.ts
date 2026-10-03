@@ -17,12 +17,16 @@ export function classifyStimulusType(activity: {
   type: string;
   name?: string | null;
   intensityFactor?: number | null;
-  rawStreamsJson?: { zoneTimes?: ZoneTime[] } | null;
+  // Viene directo de un campo Json de Prisma (JsonValue), así que aceptamos
+  // unknown y lo interpretamos nosotros — más robusto que pelear con el
+  // tipo exacto en cada call site que pasa un registro completo de Activity.
+  rawStreamsJson?: unknown;
 }): string {
   if (activity.type === "WeightTraining") return "gym";
   if (activity.type !== "Ride") return "other";
 
-  const zoneTimes = activity.rawStreamsJson?.zoneTimes;
+  const rawStreams = activity.rawStreamsJson as { zoneTimes?: ZoneTime[] } | null | undefined;
+  const zoneTimes = rawStreams?.zoneTimes;
 
   if (zoneTimes && zoneTimes.length > 0) {
     const totalSecs = zoneTimes.reduce((sum, z) => sum + z.secs, 0);

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/app/generated/prisma";
 import { calculateAvailability } from "./availability";
 import { buildBlocks } from "./block-builder";
 import { calculateTss } from "./tss";
@@ -108,7 +109,7 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
       date: new Date(),
       workoutLibraryKey: effectiveStimulusType,
       status: "SUGGESTED",
-      blocksJson: blocks,
+      blocksJson: blocks as unknown as Prisma.InputJsonValue,
       estimatedTss: tss,
       estimatedKj: fueling.totalKj,
       suggestedCarbsG: fueling.suggestedCarbsG,

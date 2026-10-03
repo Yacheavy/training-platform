@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/app/generated/prisma";
 import { buildMesocycleWeeks } from "./mesocycle-builder";
 import { buildBlocks } from "./block-builder";
 import { calculateTss } from "./tss";
@@ -183,7 +184,7 @@ export async function generateFullPlan(trainingBlockId: string) {
           date,
           workoutLibraryKey: effectiveStimulusType,
           status: "PLANNED",
-          blocksJson: blocks,
+          blocksJson: blocks as unknown as Prisma.InputJsonValue,
           estimatedTss: tss,
           estimatedKj: fueling.totalKj,
           suggestedCarbsG: fueling.suggestedCarbsG,
