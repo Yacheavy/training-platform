@@ -58,7 +58,8 @@ export function buildBlocks(
   ftp: number,
   intensityPctLow: number | null,
   intensityPctHigh: number | null,
-  progressionStep: number = 0
+  progressionStep: number = 0,
+  seriesOverride?: number
 ): WorkoutBlock[] {
   const totalSec = targetDurationMin * 60;
   const z2Watts = Math.round(ftp * 0.68);
@@ -178,7 +179,10 @@ export function buildBlocks(
     const shortInterval = stimulusType === "rst" ? 6 : 30;
     const shortRecovery = stimulusType === "rst" ? 24 : stimulusType === "billat_30_30" ? 30 : 15;
     const repsPerSeries = stimulusType === "rst" ? 6 : stimulusType === "billat_30_30" ? 15 : 13;
-    const numSeries = stimulusType === "rst" ? 4 : stimulusType === "billat_30_30" ? 1 : 3;
+    const defaultSeries = stimulusType === "rst" ? 4 : stimulusType === "billat_30_30" ? 1 : 3;
+    // Dosis progresiva (práctica de entrenadores, no dosis de los estudios): el generador
+    // puede pedir menos series que el protocolo completo.
+    const numSeries = seriesOverride ?? defaultSeries;
     const restBetweenSeriesSec = 180;
 
     const blocks: WorkoutBlock[] = [...buildWarmupVo2(ftp)];

@@ -116,13 +116,22 @@ export async function generateFullPlan(trainingBlockId: string) {
     // según la base de conocimiento), no uno por semana.
     const progressionStep = effectiveStimulusType === "hiit_genuino" ? Math.floor(weekIndex / cycleLength) : 0;
 
+    // Rønnestad progresivo: 1 → 2 → 3 series dentro del primer mesociclo; tras el
+    // deload se retoma desde 2 (ya hay adaptación previa).
+    const positionInCycle = weekIndex % cycleLength;
+    const ronnestadSeries =
+      effectiveStimulusType === "ronnestad_30_15"
+        ? Math.min(3, (weekIndex < cycleLength ? 1 : 2) + positionInCycle)
+        : undefined;
+
     const blocks = buildBlocks(
       effectiveStimulusType,
       targetDuration,
       user.ftp,
       library?.intensityPctFtpLow ?? null,
       library?.intensityPctFtpHigh ?? null,
-      progressionStep
+      progressionStep,
+      ronnestadSeries
     );
 
     const tss = calculateTss(blocks, user.ftp);
