@@ -62,8 +62,8 @@ export function buildStructuredWorkout(
   const pct = (watts: number) => `${Math.round((watts / ftp) * 100)}%`;
 
   const warmupBlocks = blocks.filter((b) => b.type.startsWith("warmup"));
-  const mainBlocks = blocks.filter((b) => b.type === "interval" || b.type === "recovery" || b.type === "z2" || b.type === "test_20min" || b.type === "test_8min" || b.type === "test_5min");
-  const cooldownBlocks = blocks.filter((b) => b.type.startsWith("cooldown") || b.type === "z2_fill");
+  const mainBlocks = blocks.filter((b) => b.type === "interval" || b.type === "recovery" || b.type === "z2" || b.type === "z2_fill" || b.type === "test_20min" || b.type === "test_8min" || b.type === "test_5min");
+  const cooldownBlocks = blocks.filter((b) => b.type.startsWith("cooldown"));
 
   const sections: string[] = [];
 

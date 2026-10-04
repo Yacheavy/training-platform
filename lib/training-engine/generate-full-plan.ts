@@ -4,36 +4,7 @@ import { buildMesocycleWeeks } from "./mesocycle-builder";
 import { buildBlocks } from "./block-builder";
 import { calculateTss } from "./tss";
 import { calculateFueling } from "./fueling";
-
-const OBJECTIVE_TO_STIMULUS: Record<string, string> = {
-  vo2max: "hiit_genuino",
-  umbral: "umbral",
-  base: "sweet_spot",
-  tapering: "z2",
-};
-
-const ALTERNATIVE_TO_STIMULUS: Record<string, string> = {
-  vo2max: "ronnestad_30_15",
-  umbral: "sweet_spot",
-  base: "z2",
-  tapering: "z2",
-};
-
-function assignWeeklyQualityStimuli(
-  count: number,
-  objective: string,
-  primaryMaxPerWeek: number | null
-): string[] {
-  const primary = OBJECTIVE_TO_STIMULUS[objective] ?? "sweet_spot";
-  const alternative = ALTERNATIVE_TO_STIMULUS[objective] ?? "sweet_spot";
-  const cap = primaryMaxPerWeek ?? count;
-
-  const result: string[] = [];
-  for (let i = 0; i < count; i++) {
-    result.push(i < cap ? primary : alternative);
-  }
-  return result;
-}
+import { OBJECTIVE_TO_STIMULUS, assignWeeklyQualityStimuli } from "./quality-assignment";
 
 function getFtpTestStimulusType(protocol: string | undefined): string {
   if (protocol === "8min") return "ftp_test_8min";
@@ -91,13 +62,14 @@ export async function generateFullPlan(trainingBlockId: string) {
   const totalWeeks = Math.ceil(totalDays / 7);
 
   const mesocycleWeeks = buildMesocycleWeeks(totalWeeks, deloadRatio);
+  const cycleLength = (parseInt(deloadRatio.split(":")[0], 10) || 3) + 1;
   const ftpTestWeekIndices = computeFtpTestWeekIndices(totalWeeks, weeksBetweenFtpTest, mesocycleWeeks);
 
   const primaryStimulus = OBJECTIVE_TO_STIMULUS[block.objective] ?? "sweet_spot";
   const primaryLibrary = await prisma.workoutLibraryEntry.findUnique({ where: { key: primaryStimulus } });
 
   const baseStimuliForWeek = assignWeeklyQualityStimuli(
-    qualityDaySlots.length,
+    qualityDaySlots.map((s) => s.dayOfWeek),
     block.objective,
     primaryLibrary?.maxSessionsPerWeek ?? null
   );
@@ -140,7 +112,9 @@ export async function generateFullPlan(trainingBlockId: string) {
     const baseDuration = slot.targetDurationMin ?? 60;
     const targetDuration = Math.round(baseDuration * mesocycleWeek.loadMultiplier);
 
-    const progressionStep = effectiveStimulusType === "hiit_genuino" ? mesocycleWeek.progressionStep : 0;
+    // Progresión del HIIT genuino: un escalón por mesociclo (cada 4-6 semanas,
+    // según la base de conocimiento), no uno por semana.
+    const progressionStep = effectiveStimulusType === "hiit_genuino" ? Math.floor(weekIndex / cycleLength) : 0;
 
     const blocks = buildBlocks(
       effectiveStimulusType,
@@ -162,7 +136,7 @@ export async function generateFullPlan(trainingBlockId: string) {
     } else if (slot.isQualityDay) {
       const isPrimary = effectiveStimulusType === primaryStimulus;
       rationaleParts.push(
-        `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (alternativa — cupo semanal del principal ya asignado a otro día)"}${effectiveStimulusType === "hiit_genuino" ? ` · progresión semana ${mesocycleWeek.progressionStep + 1} según Chicharro & Vicente-Campos 2018` : ""}`
+        `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (alternativa — 1 por semana, ≥48h del estímulo principal)"}${effectiveStimulusType === "hiit_genuino" ? ` · progresión escalón ${Math.floor(weekIndex / cycleLength) + 1} según Chicharro & Vicente-Campos 2018` : ""}`
       );
     } else {
       rationaleParts.push("Día de volumen → z2");
@@ -200,4 +174,4 @@ export async function generateFullPlan(trainingBlockId: string) {
   }
 
   return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped };
-}
+}

@@ -11,18 +11,22 @@ function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
   ];
 }
 
-function buildWarmupHiit(ftp: number): WorkoutBlock[] {
+/**
+ * Calentamiento específico para sesiones de VO2max (base de conocimiento,
+ * Chicharro & Vicente-Campos 2018): 10min a umbral láctico + 2 intervalos de
+ * 1min a intensidad MLSS/VT2 con 30s de recuperación activa. Total: 13min.
+ */
+function buildWarmupVo2(ftp: number): WorkoutBlock[] {
   const z1Watts = Math.round(ftp * 0.5);
-  const z2Watts = Math.round(ftp * 0.65);
-  const activationWatts = Math.round(ftp * 1.15);
+  const thresholdWatts = Math.round(ftp * 0.95);
+  const primerWatts = ftp;
 
   return [
-    { type: "warmup_z1", durationSec: 600, targetWatts: z1Watts },
-    { type: "warmup_z2", durationSec: 1200, targetWatts: z2Watts },
-    { type: "warmup_activation", durationSec: 10, targetWatts: activationWatts },
-    { type: "warmup_recovery", durationSec: 300, targetWatts: z1Watts },
-    { type: "warmup_activation", durationSec: 10, targetWatts: activationWatts },
-    { type: "warmup_recovery", durationSec: 300, targetWatts: z1Watts },
+    { type: "warmup_z2", durationSec: 600, targetWatts: thresholdWatts },
+    { type: "warmup_activation", durationSec: 60, targetWatts: primerWatts },
+    { type: "warmup_recovery", durationSec: 30, targetWatts: z1Watts },
+    { type: "warmup_activation", durationSec: 60, targetWatts: primerWatts },
+    { type: "warmup_recovery", durationSec: 30, targetWatts: z1Watts },
   ];
 }
 
@@ -109,20 +113,20 @@ export function buildBlocks(
   const targetWatts = Math.round(ftp * (midPct / 100));
 
   if (stimulusType === "hiit_genuino") {
-    const warmup = buildWarmupHiit(ftp);
-    const warmupSec = warmup.reduce((s, b) => s + b.durationSec, 0);
+    const warmup = buildWarmupVo2(ftp);
     const cooldownSec = 600;
 
     const progression = getHiitProgression(progressionStep);
     const intervalSec = progression.intervalSec;
     const recoverySec = progression.recoverySec;
-    const availableForIntervals = totalSec - warmupSec - cooldownSec;
-    const reps = Math.max(1, Math.min(progression.reps, Math.floor(availableForIntervals / (intervalSec + recoverySec))));
+    // El protocolo manda: las repeticiones NO se recortan al tiempo del slot
+    // (si no entran, la sesión dura lo que el protocolo necesita).
+    const reps = progression.reps;
 
     const blocks: WorkoutBlock[] = [...warmup];
     for (let i = 0; i < reps; i++) {
       blocks.push({ type: "interval", durationSec: intervalSec, targetWatts });
-      blocks.push({ type: "recovery", durationSec: recoverySec, targetWatts: z2Watts });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recoverySec, targetWatts: z2Watts });
     }
 
     const usedSecBeforeCooldown = blocks.reduce((s, b) => s + b.durationSec, 0);
@@ -177,7 +181,7 @@ export function buildBlocks(
     const numSeries = stimulusType === "rst" ? 4 : stimulusType === "billat_30_30" ? 1 : 3;
     const restBetweenSeriesSec = 180;
 
-    const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
+    const blocks: WorkoutBlock[] = [...buildWarmupVo2(ftp)];
     for (let s = 0; s < numSeries; s++) {
       for (let i = 0; i < repsPerSeries; i++) {
         blocks.push({ type: "interval", durationSec: shortInterval, targetWatts });
@@ -204,4 +208,4 @@ export function buildBlocks(
     { type: "z2", durationSec: totalSec - warmupSec - cooldownSec, targetWatts: z2Watts },
     ...buildCooldown(cooldownSec, ftp),
   ];
-}
+}
