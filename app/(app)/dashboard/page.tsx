@@ -1,4 +1,6 @@
 import { dayKeyDate } from "@/lib/tz";
+import { syncIfStale } from "@/lib/intervals-sync";
+import { syncNow } from "@/lib/sync-actions";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { approveWorkout, sendWorkoutToIntervals } from "@/lib/workout-actions";
@@ -27,6 +29,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  await syncIfStale(session.user.id);
   const data = await getDashboardData(session.user.id);
   const todayWorkout = await getTodayWorkout(session.user.id);
   const loadHistory = await getLoadHistory(session.user.id);
@@ -282,6 +285,11 @@ export default async function DashboardPage() {
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
         <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "14px" }}>
           Últimas actividades
+          <form action={syncNow} style={{ display: "inline", float: "right" }}>
+            <button type="submit" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: "6px", padding: "2px 8px", fontSize: "11px", cursor: "pointer" }}>
+              Sincronizar
+            </button>
+          </form>
         </div>
         {data.recentActivities.map((a, i) => (
           <div
