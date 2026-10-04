@@ -155,7 +155,8 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
     library?.intensityPctFtpLow ?? null,
     library?.intensityPctFtpHigh ?? null,
     progressionStep,
-    series
+    series,
+    user.pvo2maxWatts
   );
 
   const tss = calculateTss(blocks, user.ftp);

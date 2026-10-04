@@ -19,6 +19,7 @@ export async function generateFullPlan(trainingBlockId: string) {
   const plan = buildPlan({
     block: { name: block.name, objective: block.objective, startDate: block.startDate, endDate: block.endDate },
     ftp: user.ftp,
+    pvo2maxWatts: user.pvo2maxWatts,
     thresholds: {
       deloadRatio: thresholds?.deloadRatio ?? "4:1",
       weeksBetweenFtpTest: thresholds?.weeksBetweenFtpTest ?? 5,

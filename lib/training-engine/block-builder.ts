@@ -59,7 +59,8 @@ export function buildBlocks(
   intensityPctLow: number | null,
   intensityPctHigh: number | null,
   progressionStep: number = 0,
-  seriesOverride?: number
+  seriesOverride?: number,
+  pvo2maxWatts?: number | null
 ): WorkoutBlock[] {
   const totalSec = targetDurationMin * 60;
   const z2Watts = Math.round(ftp * 0.68);
@@ -124,10 +125,15 @@ export function buildBlocks(
     // (si no entran, la sesión dura lo que el protocolo necesita).
     const reps = progression.reps;
 
+    // Base de conocimiento (Chicharro & Vicente-Campos 2018): HIIT genuino al 100% de la
+    // potencia en VO2max y recuperación activa ~50%. Sin dato medido se usa el %FTP de la librería.
+    const intervalWatts = pvo2maxWatts ? Math.round(pvo2maxWatts) : targetWatts;
+    const recoveryWatts = pvo2maxWatts ? Math.round(pvo2maxWatts * 0.5) : z2Watts;
+
     const blocks: WorkoutBlock[] = [...warmup];
     for (let i = 0; i < reps; i++) {
-      blocks.push({ type: "interval", durationSec: intervalSec, targetWatts });
-      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recoverySec, targetWatts: z2Watts });
+      blocks.push({ type: "interval", durationSec: intervalSec, targetWatts: intervalWatts });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recoverySec, targetWatts: recoveryWatts });
     }
 
     const usedSecBeforeCooldown = blocks.reduce((s, b) => s + b.durationSec, 0);

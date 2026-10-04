@@ -30,6 +30,8 @@ model User {
   weight            Float?
   ftp               Int?
   ftpUpdatedAt      DateTime?
+  pvo2maxWatts      Int?
+  pvo2maxUpdatedAt  DateTime?
 
   trainingBackground String? @db.Text
   currentStateNote    String? @db.Text

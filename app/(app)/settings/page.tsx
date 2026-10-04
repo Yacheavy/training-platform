@@ -29,6 +29,15 @@ export default async function SettingsPage() {
         </p>
         <form action={saveProfile} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>
+            <label style={labelStyle}>Potencia en VO2max (W) — mejor esfuerzo de ~5 min o test de rampa</label>
+            <input name="pvo2maxWatts" type="number" min={100} max={800} defaultValue={user?.pvo2maxWatts ?? ""} placeholder="Ej: 380 (vacío = el HIIT usa un % de tu FTP)" style={inputStyle} />
+            {user?.pvo2maxUpdatedAt && (
+              <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "4px" }}>
+                Actualizado: {new Date(user.pvo2maxUpdatedAt).toLocaleDateString("es-AR")} — el HIIT usa el 100% de este valor y la recuperación el 50%
+              </div>
+            )}
+          </div>
+          <div>
             <label style={labelStyle}>Trayectoria / experiencia</label>
             <textarea
               name="trainingBackground"

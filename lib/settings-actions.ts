@@ -102,9 +102,14 @@ export async function deleteGoal(formData: FormData) {
 export async function saveProfile(formData: FormData) {
   const athleteId = await requireUserId();
 
+  const pvo2Raw = Number(formData.get("pvo2maxWatts"));
+  const current = await prisma.user.findUnique({ where: { id: athleteId }, select: { pvo2maxWatts: true } });
+  const pvo2 = Number.isFinite(pvo2Raw) && pvo2Raw >= 100 && pvo2Raw <= 800 ? Math.round(pvo2Raw) : null;
+
   await prisma.user.update({
     where: { id: athleteId },
     data: {
+      ...(pvo2 !== (current?.pvo2maxWatts ?? null) ? { pvo2maxWatts: pvo2, pvo2maxUpdatedAt: new Date() } : {}),
       trainingBackground: String(formData.get("trainingBackground") || ""),
       currentStateNote: String(formData.get("currentStateNote") || ""),
       currentStateUpdatedAt: new Date(),

@@ -82,11 +82,12 @@ export function ronnestadSeriesFor(weekIndex: number, cycleLength: number): numb
 export function buildPlan(input: {
   block: PlanBlockInput;
   ftp: number;
+  pvo2maxWatts?: number | null;
   thresholds: PlanThresholds;
   template: PlanTemplateSlot[];
   library: Record<string, PlanLibraryEntry | undefined>;
 }): PlannedDay[] {
-  const { block, ftp, thresholds, template, library } = input;
+  const { block, ftp, pvo2maxWatts, thresholds, template, library } = input;
 
   const slotByDay = new Map(template.map((t) => [t.dayOfWeek, t]));
   const qualityDaySlots = template
@@ -152,7 +153,8 @@ export function buildPlan(input: {
       lib?.intensityPctFtpLow ?? null,
       lib?.intensityPctFtpHigh ?? null,
       progressionStep,
-      series
+      series,
+      pvo2maxWatts
     );
 
     const rationaleParts = [
@@ -166,7 +168,7 @@ export function buildPlan(input: {
       const isPrimary = effectiveStimulusType === primaryStimulus;
       const detail =
         effectiveStimulusType === "hiit_genuino"
-          ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018`
+          ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Configuración)"}`
           : effectiveStimulusType === "ronnestad_30_15"
             ? ` · ${series} serie${series === 1 ? "" : "s"} de 13×(30s/15s) (progresivo 1→3)`
             : "";
