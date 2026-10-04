@@ -3,14 +3,14 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { dayKeyDate } from "@/lib/tz";
 
 export async function saveCheckin(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
 
   const athleteId = session.user.id;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = dayKeyDate(new Date());
 
   await prisma.dailyCheckin.upsert({
     where: { date: today },

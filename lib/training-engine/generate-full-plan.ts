@@ -1,41 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma";
-import { buildMesocycleWeeks } from "./mesocycle-builder";
-import { buildBlocks } from "./block-builder";
-import { calculateTss } from "./tss";
-import { calculateFueling } from "./fueling";
-import { OBJECTIVE_TO_STIMULUS, assignWeeklyQualityStimuli } from "./quality-assignment";
-
-function getFtpTestStimulusType(protocol: string | undefined): string {
-  if (protocol === "8min") return "ftp_test_8min";
-  if (protocol === "5min") return "ftp_test_5min";
-  return "ftp_test";
-}
-
-/**
- * Calcula en qué semanas (índice) corresponde el test de FTP, evitando
- * que coincida con una semana de deload — si coincide, se reprograma a
- * la última semana de carga ANTES del deload (nunca se cancela).
- */
-function computeFtpTestWeekIndices(
-  totalWeeks: number,
-  weeksBetweenFtpTest: number,
-  mesocycleWeeks: { isDeload: boolean }[]
-): Set<number> {
-  const indices = new Set<number>();
-  if (weeksBetweenFtpTest <= 0) return indices;
-
-  for (let w = weeksBetweenFtpTest - 1; w < totalWeeks; w += weeksBetweenFtpTest) {
-    let candidate = w;
-    if (mesocycleWeeks[candidate]?.isDeload) {
-      candidate = w - 1; // última semana de carga antes del deload
-    }
-    if (candidate >= 0 && !mesocycleWeeks[candidate]?.isDeload) {
-      indices.add(candidate);
-    }
-  }
-  return indices;
-}
+import { buildPlan, PlanLibraryEntry } from "./plan-builder";
+import { validatePlan } from "./plan-validator";
+import { dateKeyLocal } from "../tz";
 
 export async function generateFullPlan(trainingBlockId: string) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
@@ -45,142 +12,63 @@ export async function generateFullPlan(trainingBlockId: string) {
   if (!user?.ftp) throw new Error("Configurá tu FTP antes de generar un plan completo");
 
   const thresholds = await prisma.athleteThresholds.findUnique({ where: { athleteId: block.athleteId } });
-  const deloadRatio = thresholds?.deloadRatio ?? "4:1";
-  const weeksBetweenFtpTest = thresholds?.weeksBetweenFtpTest ?? 5;
-  const ftpTestStimulusType = getFtpTestStimulusType(thresholds?.ftpTestProtocol);
-
   const template = await prisma.trainingTemplateSlot.findMany({ where: { athleteId: block.athleteId } });
-  const slotByDay = new Map(template.map((t) => [t.dayOfWeek, t]));
+  const libraryRows = await prisma.workoutLibraryEntry.findMany();
+  const library: Record<string, PlanLibraryEntry> = Object.fromEntries(libraryRows.map((l) => [l.key, l]));
 
-  const qualityDaySlots = template
-    .filter((t) => t.stimulusType === "cycling" && t.isQualityDay)
-    .sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  const plan = buildPlan({
+    block: { name: block.name, objective: block.objective, startDate: block.startDate, endDate: block.endDate },
+    ftp: user.ftp,
+    thresholds: {
+      deloadRatio: thresholds?.deloadRatio ?? "4:1",
+      weeksBetweenFtpTest: thresholds?.weeksBetweenFtpTest ?? 5,
+      ftpTestProtocol: thresholds?.ftpTestProtocol,
+    },
+    template,
+    library,
+  });
 
-  const startDate = new Date(block.startDate);
-  const endDate = new Date(block.endDate);
-  const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  const totalWeeks = Math.ceil(totalDays / 7);
-
-  const mesocycleWeeks = buildMesocycleWeeks(totalWeeks, deloadRatio);
-  const cycleLength = (parseInt(deloadRatio.split(":")[0], 10) || 3) + 1;
-  const ftpTestWeekIndices = computeFtpTestWeekIndices(totalWeeks, weeksBetweenFtpTest, mesocycleWeeks);
-
-  const primaryStimulus = OBJECTIVE_TO_STIMULUS[block.objective] ?? "sweet_spot";
-  const primaryLibrary = await prisma.workoutLibraryEntry.findUnique({ where: { key: primaryStimulus } });
-
-  const baseStimuliForWeek = assignWeeklyQualityStimuli(
-    qualityDaySlots.map((s) => s.dayOfWeek),
-    block.objective,
-    primaryLibrary?.maxSessionsPerWeek ?? null
-  );
+  // Red de seguridad: si el plan viola una regla del protocolo se avisa en la respuesta.
+  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp });
 
   const created: string[] = [];
   const skipped: string[] = [];
 
-  for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + dayOffset);
-    const dayOfWeek = date.getDay();
-
-    const slot = slotByDay.get(dayOfWeek);
-    if (!slot || slot.stimulusType === "rest") continue;
-
-    const weekIndex = Math.floor(dayOffset / 7);
-    const mesocycleWeek = mesocycleWeeks[weekIndex] ?? mesocycleWeeks[mesocycleWeeks.length - 1];
-
-    const isFtpTestWeek = ftpTestWeekIndices.has(weekIndex);
-    const isFirstQualityDayOfWeek = qualityDaySlots.length > 0 && qualityDaySlots[0].dayOfWeek === dayOfWeek;
-
-    let effectiveStimulusType: string;
-
-    if (slot.stimulusType === "gym") {
-      effectiveStimulusType = "gym";
-    } else if (slot.isQualityDay) {
-      if (isFtpTestWeek && isFirstQualityDayOfWeek) {
-        effectiveStimulusType = ftpTestStimulusType;
-      } else if (mesocycleWeek.isDeload) {
-        effectiveStimulusType = "z2";
-      } else {
-        const positionInWeek = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
-        effectiveStimulusType = baseStimuliForWeek[positionInWeek] ?? primaryStimulus;
-      }
-    } else {
-      effectiveStimulusType = "z2";
-    }
-
-    const library = await prisma.workoutLibraryEntry.findUnique({ where: { key: effectiveStimulusType } });
-    const baseDuration = slot.targetDurationMin ?? 60;
-    const targetDuration = Math.round(baseDuration * mesocycleWeek.loadMultiplier);
-
-    // Progresión del HIIT genuino: un escalón por mesociclo (cada 4-6 semanas,
-    // según la base de conocimiento), no uno por semana.
-    const progressionStep = effectiveStimulusType === "hiit_genuino" ? Math.floor(weekIndex / cycleLength) : 0;
-
-    // Rønnestad progresivo: 1 → 2 → 3 series dentro del primer mesociclo; tras el
-    // deload se retoma desde 2 (ya hay adaptación previa).
-    const positionInCycle = weekIndex % cycleLength;
-    const ronnestadSeries =
-      effectiveStimulusType === "ronnestad_30_15"
-        ? Math.min(3, (weekIndex < cycleLength ? 1 : 2) + positionInCycle)
-        : undefined;
-
-    const blocks = buildBlocks(
-      effectiveStimulusType,
-      targetDuration,
-      user.ftp,
-      library?.intensityPctFtpLow ?? null,
-      library?.intensityPctFtpHigh ?? null,
-      progressionStep,
-      ronnestadSeries
-    );
-
-    const tss = calculateTss(blocks, user.ftp);
-    const fueling = calculateFueling(blocks);
-
-    const rationaleParts = [
-      `Plan del bloque "${block.name}" — semana ${weekIndex + 1} del mesociclo${mesocycleWeek.isDeload ? " (DELOAD, -45% volumen)" : ""}`,
-    ];
-    if (effectiveStimulusType.startsWith("ftp_test")) {
-      rationaleParts.push(`Test de FTP programado (protocolo ${thresholds?.ftpTestProtocol ?? "20min"}) — protocolo práctico de la industria, no ensayo controlado`);
-    } else if (slot.isQualityDay) {
-      const isPrimary = effectiveStimulusType === primaryStimulus;
-      rationaleParts.push(
-        `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (alternativa — 1 por semana, ≥48h del estímulo principal)"}${effectiveStimulusType === "hiit_genuino" ? ` · progresión escalón ${Math.floor(weekIndex / cycleLength) + 1} según Chicharro & Vicente-Campos 2018` : ""}`
-      );
-    } else {
-      rationaleParts.push("Día de volumen → z2");
-    }
-    const rationale = rationaleParts.join(" · ");
-
+  for (const day of plan) {
+    const key = dateKeyLocal(day.date);
     try {
       const existing = await prisma.generatedWorkout.findFirst({
-        where: { athleteId: block.athleteId, date: { gte: date, lt: new Date(date.getTime() + 86400000) }, status: "PLANNED" },
+        where: {
+          athleteId: block.athleteId,
+          date: { gte: day.date, lt: new Date(day.date.getTime() + 86400000) },
+          status: "PLANNED",
+        },
       });
       if (existing) {
-        skipped.push(date.toISOString().split("T")[0]);
+        skipped.push(key);
         continue;
       }
 
       await prisma.generatedWorkout.create({
         data: {
           athleteId: block.athleteId,
-          date,
-          workoutLibraryKey: effectiveStimulusType,
+          date: day.date,
+          workoutLibraryKey: day.stimulusType,
           status: "PLANNED",
-          blocksJson: blocks as unknown as Prisma.InputJsonValue,
-          estimatedTss: tss,
-          estimatedKj: fueling.totalKj,
-          suggestedCarbsG: fueling.suggestedCarbsG,
-          suggestedCarbsGPerHour: fueling.suggestedCarbsGPerHour,
-          requiresMultipleCarbSources: fueling.requiresMultipleCarbSources,
-          rationale,
+          blocksJson: day.blocks as unknown as Prisma.InputJsonValue,
+          estimatedTss: day.tss,
+          estimatedKj: day.fueling.totalKj,
+          suggestedCarbsG: day.fueling.suggestedCarbsG,
+          suggestedCarbsGPerHour: day.fueling.suggestedCarbsGPerHour,
+          requiresMultipleCarbSources: day.fueling.requiresMultipleCarbSources,
+          rationale: day.rationale,
         },
       });
-      created.push(date.toISOString().split("T")[0]);
+      created.push(key);
     } catch (err) {
-      skipped.push(`${date.toISOString().split("T")[0]} (error: ${String(err)})`);
+      skipped.push(`${key} (error: ${String(err)})`);
     }
   }
 
-  return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped };
-}
+  return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped, warnings };
+}

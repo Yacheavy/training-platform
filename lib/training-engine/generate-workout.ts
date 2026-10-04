@@ -4,41 +4,88 @@ import { calculateAvailability } from "./availability";
 import { buildBlocks } from "./block-builder";
 import { calculateTss } from "./tss";
 import { calculateFueling } from "./fueling";
+import { buildMesocycleWeeks } from "./mesocycle-builder";
+import { OBJECTIVE_TO_STIMULUS, ALTERNATIVE_TO_STIMULUS, MIN_GAP_DAYS_BETWEEN_VO2MAX } from "./quality-assignment";
+import { ronnestadSeriesFor } from "./plan-builder";
+import { dayOfWeekLocal, dayStartLocal, dayRangeLocal } from "../tz";
 
-const OBJECTIVE_TO_STIMULUS: Record<string, string> = {
-  vo2max: "hiit_genuino",
-  umbral: "umbral",
-  base: "sweet_spot",
-  tapering: "z2",
-};
+const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst"]);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-async function pickQualityStimulus(athleteId: string, rationale: string[]): Promise<string> {
-  const today = new Date();
+interface QualityContext {
+  stimulusType: string;
+  isDeload: boolean;
+  loadMultiplier: number;
+  weekIndex: number;
+  cycleLength: number;
+}
+
+/**
+ * Elige el estímulo de calidad de HOY aplicando las MISMAS reglas que el
+ * planificador (quality-assignment): estímulo principal del objetivo,
+ * máx. semanal por librería, ≥48h entre sesiones VO2max, 1 alternativa
+ * (Rønnestad) cuando el principal está agotado, y deload → Z2.
+ * Nunca cae silenciosamente a otro estímulo: cada decisión queda en el rationale.
+ */
+async function pickQualityStimulus(athleteId: string, today: Date, rationale: string[]): Promise<QualityContext> {
   const activeBlock = await prisma.trainingBlock.findFirst({
     where: { athleteId, startDate: { lte: today }, endDate: { gte: today } },
   });
+  const thresholds = await prisma.athleteThresholds.findFirst({ where: { athleteId } });
+  const deloadRatio = thresholds?.deloadRatio ?? "4:1";
+  const cycleLength = (parseInt(deloadRatio.split(":")[0], 10) || 3) + 1;
 
-  let candidate = "sweet_spot";
+  let weekIndex = 0;
+  let isDeload = false;
+  let loadMultiplier = 1;
   if (activeBlock) {
-    candidate = OBJECTIVE_TO_STIMULUS[activeBlock.objective] ?? "sweet_spot";
-    rationale.push(`Bloque activo "${activeBlock.name}" (objetivo: ${activeBlock.objective}) → sugiere ${candidate}`);
-  } else {
+    weekIndex = Math.max(0, Math.floor((today.getTime() - activeBlock.startDate.getTime()) / (7 * DAY_MS)));
+    const totalWeeks = Math.ceil((activeBlock.endDate.getTime() - activeBlock.startDate.getTime()) / (7 * DAY_MS));
+    const meso = buildMesocycleWeeks(Math.max(totalWeeks, weekIndex + 1), deloadRatio)[weekIndex];
+    isDeload = meso.isDeload;
+    loadMultiplier = meso.loadMultiplier;
+  }
+  const ctx = (stimulusType: string): QualityContext => ({ stimulusType, isDeload, loadMultiplier, weekIndex, cycleLength });
+
+  if (!activeBlock) {
     rationale.push("Sin bloque de entrenamiento activo configurado — usando sweet_spot como opción de calidad por defecto");
+    return ctx("sweet_spot");
   }
 
-  const library = await prisma.workoutLibraryEntry.findUnique({ where: { key: candidate } });
-  if (library?.maxSessionsPerWeek != null) {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const recentCount = await prisma.generatedWorkout.count({
-      where: { athleteId, workoutLibraryKey: candidate, date: { gte: sevenDaysAgo } },
-    });
-    if (recentCount >= library.maxSessionsPerWeek) {
-      rationale.push(`Ya alcanzaste el máximo semanal de ${candidate} (${library.maxSessionsPerWeek}/sem) — bajando a sweet_spot`);
-      candidate = "sweet_spot";
+  const primary = OBJECTIVE_TO_STIMULUS[activeBlock.objective] ?? "sweet_spot";
+  rationale.push(`Bloque activo "${activeBlock.name}" (objetivo: ${activeBlock.objective}) → sugiere ${primary}`);
+
+  if (isDeload) {
+    rationale.push("Semana de DELOAD → sin calidad, Z2");
+    return ctx("z2");
+  }
+
+  const since = new Date(today.getTime() - 7 * DAY_MS);
+  const recent = await prisma.generatedWorkout.findMany({
+    where: { athleteId, date: { gte: since, lt: dayStartLocal(today) } },
+    select: { workoutLibraryKey: true, date: true },
+  });
+  const lastVo2 = recent
+    .filter((r) => VO2_STIMULI.has(r.workoutLibraryKey))
+    .map((r) => r.date.getTime())
+    .sort((x, y) => y - x)[0];
+  if (lastVo2 != null && dayStartLocal(today).getTime() - dayStartLocal(new Date(lastVo2)).getTime() < MIN_GAP_DAYS_BETWEEN_VO2MAX * DAY_MS) {
+    rationale.push(`Sesión VO2max hace menos de ${MIN_GAP_DAYS_BETWEEN_VO2MAX} días (≥48h de separación) → Z2`);
+    return ctx("z2");
+  }
+
+  const countOf = (key: string) => recent.filter((r) => r.workoutLibraryKey === key).length;
+  const lib = await prisma.workoutLibraryEntry.findUnique({ where: { key: primary } });
+  if (lib?.maxSessionsPerWeek != null && countOf(primary) >= lib.maxSessionsPerWeek) {
+    const alt = ALTERNATIVE_TO_STIMULUS[activeBlock.objective];
+    if (alt && countOf(alt) < 1) {
+      rationale.push(`Máximo semanal de ${primary} (${lib.maxSessionsPerWeek}/sem) alcanzado — alternativa del objetivo: ${alt} (máx. 1/sem)`);
+      return ctx(alt);
     }
+    rationale.push(`Máximo semanal de ${primary} (${lib.maxSessionsPerWeek}/sem) alcanzado y sin alternativa disponible → Z2`);
+    return ctx("z2");
   }
-
-  return candidate;
+  return ctx(primary);
 }
 
 /**
@@ -52,7 +99,8 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
     return { error: "Configurá tu FTP en el perfil antes de generar sugerencias" };
   }
 
-  const dayOfWeek = forceDayOfWeek ?? new Date().getDay();
+  const now = new Date();
+  const dayOfWeek = forceDayOfWeek ?? dayOfWeekLocal(now);
   const slot = await prisma.trainingTemplateSlot.findUnique({
     where: { athleteId_dayOfWeek: { athleteId, dayOfWeek } },
   });
@@ -66,13 +114,17 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   ];
 
   let effectiveStimulusType: string;
+  let quality: QualityContext | null = null;
 
   if (slot.stimulusType === "gym") {
     effectiveStimulusType = "gym";
   } else if (slot.stimulusType === "cycling") {
-    effectiveStimulusType = slot.isQualityDay
-      ? await pickQualityStimulus(athleteId, rationale)
-      : "z2";
+    if (slot.isQualityDay) {
+      quality = await pickQualityStimulus(athleteId, now, rationale);
+      effectiveStimulusType = quality.stimulusType;
+    } else {
+      effectiveStimulusType = "z2";
+    }
     if (!slot.isQualityDay) rationale.push("Día de volumen (no calidad) → z2 por defecto");
   } else {
     effectiveStimulusType = "z2";
@@ -90,14 +142,20 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   }
 
   const library = await prisma.workoutLibraryEntry.findUnique({ where: { key: effectiveStimulusType } });
-  const duration = slot.targetDurationMin ?? 60;
+  const duration = Math.round((slot.targetDurationMin ?? 60) * (quality?.loadMultiplier ?? 1));
+  const progressionStep =
+    effectiveStimulusType === "hiit_genuino" && quality ? Math.floor(quality.weekIndex / quality.cycleLength) : 0;
+  const series =
+    effectiveStimulusType === "ronnestad_30_15" && quality ? ronnestadSeriesFor(quality.weekIndex, quality.cycleLength) : undefined;
 
   const blocks = buildBlocks(
     effectiveStimulusType,
     duration,
     user.ftp,
     library?.intensityPctFtpLow ?? null,
-    library?.intensityPctFtpHigh ?? null
+    library?.intensityPctFtpHigh ?? null,
+    progressionStep,
+    series
   );
 
   const tss = calculateTss(blocks, user.ftp);
@@ -106,7 +164,7 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   const workout = await prisma.generatedWorkout.create({
     data: {
       athleteId,
-      date: new Date(),
+      date: now,
       workoutLibraryKey: effectiveStimulusType,
       status: "SUGGESTED",
       blocksJson: blocks as unknown as Prisma.InputJsonValue,
@@ -133,16 +191,13 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
 export async function generateTodayWorkout(athleteId: string, forceDayOfWeek?: number) {
   const targetDate = new Date();
   if (forceDayOfWeek != null) {
-    const diff = forceDayOfWeek - targetDate.getDay();
-    targetDate.setDate(targetDate.getDate() + diff);
+    const diff = forceDayOfWeek - dayOfWeekLocal(targetDate);
+    targetDate.setTime(targetDate.getTime() + diff * DAY_MS);
   }
-  const startOfDay = new Date(targetDate);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
+  const { start: startOfDay, end: endOfDay } = dayRangeLocal(targetDate);
 
   const planned = await prisma.generatedWorkout.findFirst({
-    where: { athleteId, date: { gte: startOfDay, lte: endOfDay }, status: "PLANNED" },
+    where: { athleteId, date: { gte: startOfDay, lt: endOfDay }, status: "PLANNED" },
   });
 
   if (!planned) {

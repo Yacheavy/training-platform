@@ -1,3 +1,4 @@
+import { dayKeyDate } from "@/lib/tz";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { approveWorkout, sendWorkoutToIntervals } from "@/lib/workout-actions";
@@ -31,8 +32,7 @@ export default async function DashboardPage() {
   const loadHistory = await getLoadHistory(session.user.id);
   const currentWeekWorkouts = await getCurrentWeekWorkouts(session.user.id);
   const availability = await calculateAvailability(session.user.id);
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const todayStart = dayKeyDate(new Date());
   const existingCheckin = await prisma.dailyCheckin.findUnique({ where: { date: todayStart } });
   const hrvRhrHistory = await getHrvRhrHistory(session.user.id);
   const availabilityHistory = await getAvailabilityHistory(session.user.id);

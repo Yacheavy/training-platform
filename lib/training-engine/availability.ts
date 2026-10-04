@@ -1,3 +1,4 @@
+import { dayKeyDate } from "../tz";
 import { prisma } from "@/lib/prisma";
 
 export interface AvailabilityResult {
@@ -58,8 +59,7 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
 
   const tsb = latest?.ctl != null && latest?.atl != null ? latest.ctl - latest.atl : null;
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const todayStart = dayKeyDate(new Date());
   const checkin = await prisma.dailyCheckin.findUnique({ where: { date: todayStart } });
   const checkinToday = checkin
     ? { fatigue: checkin.fatigue, stress: checkin.stress, muscleSoreness: checkin.muscleSoreness, sleepQuality: checkin.sleepQuality }

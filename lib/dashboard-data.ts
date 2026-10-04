@@ -1,3 +1,4 @@
+import { dayRangeLocal, weekRangeLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
 
 export async function getDashboardData(athleteId: string) {
@@ -40,13 +41,10 @@ export async function getDashboardData(athleteId: string) {
   };
 }
 export async function getTodayWorkout(athleteId: string) {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
+  const { start: startOfDay, end: endOfDay } = dayRangeLocal(new Date());
 
   return prisma.generatedWorkout.findFirst({
-    where: { athleteId, date: { gte: startOfDay, lte: endOfDay } },
+    where: { athleteId, date: { gte: startOfDay, lt: endOfDay } },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -83,16 +81,10 @@ export async function getWeeklyTemplate(athleteId: string) {
  * gráfico de intervalos por día como en Intervals.icu.
  */
 export async function getCurrentWeekWorkouts(athleteId: string) {
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
-  endOfWeek.setHours(23, 59, 59, 999);
+  const { start: startOfWeek, end: endOfWeek } = weekRangeLocal(new Date());
 
   const workouts = await prisma.generatedWorkout.findMany({
-    where: { athleteId, date: { gte: startOfWeek, lte: endOfWeek } },
+    where: { athleteId, date: { gte: startOfWeek, lt: endOfWeek } },
     orderBy: { date: "asc" },
     select: {
       id: true,

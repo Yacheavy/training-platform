@@ -1,3 +1,4 @@
+import { ATHLETE_TZ, dayOfWeekLocal, weekRangeLocal } from "@/lib/tz";
 import { WorkoutMiniChart } from "./WorkoutMiniChart";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -35,21 +36,21 @@ interface WeekWorkout {
 }
 
 export function WeekList({ workouts }: { workouts: WeekWorkout[] }) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const weekStart = weekRangeLocal(now).start;
+  const todayDow = dayOfWeekLocal(now);
 
   const byDay = new Map<number, WeekWorkout>();
   for (const w of workouts) {
-    byDay.set(new Date(w.date).getDay(), w);
+    byDay.set(dayOfWeekLocal(new Date(w.date)), w);
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       {DAY_NAMES.map((name, dayOfWeek) => {
         const workout = byDay.get(dayOfWeek);
-        const dayDate = new Date(today);
-        dayDate.setDate(today.getDate() - today.getDay() + dayOfWeek);
-        const isToday = dayDate.getTime() === today.getTime();
+        const dayDate = new Date(weekStart.getTime() + dayOfWeek * 24 * 60 * 60 * 1000);
+        const isToday = dayOfWeek === todayDow;
         const totalMin = workout ? Math.round(workout.blocksJson.reduce((s, b) => s + b.durationSec, 0) / 60) : 0;
 
         return (
@@ -70,7 +71,7 @@ export function WeekList({ workouts }: { workouts: WeekWorkout[] }) {
                 {name.slice(0, 3)}
               </div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "10.5px", color: "var(--text-muted)" }}>
-                {dayDate.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}
+                {dayDate.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", timeZone: ATHLETE_TZ })}
               </div>
             </div>
 
