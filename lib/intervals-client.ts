@@ -71,3 +71,21 @@ export async function createEvent(
   }
   return res.json();
 }
+
+export async function getPowerCurve(athleteId: string, apiKey: string, curves = "90d", type = "Ride") {
+  const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/power-curves?curves=${encodeURIComponent(curves)}&type=${encodeURIComponent(type)}`;
+  const res = await fetch(url, { headers: { Authorization: authHeader(apiKey) } });
+  if (!res.ok) {
+    throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+export async function getSportSettings(athleteId: string, apiKey: string) {
+  const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/sport-settings`;
+  const res = await fetch(url, { headers: { Authorization: authHeader(apiKey) } });
+  if (!res.ok) {
+    throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
+  }
+  return res.json();
+}

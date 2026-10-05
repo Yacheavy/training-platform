@@ -32,6 +32,12 @@ model User {
   ftpUpdatedAt      DateTime?
   pvo2maxWatts      Int?
   pvo2maxUpdatedAt  DateTime?
+  pvo2maxSource     String?
+  lthr              Int?
+  maxHr             Int?
+  powerCurveJson    Json?
+  powerCurveSyncedAt DateTime?
+  sportSettingsJson Json?
 
   trainingBackground String? @db.Text
   currentStateNote    String? @db.Text

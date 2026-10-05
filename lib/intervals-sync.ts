@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getActivities, getWellness } from "@/lib/intervals-client";
 import { dateKeyLocal } from "@/lib/tz";
+import { refreshAthleteMetrics } from "@/lib/athlete-metrics";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function mapActivity(a: any, userId: string) {
@@ -125,6 +126,16 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
     }
   } catch (err) {
     result.errors.push(`Wellness ${oldest}→${newest}: ${String(err)}`);
+  }
+
+  // Curva de potencia y configuración de deporte: cambian poco, se refrescan cada 6 h
+  try {
+    const u = await prisma.user.findUnique({ where: { id: userId }, select: { powerCurveSyncedAt: true } });
+    if (!u?.powerCurveSyncedAt || Date.now() - u.powerCurveSyncedAt.getTime() > 6 * 60 * 60 * 1000) {
+      result.errors.push(...(await refreshAthleteMetrics(userId)));
+    }
+  } catch (err) {
+    result.errors.push(`Métricas del atleta: ${String(err)}`);
   }
 
   // Solo marcamos la sync como hecha si al menos una de las dos llamadas funcionó

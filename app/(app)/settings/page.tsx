@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { getSettingsData, saveTemplateSlot, saveThresholds, addGoal, deleteGoal, saveProfile } from "@/lib/settings-actions";
+import { getSettingsData, saveTemplateSlot, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
+import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const STIMULUS_OPTIONS = ["cycling", "gym", "rest"];
@@ -21,6 +22,85 @@ export default async function SettingsPage() {
     <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "24px" }}>Configuración</h1>
 
+      {/* Rendimiento: curva de potencia y configuración de deporte (Intervals) */}
+      {(() => {
+        const curve = user?.powerCurveJson as StoredPowerCurve | null;
+        const ss = user?.sportSettingsJson as StoredSportSettings | null;
+        const best5 = curve?.points?.find((p) => p.secs === 300)?.watts ?? null;
+        const fields = [
+          { name: "ftp", label: "FTP (W)", value: user?.ftp, remote: ss?.ftp, unit: "W" },
+          { name: "pvo2maxWatts", label: "Potencia en VO2max (W)", value: user?.pvo2maxWatts, remote: best5, unit: "W", remoteLabel: "mejor 5 min (90 d)" },
+          { name: "lthr", label: "FC de umbral (lpm)", value: user?.lthr, remote: ss?.lthr, unit: "lpm" },
+          { name: "maxHr", label: "FC máxima (lpm)", value: user?.maxHr, remote: ss?.maxHr, unit: "lpm" },
+        ];
+        return (
+          <div style={cardStyle}>
+            <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Rendimiento</h2>
+            <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "16px" }}>
+              Editá tus valores a mano o copiá los de Intervals. El HIIT usa el 100% de la potencia en VO2max y la recuperación el 50%; sin ese dato usa un % del FTP.
+              Cambiar el FTP no regenera un plan ya creado.
+            </p>
+
+            <form action={saveMetrics} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "10px" }}>
+              {fields.map((f) => (
+                <div key={f.name}>
+                  <label style={labelStyle}>{f.label}</label>
+                  <input name={f.name} type="number" defaultValue={f.value ?? ""} style={inputStyle} />
+                  <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "4px" }}>
+                    {f.name === "pvo2maxWatts" && user?.pvo2maxUpdatedAt
+                      ? `${user.pvo2maxSource === "intervals-5min" ? "Desde Intervals" : "Manual"} · ${new Date(user.pvo2maxUpdatedAt).toLocaleDateString("es-AR")}`
+                      : f.name === "ftp" && user?.ftpUpdatedAt
+                        ? `Actualizado ${new Date(user.ftpUpdatedAt).toLocaleDateString("es-AR")}`
+                        : "\u00A0"}
+                  </div>
+                </div>
+              ))}
+              <button type="submit" style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar rendimiento</button>
+            </form>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", margin: "14px 0" }}>
+              {fields.map((f) =>
+                f.remote != null && f.remote !== f.value ? (
+                  <form key={f.name} action={applyIntervalsValue}>
+                    <input type="hidden" name="field" value={f.name} />
+                    <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#4FD1C5", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+                      Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
+                    </button>
+                  </form>
+                ) : null
+              )}
+            </div>
+
+            <div style={{ fontSize: "11px", textTransform: "uppercase", color: "#8A97A6", marginBottom: "8px" }}>Curva de potencia — mejores esfuerzos, últimos 90 días</div>
+            {curve?.points?.length ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                {curve.points.map((p) => (
+                  <div key={p.secs} style={{ background: "#242F3B", borderRadius: "8px", padding: "8px 12px", minWidth: "78px" }}>
+                    <div style={{ fontSize: "10px", color: "#8A97A6" }}>{DURATION_LABEL[p.secs] ?? `${p.secs}s`}</div>
+                    <div style={{ fontSize: "16px", fontWeight: 600 }}>{p.watts} W</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: "12px", color: "#8A97A6" }}>
+                {curve?.error ? `${curve.error}. Respuesta recibida: ${curve.sample}` : "Todavía no se trajo la curva. Se actualiza sola con la sincronización, o tocá el botón."}
+              </div>
+            )}
+            {ss?.error && (
+              <div style={{ fontSize: "11px", color: "#8A97A6", marginTop: "10px" }}>Configuración de deporte: {ss.error}. Respuesta recibida: {ss.sample}</div>
+            )}
+            <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "10px" }}>
+              {user?.powerCurveSyncedAt ? `Última lectura de Intervals: ${new Date(user.powerCurveSyncedAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : "Sin lectura de Intervals todavía"}
+            </div>
+            <form action={refreshMetricsNow} style={{ marginTop: "8px" }}>
+              <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+                Leer de Intervals ahora
+              </button>
+            </form>
+          </div>
+        );
+      })()}
+
       {/* Perfil del atleta */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Tu perfil</h2>
@@ -28,15 +108,6 @@ export default async function SettingsPage() {
           Esto le da contexto real al chat sobre quién sos — actualizalo cuando sientas que cambió algo, no hace falta que sea diario.
         </p>
         <form action={saveProfile} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <div>
-            <label style={labelStyle}>Potencia en VO2max (W) — mejor esfuerzo de ~5 min o test de rampa</label>
-            <input name="pvo2maxWatts" type="number" min={100} max={800} defaultValue={user?.pvo2maxWatts ?? ""} placeholder="Ej: 380 (vacío = el HIIT usa un % de tu FTP)" style={inputStyle} />
-            {user?.pvo2maxUpdatedAt && (
-              <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "4px" }}>
-                Actualizado: {new Date(user.pvo2maxUpdatedAt).toLocaleDateString("es-AR")} — el HIIT usa el 100% de este valor y la recuperación el 50%
-              </div>
-            )}
-          </div>
           <div>
             <label style={labelStyle}>Trayectoria / experiencia</label>
             <textarea
