@@ -86,7 +86,8 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
 
   const now = new Date();
   const oldest = dateKeyLocal(new Date(now.getTime() - days * DAY_MS));
-  const newest = dateKeyLocal(new Date(now.getTime() + DAY_MS));
+  const newest = dateKeyLocal(new Date(now.getTime() + DAY_MS)); // actividades: incluye "mañana" por el desfase horario
+  const newestWellness = dateKeyLocal(now); // wellness: Intervals proyecta CTL/ATL a días futuros sin datos reales
 
   try {
     const activities = await getActivities(athleteId, apiKey, oldest, newest);
@@ -109,7 +110,7 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
   }
 
   try {
-    const wellness = await getWellness(athleteId, apiKey, oldest, newest);
+    const wellness = await getWellness(athleteId, apiKey, oldest, newestWellness);
     const wl = wellness as any[];
     for (let i = 0; i < wl.length; i += 10) {
       await Promise.all(

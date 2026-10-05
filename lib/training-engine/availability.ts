@@ -33,7 +33,7 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const minTsb = thresholds?.minTsb ?? -25;
 
   const latest = await prisma.wellness.findFirst({
-    where: { athleteId },
+    where: { athleteId, date: { lte: dayKeyDate(new Date()) } },
     orderBy: { date: "desc" },
   });
 

@@ -1,9 +1,10 @@
-import { dayRangeLocal, weekRangeLocal } from "@/lib/tz";
+import { dayKeyDate, dayRangeLocal, weekRangeLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
 
 export async function getDashboardData(athleteId: string) {
+  // Nunca "mañana": Intervals proyecta CTL/ATL a fechas futuras sin HRV/FC/sueño
   const latestWellness = await prisma.wellness.findFirst({
-    where: { athleteId },
+    where: { athleteId, date: { lte: dayKeyDate(new Date()) } },
     orderBy: { date: "desc" },
   });
 
@@ -52,7 +53,7 @@ export async function getTodayWorkout(athleteId: string) {
 export async function getLoadHistory(athleteId: string, days: number = 56) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const records = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: startDate }, ctl: { not: null } },
+    where: { athleteId, date: { gte: startDate, lte: dayKeyDate(new Date()) }, ctl: { not: null } },
     orderBy: { date: "asc" },
     select: { date: true, ctl: true, atl: true },
   });
@@ -106,7 +107,7 @@ export async function getCurrentWeekWorkouts(athleteId: string) {
 export async function getHrvRhrHistory(athleteId: string, days: number = 7) {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const records = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: startDate } },
+    where: { athleteId, date: { gte: startDate, lte: dayKeyDate(new Date()) } },
     orderBy: { date: "asc" },
     select: { date: true, hrv: true, restingHr: true },
   });
@@ -120,7 +121,7 @@ export async function getHrvRhrHistory(athleteId: string, days: number = 7) {
 export async function getAvailabilityHistory(athleteId: string, days: number = 30) {
   const startDate = new Date(Date.now() - (days + 7) * 24 * 60 * 60 * 1000);
   const records = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: startDate } },
+    where: { athleteId, date: { gte: startDate, lte: dayKeyDate(new Date()) } },
     orderBy: { date: "asc" },
     select: { date: true, hrv: true, ctl: true, atl: true },
   });

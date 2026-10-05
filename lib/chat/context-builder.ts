@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { dayKeyDate } from "@/lib/tz";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 
 export async function buildChatContext(athleteId: string, focusedWorkoutId?: string): Promise<string> {
@@ -28,7 +29,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   );
 
   const latestWellness = await prisma.wellness.findFirst({
-    where: { athleteId, ctl: { not: null } },
+    where: { athleteId, ctl: { not: null }, date: { lte: dayKeyDate(new Date()) } },
     orderBy: { date: "desc" },
   });
   if (latestWellness?.ctl != null && latestWellness?.atl != null) {
