@@ -199,18 +199,21 @@ export function buildBlocks(
     const numSeries = seriesOverride ?? defaultSeries;
     const restBetweenSeriesSec = 180;
 
-    // Libro (cap. 2): HIIT corto a 100-110% de la PAM. Con PAM medida se usa 105%, con tope de
-    // 140% FTP (carga neuromuscular); sin PAM, el %FTP de la librería.
-    const shortWatts =
-      pvo2maxWatts && stimulusType !== "rst"
-        ? Math.min(Math.round(pvo2maxWatts * 1.05), Math.round(ftp * 1.4))
-        : targetWatts;
+    // Rønnestad 2015 (SMS): "the power output during the first short work intervals was set to
+    // PVO2max", luego ajuste individual entre series a la máxima intensidad sostenible; la
+    // recuperación es el 50% de la potencia del intervalo. El libro (Chicharro) da 100-110% PAM.
+    // Con PAM medida se arranca al 100% (tope 140% FTP); sin PAM, el %FTP de la librería.
+    const usesPam = !!pvo2maxWatts && stimulusType !== "rst";
+    const shortWatts = usesPam
+      ? Math.min(Math.round(pvo2maxWatts as number), Math.round(ftp * 1.4))
+      : targetWatts;
+    const shortRecoveryWatts = usesPam ? Math.round(shortWatts * 0.5) : z2Watts;
 
     const blocks: WorkoutBlock[] = [...buildWarmupVo2(ftp)];
     for (let s = 0; s < numSeries; s++) {
       for (let i = 0; i < repsPerSeries; i++) {
         blocks.push({ type: "interval", durationSec: shortInterval, targetWatts: shortWatts });
-        blocks.push({ type: "recovery", durationSec: shortRecovery, targetWatts: z2Watts });
+        blocks.push({ type: "recovery", durationSec: shortRecovery, targetWatts: shortRecoveryWatts });
       }
       if (s < numSeries - 1) {
         blocks.push({ type: "recovery", durationSec: restBetweenSeriesSec, targetWatts: z2Watts });

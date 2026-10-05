@@ -28,7 +28,7 @@ aeróbico no sube.
 
 UMBRAL: 95-105% FTP, ej. 4x8min. Eleva el umbral de lactato.
 
-RØNNESTAD 30/15: ~110-130% FTP, ej. 3 series de 13x(30s/15s). Similar objetivo a HIIT genuino
+RØNNESTAD 30/15 (Rønnestad 2015 y 2020): 3 series de 13x(30s/15s), 3min entre series. Intensidad: la primera serie se fija en la potencia asociada al VO2max (PAM, no un %FTP) y luego se ajusta individualmente entre series a la máxima intensidad sostenible; recuperación al 50% de la potencia del intervalo. Sin PAM medida se usa ~125-130% FTP como aproximación de práctica (no es un valor del estudio). Similar objetivo a HIIT genuino
 (VO2max) pero con menor costo neuromuscular por las pausas cortas — buena alternativa cuando
 ya se usó el cupo semanal de HIIT genuino.
 

@@ -24,6 +24,7 @@ export function getExecutionTips(stimulusType: string): string[] {
       "Si no llegás al watt objetivo en el último bloque, es mejor bajar 5-10W que cortar el bloque.",
     ],
     ronnestad_30_15: [
+      "Arrancá la primera serie en tu potencia en VO2max (es el punto de partida del protocolo). Entre series ajustá: si terminaste las 13 repeticiones sin caerte, subí 5-10 W; si no llegaste, bajá. La consigna original es la máxima intensidad sostenible.",
       "Los 15s de recuperación son cortos a propósito — no bajes del todo la cadencia, mantenés el pedaleo suave.",
       "Es normal sentir acumulación fuerte hacia la serie 2-3, el objetivo es aguantar el patrón, no ir sobrado al principio.",
     ],
