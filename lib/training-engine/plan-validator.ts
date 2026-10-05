@@ -66,9 +66,9 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
 
     const reps = d.blocks.filter((b) => b.type === "interval").length;
     if (d.stimulusType === "hiit_genuino") {
-      const step = Math.floor(d.weekIndex / 5);
-      const expected = Math.min(10, 7 + 0); // el escalón sube duración/reps cada mesociclo
-      if (reps < 7 || reps > 10) w.push(`${label(d)}: ${reps} repeticiones (esperado 7–10; base ${expected}, escalón ${step + 1})`);
+      // En deload/taper la sesión de mantenimiento lleva la mitad de repeticiones (mín. 3)
+      const minReps = d.isDeload || d.rationale.includes("TAPER") ? 3 : 7;
+      if (reps < minReps || reps > 10) w.push(`${label(d)}: ${reps} repeticiones (esperado ${minReps}–10)`);
       const longestInt = Math.max(...d.blocks.filter((b) => b.type === "interval").map((b) => b.durationSec));
       if (longestInt > 5 * 60) w.push(`${label(d)}: intervalo de ${Math.round(longestInt / 60)} min (>5)`);
     }
@@ -84,9 +84,10 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     if (!Number.isFinite(d.tss) || d.tss < 0 || d.tss > 400) w.push(`${label(d)}: TSS fuera de rango (${d.tss})`);
   }
 
-  // Deload sin calidad
-  for (const d of plan) {
-    if (d.isDeload && VO2_STIMULI.has(d.stimulusType)) w.push(`${label(d)}: sesión de VO2max en semana de deload`);
+  // Deload: como máximo UNA sesión de VO2max (de mantenimiento) por semana
+  for (const [wk, days] of weeks) {
+    const n = days.filter((d) => d.isDeload && VO2_STIMULI.has(d.stimulusType)).length;
+    if (n > 1) w.push(`Semana ${wk + 1} (deload): ${n} sesiones de VO2max (máx. 1 de mantenimiento)`);
   }
 
   return w;

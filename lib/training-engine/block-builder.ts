@@ -60,7 +60,8 @@ export function buildBlocks(
   intensityPctHigh: number | null,
   progressionStep: number = 0,
   seriesOverride?: number,
-  pvo2maxWatts?: number | null
+  pvo2maxWatts?: number | null,
+  maintenance: boolean = false
 ): WorkoutBlock[] {
   const totalSec = targetDurationMin * 60;
   const z2Watts = Math.round(ftp * 0.68);
@@ -123,7 +124,8 @@ export function buildBlocks(
     const recoverySec = progression.recoverySec;
     // El protocolo manda: las repeticiones NO se recortan al tiempo del slot
     // (si no entran, la sesión dura lo que el protocolo necesita).
-    const reps = progression.reps;
+    // Mantenimiento (deload/taper): mitad de repeticiones (mín. 3), misma intensidad
+    const reps = maintenance ? Math.max(3, Math.ceil(progression.reps / 2)) : progression.reps;
 
     // Base de conocimiento (Chicharro & Vicente-Campos 2018): HIIT genuino al 100% de la
     // potencia en VO2max y recuperación activa ~50%. Sin dato medido se usa el %FTP de la librería.
@@ -151,10 +153,14 @@ export function buildBlocks(
   const cooldownSec = Math.min(600, Math.round(totalSec * 0.12));
 
   if (stimulusType === "sweet_spot" || stimulusType === "umbral") {
-    const blockSec = stimulusType === "sweet_spot" ? 1200 : 480;
+    // Progresión por mesociclo: sweet spot 20→25→30 min, umbral 8→10→12 min (práctica de
+    // entrenadores; no hay ensayos que validen una progresión concreta)
+    const step = Math.min(2, Math.max(0, progressionStep));
+    const blockSec = stimulusType === "sweet_spot" ? [1200, 1500, 1800][step] : [480, 600, 720][step];
     const recoverySec = 300;
     const availableForIntervals = totalSec - warmupSec - cooldownSec;
-    const reps = Math.max(1, Math.min(4, Math.floor(availableForIntervals / (blockSec + recoverySec))));
+    let reps = Math.max(1, Math.min(4, Math.floor(availableForIntervals / (blockSec + recoverySec))));
+    if (maintenance) reps = Math.max(1, Math.ceil(reps / 2));
 
     const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
     for (let i = 0; i < reps; i++) {

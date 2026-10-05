@@ -46,6 +46,7 @@ export interface PlannedDay {
   rationale: string;
 }
 
+const MAINTAINABLE = new Set(["hiit_genuino", "ronnestad_30_15", "sweet_spot", "umbral"]);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function getFtpTestStimulusType(protocol: string | null | undefined): string {
@@ -111,7 +112,21 @@ export function buildPlan(input: {
   const totalDays = Math.ceil((block.endDate.getTime() - block.startDate.getTime()) / DAY_MS);
   const totalWeeks = Math.ceil(totalDays / 7);
 
-  const mesocycleWeeks = buildMesocycleWeeks(totalWeeks, thresholds.deloadRatio);
+  const isTapering = block.objective === "tapering";
+  // Taper (Bosquet 2007): sin ciclos de deload; el volumen baja ~40-55% en las últimas 2 semanas
+  // manteniendo intensidad y frecuencia. Antes de eso, carga normal.
+  const mesocycleWeeks = isTapering
+    ? Array.from({ length: totalWeeks }, (_, i) => {
+        const fromEnd = totalWeeks - 1 - i;
+        return {
+          weekNumber: i + 1,
+          isDeload: false,
+          loadMultiplier: fromEnd === 0 ? 0.45 : fromEnd === 1 ? 0.6 : 1.0,
+          progressionStep: 0,
+        };
+      })
+    : buildMesocycleWeeks(totalWeeks, thresholds.deloadRatio);
+  const taperWeek = (i: number) => isTapering && totalWeeks - 1 - i <= 1;
   const cycleLength = (parseInt(thresholds.deloadRatio.split(":")[0], 10) || 3) + 1;
   const ftpTestWeekIndices = computeFtpTestWeekIndices(totalWeeks, thresholds.weeksBetweenFtpTest, mesocycleWeeks);
   const ftpTestStimulusType = getFtpTestStimulusType(thresholds.ftpTestProtocol);
@@ -138,13 +153,18 @@ export function buildPlan(input: {
     const isFirstQualityDayOfWeek = qualityDaySlots.length > 0 && qualityDaySlots[0].dayOfWeek === dayOfWeek;
 
     let effectiveStimulusType: string;
+    let maintenance = false;
     if (slot.stimulusType === "gym") {
       effectiveStimulusType = "gym";
     } else if (slot.isQualityDay) {
       if (isFtpTestWeek && isFirstQualityDayOfWeek) {
         effectiveStimulusType = ftpTestStimulusType;
-      } else if (mesocycleWeek.isDeload) {
-        effectiveStimulusType = "z2";
+      } else if (mesocycleWeek.isDeload || taperWeek(weekIndex)) {
+        // Deload/taper: se conserva UNA sesión de intensidad con volumen reducido
+        // (la intensidad es lo que se mantiene; el volumen es lo que baja).
+        const keep = isFirstQualityDayOfWeek && MAINTAINABLE.has(isTapering ? "hiit_genuino" : primaryStimulus);
+        effectiveStimulusType = keep ? (isTapering ? "hiit_genuino" : primaryStimulus) : "z2";
+        maintenance = keep;
       } else {
         const positionInWeek = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
         effectiveStimulusType = baseStimuliForWeek[positionInWeek] ?? primaryStimulus;
@@ -157,8 +177,15 @@ export function buildPlan(input: {
     const targetDuration = Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier);
 
     // Un escalón de progresión del HIIT genuino por mesociclo (cada 4-6 semanas según la base de conocimiento).
-    const progressionStep = effectiveStimulusType === "hiit_genuino" ? Math.floor(weekIndex / cycleLength) : 0;
-    const series = effectiveStimulusType === "ronnestad_30_15" ? ronnestadSeriesFor(weekIndex, cycleLength) : undefined;
+    const progressionStep = ["hiit_genuino", "sweet_spot", "umbral"].includes(effectiveStimulusType)
+      ? Math.floor(weekIndex / cycleLength)
+      : 0;
+    const series =
+      effectiveStimulusType === "ronnestad_30_15"
+        ? maintenance
+          ? 1
+          : ronnestadSeriesFor(weekIndex, cycleLength)
+        : undefined;
 
     const blocks = buildBlocks(
       effectiveStimulusType,
@@ -168,11 +195,12 @@ export function buildPlan(input: {
       lib?.intensityPctFtpHigh ?? null,
       progressionStep,
       series,
-      pvo2maxWatts
+      pvo2maxWatts,
+      maintenance
     );
 
     const rationaleParts = [
-      `Plan del bloque "${block.name}" — semana ${weekIndex + 1} del mesociclo${mesocycleWeek.isDeload ? " (DELOAD, -45% volumen)" : ""}`,
+      `Plan del bloque "${block.name}" — semana ${weekIndex + 1} del mesociclo${mesocycleWeek.isDeload ? " (DELOAD, -45% volumen, se mantiene 1 sesión de intensidad reducida)" : taperWeek(weekIndex) ? " (TAPER: volumen reducido, intensidad y frecuencia conservadas — Bosquet 2007)" : ""}`,
     ];
     if (effectiveStimulusType.startsWith("ftp_test")) {
       rationaleParts.push(
