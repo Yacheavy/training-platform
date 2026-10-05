@@ -157,8 +157,12 @@ export async function getPlanVsActual(athleteId: string, weeks = 10): Promise<We
     w.actualMin += a.durationSec / 60;
     w.actualTss += a.tss ?? 0;
   }
+  // La primera semana del plan suele estar incompleta (se generó a mitad de semana): no sirve para medir cumplimiento
+  const firstPlanned = planned.length ? planned.reduce((m, p) => (p.date < m ? p.date : m), planned[0].date) : null;
+  const firstWeekIdx = firstPlanned ? idxOf(firstPlanned) : -1;
+  const startsMidWeek = firstPlanned ? firstPlanned.getTime() - (firstStart + firstWeekIdx * WEEK_MS) > 1.5 * DAY_MS : false;
   out.forEach((w, i) => {
-    const refTss = plannedToDate[i].tss;
+    const refTss = i === firstWeekIdx && startsMidWeek ? 0 : plannedToDate[i].tss;
     w.compliancePct = refTss > 0 ? Math.round((w.actualTss / refTss) * 100) : null;
     w.plannedMin = Math.round(w.plannedMin);
     w.plannedTss = Math.round(w.plannedTss);

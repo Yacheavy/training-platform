@@ -8,6 +8,9 @@ export const STIMULUS_LABELS: Record<string, string> = {
   rst: "RST",
   sweet_spot: "Sweet spot",
   umbral: "Umbral",
+  ftp_test: "Test de FTP (20 min)",
+  ftp_test_8min: "Test de FTP (8 min)",
+  ftp_test_5min: "Test de FTP (5 min)",
   other: "Otro",
 };
 

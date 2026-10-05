@@ -28,6 +28,7 @@ import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart"
 import { PhaseTimeline } from "@/components/PhaseTimeline";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { CheckinForm } from "@/components/CheckinForm";
+import { Card, Section } from "@/components/Card";
 import { prisma } from "@/lib/prisma";
 
 const WARN_KEYWORDS = ["⚠", "bajando", "Ya alcanzaste", "RED", "AMBER"];
@@ -84,315 +85,279 @@ export default async function DashboardPage() {
       }))
     : [];
 
+  const sessionLabel = (k: string) => STIMULUS_LABELS[k] ?? k;
+  const checkinSummary = existingCheckin
+    ? [
+        ["Sueño", existingCheckin.sleepQuality],
+        ["Fatiga", existingCheckin.fatigue],
+        ["Estrés", existingCheckin.stress],
+        ["Dolor", existingCheckin.muscleSoreness],
+        ["Ánimo", existingCheckin.mood],
+      ]
+    : null;
+
+  const recentActivitiesCard = (
+    <Card
+      title="Últimas actividades"
+      subtitle="Tocá una para ver su resumen."
+      action={
+        <ActionForm action={syncNow} success="Datos actualizados desde Intervals">
+          <SubmitButton pendingText="Sincronizando…" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: "8px", padding: "5px 12px", fontSize: "12px" }}>
+            Sincronizar
+          </SubmitButton>
+        </ActionForm>
+      }
+    >
+      {data.recentActivities.length === 0 && <div style={{ fontSize: "12.5px", color: "var(--text-dim)" }}>Todavía no hay actividades sincronizadas.</div>}
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {data.recentActivities.map((a) => {
+          const mins = Math.round(a.durationSec / 60);
+          const dur = mins >= 60 ? `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}` : `${mins} min`;
+          const chips: string[] = [];
+          if (a.normalizedPower) chips.push(`${Math.round(a.normalizedPower)} W NP`);
+          else if (a.avgPower) chips.push(`${Math.round(a.avgPower)} W`);
+          if (a.avgHr) chips.push(`${Math.round(a.avgHr)} lpm`);
+          if (a.distanceM) chips.push(`${(a.distanceM / 1000).toFixed(1)} km`);
+          return (
+            <Link key={a.id} href={`/activities/${a.id}`} className="activity-card" style={{ textDecoration: "none", color: "inherit" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px", border: "1px solid var(--border)", borderRadius: "12px", background: "var(--surface-2, transparent)" }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(79,209,197,.1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <ActivityIcon type={a.type} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "13.5px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{a.name ?? a.type}</span>
+                    {a.type === "Ride" && (
+                      <span style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "1px 8px", whiteSpace: "nowrap" }}>
+                        {sessionLabel(a.stimulus)}
+                      </span>
+                    )}
+                    {a.deviationFlag !== "NONE" && (
+                      <span style={{ fontSize: "10px", color: "var(--amber)", whiteSpace: "nowrap" }}>
+                        {a.deviationFlag === "HARDER_THAN_PLANNED" ? "▲ más duro que el plan" : "▼ más suave que el plan"}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "3px" }}>
+                    {new Date(a.date).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", timeZone: ATHLETE_TZ })}
+                    {chips.length > 0 && <span> · {chips.join(" · ")}</span>}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "var(--font-mono)" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600 }}>
+                    {a.tss ? Math.round(a.tss) : "—"}
+                    <span style={{ fontSize: "10px", color: "var(--text-dim)", marginLeft: "3px" }}>TSS</span>
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>{dur}</div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </Card>
+  );
+
   return (
     <div className="page-container">
       <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 600, letterSpacing: "-0.01em" }}>
-            Hola, {session.user.name?.split(" ")[0]}
-          </h1>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "12.5px", color: "var(--text-muted)", marginTop: "6px" }}>
-            Último wellness: {data.lastWellnessDate ? new Date(data.lastWellnessDate).toLocaleDateString("es-AR") : "sin datos"}
+          <h1 style={{ fontSize: "22px", fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Hola, {session.user.name?.split(" ")[0]}</h1>
+          <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "6px" }}>
+            {data.hrvDate ? `Último dato de recuperación: ${ageLabel(data.hrvDate).replace(/[()]/g, "")}` : "Todavía no hay datos de recuperación"}
           </div>
         </div>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "14px 18px" }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "14px 18px", maxWidth: "100%" }}>
           <AvailabilityRing status={availability.status} signalsTriggered={availability.signalsTriggered} reasons={availability.reasons} />
         </div>
       </div>
 
-      <div
-        className="grid-stats"
-        style={{
-          marginBottom: "16px",
-        }}
-      >
-        <StatCard label="CTL · Fitness" value={data.ctl?.toFixed(1) ?? "—"} desc="Carga crónica: promedio de 42 días de TSS (Coggan)" />
-        <StatCard label="ATL · Fatiga" value={data.atl?.toFixed(1) ?? "—"} desc="Carga aguda: promedio de 7 días de TSS" />
-        <StatCard
-          label="TSB · Forma"
-          value={data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—"}
-          desc="CTL menos ATL — positivo es fresco, negativo es fatigado"
-          accent={data.tsb != null ? (data.tsb < -25 ? "red" : data.tsb > 5 ? "teal" : undefined) : undefined}
-        />
-        <StatCard
-          label={`HRV ${ageLabel(data.hrvDate)}`}
-          value={data.hrvToday?.toFixed(0) ?? "—"}
-          sub={hrvDeltaPct != null ? `${hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(hrvDeltaPct)}% vs 7d` : undefined}
-          desc="Variabilidad cardíaca — se compara contra tu propia media de 7 días"
-        />
-        <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} desc="Pulsaciones al despertar, tendencia de fatiga acumulada" />
-        <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} desc="Horas dormidas la última noche" />
-      </div>
-
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
-        <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-          Plan de entrenamiento
-        </div>
-        <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "14px" }}>
-          Navegá semana a semana con las flechas (o deslizando en el celular)
-        </div>
-        <PlanNavigator workouts={planWorkouts} nowISO={new Date().toISOString()} />
-      </div>
-
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
-        <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-          Periodización — próximos bloques
-        </div>
-        <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "16px" }}>
-          Objetivo activo y bloques configurados hacia adelante
-        </div>
-        <PhaseTimeline blocks={upcomingBlocks} />
-      </div>
-
-      {availabilityHistory.length > 0 && (
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
-          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-            Historial de disponibilidad — 30 días
-          </div>
-          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
-            Score combinado de HRV vs. tu media móvil + TSB, día a día
-          </div>
-          <AvailabilityHistoryChart data={availabilityHistory} />
-        </div>
-      )}
-
-      <div className="grid-2col-eq" style={{ marginBottom: "16px" }}>
-        {loadHistory.length > 0 && (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
-            <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-              Carga de entrenamiento — 8 semanas
-            </div>
-            <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
-              CTL (fitness), ATL (fatiga) y TSB (forma) calculados por Intervals.icu
-            </div>
-            <LoadChart data={loadHistory} />
-          </div>
-        )}
-
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
-          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-            HRV y FC de reposo — 30 días
-          </div>
-          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
-            {hrvBand.band
-              ? `La franja es tu rango habitual (${Math.round(hrvBand.band.low)}–${Math.round(hrvBand.band.high)} ms, calculado con tus últimos ${hrvBand.band.days} días). Si la línea gruesa se sale por debajo varios días, es una señal de fatiga.`
-              : "Todavía no hay 4 semanas de HRV para calcular tu rango habitual; mientras tanto se compara contra la media de los días previos."}
-          </div>
-          <HrvRhrChart points={hrvBand.points} band={hrvBand.band} />
-        </div>
-      </div>
-
-      <div className="grid-2col-eq" style={{ marginBottom: "16px" }}>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
-          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-            Distribución de intensidad
-          </div>
-          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
-            {lowPct != null
-              ? `En las últimas 4 semanas el ${lowPct}% del tiempo fue en zona baja. La referencia para entrenamiento polarizado es cerca de 80%.`
-              : "Horas por semana en zona baja, media y alta."}
-          </div>
-          <IntensityChart data={intensity} />
-        </div>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
-          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-            Plan vs. realizado
-          </div>
-          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
-            {avgCompliance != null
-              ? `Cumplimiento de las últimas semanas: ${avgCompliance}% de la carga planificada (TSS).`
-              : "Carga planificada contra la carga que hiciste, semana a semana."}
-          </div>
-          <PlanVsActualChart data={planVsActual} />
-        </div>
-      </div>
-
-      <div className="grid-2col-b" style={{ marginBottom: "16px" }}>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-            Check-in de hoy
-          </div>
-          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "16px" }}>
-            Escala tipo Hooper-Mackinnon — el estrés es el ítem que más pesa según tu perfil
-          </div>
-          <CheckinForm existing={existingCheckin} />
-        </div>
-
-        {todayWorkout && (
-          <div
-            style={{
-              background: "linear-gradient(135deg, var(--surface), var(--surface-2))",
-              border: `1px solid ${wasAdjusted ? "var(--amber)" : "var(--teal)"}`,
-              borderRadius: "14px",
-              padding: "20px",
-              display: "flex",
-              flexDirection: "column",
-            }}
+      <Section title="Hoy">
+        <div className="dash-row today">
+          <Card
+            title="Check-in de hoy"
+            subtitle={existingCheckin ? "Ya lo completaste. Si algo cambió, podés actualizarlo." : "Cinco preguntas rápidas. Con esto la app ajusta la sesión de hoy si venís cansado."}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "12px" }}>
-              <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)" }}>
-                Sesión de hoy
-              </div>
-              {wasAdjusted && (
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "11px",
-                    color: "var(--amber)",
-                    background: "rgba(232,163,61,.15)",
-                    border: "1px solid var(--amber)",
-                    padding: "3px 9px",
-                    borderRadius: "6px",
-                  }}
-                >
-                  ⚠ Ajustado por check-in
-                </span>
-              )}
-            </div>
-
-            {wasAdjusted ? (
-              <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "14px", color: "var(--text-dim)", textDecoration: "line-through" }}>
-                  {originalSuggestion}
-                </span>
-                <span style={{ color: "var(--text-dim)" }}>→</span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 600, color: "var(--text)" }}>
-                  {todayWorkout.workoutLibraryKey}
-                </span>
-              </div>
+            {checkinSummary ? (
+              <details className="checkin">
+                <summary>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                    {checkinSummary.map(([label, v]) => (
+                      <span key={label as string} style={{ fontSize: "12px", background: "var(--surface-3)", borderRadius: "8px", padding: "5px 10px" }}>
+                        {label} <strong style={{ fontFamily: "var(--font-mono)", color: "var(--teal)" }}>{v ?? "—"}</strong>
+                      </span>
+                    ))}
+                  </div>
+                  <span style={{ color: "var(--teal)", fontSize: "12.5px", fontWeight: 600 }}>Editar check-in</span>
+                </summary>
+                <div style={{ marginTop: "16px" }}>
+                  <CheckinForm existing={existingCheckin} />
+                </div>
+              </details>
             ) : (
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 600, marginBottom: "4px" }}>
-                {todayWorkout.workoutLibraryKey}
-              </div>
+              <CheckinForm existing={existingCheckin} />
             )}
+          </Card>
 
-            <div style={{ display: "flex", gap: "20px", marginTop: "12px", marginBottom: "16px" }}>
-              <MiniStat label="TSS" value={`${Math.round(todayWorkout.estimatedTss ?? 0)}`} />
-              <MiniStat label="kJ" value={`${Math.round(todayWorkout.estimatedKj ?? 0)}`} />
-              <MiniStat label="Carbos" value={`${todayWorkout.suggestedCarbsG ?? 0}g`} />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "8px", marginBottom: "16px", flex: 1 }}>
-              {rationaleItems.map((item, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    gap: "8px",
-                    alignItems: "flex-start",
-                    fontSize: "11.5px",
-                    color: "var(--text-muted)",
-                    padding: "9px 10px",
-                    background: "rgba(0,0,0,.15)",
-                    borderRadius: "8px",
-                    border: "1px solid var(--border)",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: "6px",
-                      height: "6px",
-                      borderRadius: "50%",
-                      marginTop: "5px",
-                      flexShrink: 0,
-                      background: item.warn ? "var(--amber)" : "var(--teal)",
-                    }}
-                  />
-                  {item.text}
-                </div>
-              ))}
-            </div>
-
-            <a
-              href={`/workouts/${todayWorkout.id}`}
-              style={{ color: "var(--teal)", fontSize: "12px", display: "inline-block", marginBottom: "8px", marginRight: "16px", textDecoration: "none" }}
+          {todayWorkout ? (
+            <div
+              className="dash-card"
+              style={{
+                background: "linear-gradient(135deg, var(--surface), var(--surface-2))",
+                borderColor: wasAdjusted ? "var(--amber)" : "var(--teal)",
+                display: "flex",
+                flexDirection: "column",
+              }}
             >
-              Ver detalle completo →
-            </a>
-            <a
-              href={`/chat?workoutId=${todayWorkout.id}`}
-              style={{ color: "var(--teal)", fontSize: "12px", display: "inline-block", marginBottom: "14px", textDecoration: "none" }}
-            >
-              Pedir ajustes a este entrenamiento →
-            </a>
-            <div style={{ display: "flex", gap: "10px" }}>
-              {todayWorkout.status === "SUGGESTED" && (
-                <ActionForm action={approveWorkout} success="Sesión aprobada">
-                  <input type="hidden" name="workoutId" value={todayWorkout.id} />
-                  <ActionButton primary>Aprobar</ActionButton>
-                </ActionForm>
-              )}
-              {(todayWorkout.status === "APPROVED" || todayWorkout.status === "EDITED") && (
-                <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
-                  <input type="hidden" name="workoutId" value={todayWorkout.id} />
-                  <ActionButton primary>Enviar a Intervals</ActionButton>
-                </ActionForm>
-              )}
-              {todayWorkout.status === "SENT_TO_INTERVALS" && (
-                <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals</span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+                <h3 className="dash-card-title">Sesión de hoy</h3>
+                {wasAdjusted && (
+                  <span style={{ fontSize: "11px", color: "var(--amber)", background: "rgba(232,163,61,.15)", border: "1px solid var(--amber)", padding: "3px 9px", borderRadius: "6px" }}>
+                    Ajustada por tu check-in
+                  </span>
+                )}
+              </div>
 
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
-        <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "14px" }}>
-          Últimas actividades
-          <ActionForm action={syncNow} success="Datos actualizados desde Intervals" style={{ display: "inline", float: "right" }}>
-            <button type="submit" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: "6px", padding: "2px 8px", fontSize: "11px", cursor: "pointer" }}>
-              Sincronizar
-            </button>
-          </ActionForm>
-        </div>
-        {data.recentActivities.length === 0 && (
-          <div style={{ fontSize: "12.5px", color: "var(--text-dim)" }}>Todavía no hay actividades sincronizadas.</div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {data.recentActivities.map((a) => {
-            const mins = Math.round(a.durationSec / 60);
-            const dur = mins >= 60 ? `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}` : `${mins} min`;
-            const chips: string[] = [];
-            if (a.normalizedPower) chips.push(`${Math.round(a.normalizedPower)} W NP`);
-            else if (a.avgPower) chips.push(`${Math.round(a.avgPower)} W`);
-            if (a.avgHr) chips.push(`${Math.round(a.avgHr)} lpm`);
-            if (a.distanceM) chips.push(`${(a.distanceM / 1000).toFixed(1)} km`);
-            return (
-              <Link key={a.id} href={`/activities/${a.id}`} className="activity-card" style={{ textDecoration: "none", color: "inherit" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px", border: "1px solid var(--border)", borderRadius: "12px", background: "var(--surface-2, transparent)" }}>
-                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(79,209,197,.1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <ActivityIcon type={a.type} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "13.5px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{a.name ?? a.type}</span>
-                      {a.type === "Ride" && (
-                        <span style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "1px 8px", whiteSpace: "nowrap" }}>
-                          {STIMULUS_LABELS[a.stimulus] ?? a.stimulus}
-                        </span>
-                      )}
-                      {a.deviationFlag !== "NONE" && (
-                        <span style={{ fontSize: "10px", color: "var(--amber)", whiteSpace: "nowrap" }}>
-                          {a.deviationFlag === "HARDER_THAN_PLANNED" ? "▲ más duro que el plan" : "▼ más suave que el plan"}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "3px" }}>
-                      {new Date(a.date).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", timeZone: ATHLETE_TZ })}
-                      {chips.length > 0 && <span> · {chips.join(" · ")}</span>}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "var(--font-mono)" }}>
-                    <div style={{ fontSize: "14px", fontWeight: 600 }}>{a.tss ? Math.round(a.tss) : "—"}<span style={{ fontSize: "10px", color: "var(--text-dim)", marginLeft: "3px" }}>TSS</span></div>
-                    <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>{dur}</div>
-                  </div>
+              {wasAdjusted ? (
+                <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "14px", color: "var(--text-dim)", textDecoration: "line-through" }}>{sessionLabel(originalSuggestion!)}</span>
+                  <span style={{ color: "var(--text-dim)" }}>→</span>
+                  <span style={{ fontSize: "20px", fontWeight: 600 }}>{sessionLabel(todayWorkout.workoutLibraryKey)}</span>
                 </div>
-              </Link>
-            );
-          })}
+              ) : (
+                <div style={{ fontSize: "20px", fontWeight: 600, marginBottom: "4px" }}>{sessionLabel(todayWorkout.workoutLibraryKey)}</div>
+              )}
+
+              <div style={{ display: "flex", gap: "22px", marginTop: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+                <MiniStat label="TSS" value={`${Math.round(todayWorkout.estimatedTss ?? 0)}`} />
+                <MiniStat label="kJ" value={`${Math.round(todayWorkout.estimatedKj ?? 0)}`} />
+                <MiniStat label="Carbos" value={todayWorkout.suggestedCarbsG ? `${Math.round(todayWorkout.suggestedCarbsG)} g` : "—"} />
+              </div>
+
+              {rationaleItems.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "8px", marginBottom: "16px", flex: 1 }}>
+                  {rationaleItems.map((item, i) => (
+                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "11.5px", color: "var(--text-muted)", padding: "9px 10px", background: "rgba(0,0,0,.15)", borderRadius: "8px", border: "1px solid var(--border)", lineHeight: 1.4 }}>
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", marginTop: "5px", flexShrink: 0, background: item.warn ? "var(--amber)" : "var(--teal)" }} />
+                      {item.text}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "14px" }}>
+                <Link href={`/workouts/${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Ver detalle completo</Link>
+                <Link href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat</Link>
+              </div>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                {todayWorkout.status === "SUGGESTED" && (
+                  <ActionForm action={approveWorkout} success="Sesión aprobada">
+                    <input type="hidden" name="workoutId" value={todayWorkout.id} />
+                    <ActionButton primary>Aprobar</ActionButton>
+                  </ActionForm>
+                )}
+                {(todayWorkout.status === "APPROVED" || todayWorkout.status === "EDITED") && (
+                  <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
+                    <input type="hidden" name="workoutId" value={todayWorkout.id} />
+                    <ActionButton primary>Enviar a Intervals</ActionButton>
+                  </ActionForm>
+                )}
+                {todayWorkout.status === "SENT_TO_INTERVALS" && <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviada a Intervals</span>}
+              </div>
+            </div>
+          ) : (
+            <Card title="Sesión de hoy" subtitle="No hay una sesión planificada para hoy.">
+              <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Es un día de descanso en tu plan, o todavía no generaste el plan. Podés revisar la semana más abajo o regenerar el plan desde{" "}
+                <Link href="/settings" style={{ color: "var(--teal)", textDecoration: "none" }}>Ajustes</Link>.
+              </div>
+            </Card>
+          )}
         </div>
-      </div>
+      </Section>
+
+      <Section title="Cómo estás">
+        <div className="grid-stats">
+          <StatCard label="CTL · Fitness" value={data.ctl?.toFixed(1) ?? "—"} desc="Carga crónica: promedio de 42 días de TSS" />
+          <StatCard label="ATL · Fatiga" value={data.atl?.toFixed(1) ?? "—"} desc="Carga aguda: promedio de 7 días de TSS" />
+          <StatCard
+            label="TSB · Forma"
+            value={data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—"}
+            desc="CTL menos ATL: positivo es fresco, negativo es fatigado"
+            accent={data.tsb != null ? (data.tsb < -25 ? "red" : data.tsb > 5 ? "teal" : undefined) : undefined}
+          />
+          <StatCard
+            label={`HRV ${ageLabel(data.hrvDate)}`}
+            value={data.hrvToday?.toFixed(0) ?? "—"}
+            sub={hrvDeltaPct != null ? `${hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(hrvDeltaPct)}% vs 7d` : undefined}
+            desc="Se compara contra tu media de 7 días"
+          />
+          <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} desc="Pulsaciones en reposo; sube con la fatiga acumulada" />
+          <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} desc="Horas dormidas" />
+        </div>
+      </Section>
+
+      <Section title="Tu plan">
+        <Card title="Plan de entrenamiento" subtitle="Navegá semana a semana con las flechas, o deslizando en el celular.">
+          <PlanNavigator workouts={planWorkouts} nowISO={new Date().toISOString()} />
+        </Card>
+        <div style={{ height: "16px" }} />
+        <Card title="Periodización" subtitle="Objetivo activo y bloques configurados hacia adelante.">
+          <PhaseTimeline blocks={upcomingBlocks} />
+        </Card>
+      </Section>
+
+      <Section title="Recuperación">
+        <div className="dash-row two">
+          <Card
+            title="HRV y FC de reposo, 30 días"
+            subtitle={
+              hrvBand.band
+                ? `La franja es tu rango habitual (${Math.round(hrvBand.band.low)}–${Math.round(hrvBand.band.high)} ms, según tus últimos ${hrvBand.band.days} días). Si la línea gruesa se mantiene por debajo varios días, es señal de fatiga.`
+                : "Todavía no hay 4 semanas de HRV para calcular tu rango habitual; mientras tanto se compara contra la media de los días previos."
+            }
+          >
+            <HrvRhrChart points={hrvBand.points} band={hrvBand.band} />
+          </Card>
+          {availabilityHistory.length > 0 && (
+            <Card title="Disponibilidad, 30 días" subtitle="Puntaje que combina tu HRV contra tu media de 7 días y tu forma (TSB), día a día. Solo se calcula en días con datos.">
+              <AvailabilityHistoryChart data={availabilityHistory} />
+            </Card>
+          )}
+        </div>
+      </Section>
+
+      <Section title="Carga y cumplimiento">
+        <div className="dash-row two" style={{ marginBottom: "16px" }}>
+          {loadHistory.length > 0 && (
+            <Card title="Carga de entrenamiento, 8 semanas" subtitle="CTL (fitness), ATL (fatiga) y TSB (forma), calculados por Intervals.icu.">
+              <LoadChart data={loadHistory} />
+            </Card>
+          )}
+          <Card
+            title="Distribución de intensidad"
+            subtitle={
+              lowPct != null
+                ? `En las últimas 4 semanas el ${lowPct}% del tiempo fue en zona baja. La referencia para entrenamiento polarizado es cerca de 80%.`
+                : "Horas por semana en zona baja, media y alta."
+            }
+          >
+            <IntensityChart data={intensity} />
+          </Card>
+        </div>
+        <Card
+          title="Plan vs. realizado"
+          subtitle={
+            avgCompliance != null
+              ? `Cumplimiento de las últimas semanas completas: ${avgCompliance}% de la carga planificada (TSS). Las semanas sin plan completo no se cuentan.`
+              : "Carga planificada contra la que hiciste, semana a semana. El cumplimiento aparece cuando hay semanas completas con plan."
+          }
+        >
+          <PlanVsActualChart data={planVsActual} />
+        </Card>
+      </Section>
+
+      <Section title="Actividad reciente">{recentActivitiesCard}</Section>
     </div>
   );
 }

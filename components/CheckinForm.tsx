@@ -29,7 +29,7 @@ export function CheckinForm({
   const complete = FIELDS.every((f) => values[f.key] != null);
 
   return (
-    <ActionForm action={saveCheckin} success="Check-in guardado" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+    <ActionForm action={saveCheckin} success="Check-in guardado" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {FIELDS.map((field) => (
         <div key={field.key}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
