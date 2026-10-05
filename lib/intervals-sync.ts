@@ -19,7 +19,7 @@ export function mapActivity(a: any, userId: string) {
     avgHr: a.average_heartrate,
     maxHr: a.max_heartrate,
     avgCadence: a.average_cadence,
-    kilojoules: a.icu_joules,
+    kilojoules: a.icu_joules != null ? a.icu_joules / 1000 : null, // Intervals lo entrega en julios
     tss: a.icu_training_load,
     intensityFactor: a.icu_intensity,
     elevationGainM: a.total_elevation_gain,
