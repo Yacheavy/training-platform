@@ -45,9 +45,17 @@ export function classifyStimulusType(activity: {
 
       const pctHighIntensity = pctZ5 + pctZ6 + pctZ7;
 
-      if (pctZ1 + pctZ2 > 75) return "z2";
+      // Minutos absolutos en Z5+: un fondo largo con 8 min de VO2max sigue
+      // siendo un estímulo de VO2max aunque el % sea bajo; lo evaluamos
+      // antes de la regla de "mayormente Z1+Z2".
+      const highMinutes =
+        zoneTimes
+          .filter((z) => ["Z5", "Z6", "Z7"].includes(z.id))
+          .reduce((s, z) => s + z.secs, 0) / 60;
 
-      if (pctHighIntensity > 8) {
+      if (pctZ1 + pctZ2 > 75 && highMinutes < 6) return "z2";
+
+      if (pctHighIntensity > 8 || highMinutes >= 6) {
         const name = (activity.name ?? "").toLowerCase();
         if (name.includes("hiit corto") || name.includes("30/15") || name.includes("30-15"))
           return "ronnestad_30_15";
@@ -70,8 +78,9 @@ export function classifyStimulusType(activity: {
   if (name.includes("sprint") || name.includes("rst")) return "rst";
 
   const ifValue = activity.intensityFactor ?? 0;
-  if (ifValue >= 85) return "hiit_genuino";
-  if (ifValue >= 70) return "umbral";
-  if (ifValue >= 55) return "sweet_spot";
+  // Último recurso (heurística): solo IF muy alto implica intensidad real
+  if (ifValue >= 90) return "hiit_genuino";
+  if (ifValue >= 80) return "umbral";
+  if (ifValue >= 70) return "sweet_spot";
   return "z2";
 }

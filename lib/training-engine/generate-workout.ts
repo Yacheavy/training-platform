@@ -160,7 +160,7 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   );
 
   const tss = calculateTss(blocks, user.ftp);
-  const fueling = calculateFueling(blocks);
+  const fueling = calculateFueling(blocks, user.ftp);
 
   const workout = await prisma.generatedWorkout.create({
     data: {
@@ -232,7 +232,7 @@ export async function generateTodayWorkout(athleteId: string, forceDayOfWeek?: n
   let updated = planned;
   if (wasModifiedToday && user?.ftp) {
     const tss = calculateTss(finalBlocks, user.ftp);
-    const fueling = calculateFueling(finalBlocks);
+    const fueling = calculateFueling(finalBlocks, user.ftp);
 
     updated = await prisma.generatedWorkout.update({
       where: { id: planned.id },

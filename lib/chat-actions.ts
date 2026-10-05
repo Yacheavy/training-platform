@@ -88,7 +88,7 @@ export async function sendChatMessage(formData: FormData) {
         else {
           // Se recalcula TODO lo derivado (TSS, kJ, carbos) en el mismo paso
           const tss = calculateTss(check.blocks, me.ftp);
-          const fueling = calculateFueling(check.blocks);
+          const fueling = calculateFueling(check.blocks, me.ftp);
           await prisma.generatedWorkout.update({
             where: { id: workout.id },
             data: {

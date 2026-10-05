@@ -18,12 +18,12 @@ HIIT GENUINO (Chicharro & Vicente-Campos, 2018, "HIIT: de la teoría a la práct
   3) recuperación 3→2min (la más difícil de lograr)
 - Evitar pendiente positiva: con 4-5% de pendiente la relación tiempo-en-VO2max cae de 44% a 27%
 
-SWEET SPOT: 88-94% FTP, 2-3x15-20min. Evidencia MÁS DÉBIL que otros métodos (el rango de Coggan
-se originó analizando datos de solo ~12 ciclistas). Útil como herramienta táctica de tiempo
+SWEET SPOT: 88-94% FTP, 2-3x15-20min. Evidencia MÁS DÉBIL que otros métodos (es un concepto
+práctico de entrenadores, con poca investigación directa). Útil como herramienta táctica de tiempo
 limitado, NO como sustituto de trabajo real de VO2max — sin ese trabajo en paralelo, el techo
 aeróbico no sube.
 
-UMBRAL (Seiler LI): 95-105% FTP, ej. 4x8min. Eleva el umbral de lactato.
+UMBRAL: 95-105% FTP, ej. 4x8min. Eleva el umbral de lactato.
 
 RØNNESTAD 30/15: ~110-130% FTP, ej. 3 series de 13x(30s/15s). Similar objetivo a HIIT genuino
 (VO2max) pero con menor costo neuromuscular por las pausas cortas — buena alternativa cuando
@@ -40,13 +40,14 @@ Z2 / BASE: 56-75% FTP. Modelo 80/20 (Seiler): la mayoría del volumen semanal de
 --- CARGA: INTERNA VS EXTERNA ---
 
 - TSS/kJ (Coggan) = carga EXTERNA (trabajo mecánico). Sólido, aprovechado directo de Intervals.icu.
-- iTRIMP = carga INTERNA individualizada. Sanders et al. 2017 (ciclistas de ruta): iTRIMP y TSS
-  tienen la relación dosis-respuesta MÁS FUERTE con cambios reales de fitness (r=0.81 y r=0.75).
+- iTRIMP = carga INTERNA individualizada. Sanders et al. 2017 (ciclistas de ruta): las cargas internas
+  (iTRIMP/luTRIMP) mostraron la relación dosis-respuesta más fuerte con cambios de rendimiento; el TSS
+  también se asoció, algo menos. Son correlaciones en un grupo pequeño, no garantía individual.
 - Ningún marcador aislado de fatiga es confiable — requiere FUSIÓN de: HRV + FC reposo + bienestar
   subjetivo (Alfonso et al. 2025, ciclistas). El estrés subjetivo es el marcador más consistente
   día a día de los tres.
-- Desacople Pw:HR: umbral popular de 5% tiene validación académica reciente y limitada (Rothschild/
-  Maunder 2025). Por encima de 10% es la señal más fuerte de mala eficiencia aeróbica o fatiga real
+- Desacople Pw:HR: umbral popular de 5% tiene validación académica limitada (es una heurística
+  de campo, no un punto de corte validado). Por encima de 10% es la señal más fuerte de mala eficiencia aeróbica o fatiga real
   — usar 10% como corte de alerta fuerte, no 5%. SIEMPRE interpretar junto con HRV/HRR/potencia real,
   nunca aislado — está confundido por calor, hidratación y duración de la sesión.
 - Deriva cardiovascular normal (cardiovascular drift) ≠ fatiga: es fisiológica, reversible con
@@ -57,12 +58,14 @@ Z2 / BASE: 56-75% FTP. Modelo 80/20 (Seiler): la mayoría del volumen semanal de
 
 --- PERIODIZACIÓN Y AUTORREGULACIÓN ---
 
-- Entrenamiento guiado por HRV iguala o supera modestamente al plan fijo tradicional en ciclistas
-  (Javaloyes et al. 2018/2020), con menos sesiones de alta intensidad para el mismo resultado.
-  Beneficio mayor en amateurs que en élite.
+- Entrenamiento guiado por HRV mostró en ciclistas (Javaloyes et al.) resultados similares o algo mejores
+  que el plan fijo con menos sesiones de alta intensidad; los metaanálisis lo ven prometedor pero con
+  evidencia heterogénea y de calidad limitada — no es una ventaja establecida.
+- HRV: se interpreta con LnRMSSD frente a la línea base propia (~60 días) y la media de 7 días
+  (Plews et al. 2013); un valor aislado de un día no es una señal confiable.
 - Kiely (2012, 2018): la periodización rígida por bloques carece de fundamento sólido de evidencia;
   la planificación debe ser flexible y responsiva al estado real del atleta, no un plan inamovible.
-- Check-in diario tipo Hooper-Mackinnon (sueño, fatiga, estrés, dolor muscular, ánimo, escala 1-7)
+- Check-in diario tipo Hooper-Mackinnon (sueño, fatiga, estrés, dolor muscular; escala 1-7, versión original de 4 ítems; el ánimo es una extensión)
   es el estándar de campo por su brevedad — más práctico que cuestionarios largos (DALDA/POMS/RESTQ).
 - Taper pre-competencia: 2 semanas, reducción de volumen 41-60%, SIN tocar intensidad ni frecuencia
   (Bosquet 2007). Distinto de deload por fatiga acumulada, que no tiene calendario fijo — se dispara
@@ -72,10 +75,11 @@ Z2 / BASE: 56-75% FTP. Modelo 80/20 (Seiler): la mayoría del volumen semanal de
 
 - 1000 kJ de trabajo ≈ 1000 kcal de gasto (la conversión kJ→kcal y la eficiencia mecánica ~22% se
   cancelan matemáticamente)
-- Carbohidrato sugerido = 40-50% del gasto en kJ, convertido a kcal, luego a gramos (÷4 kcal/g)
-- Techo de absorción por una sola fuente: 60g/h para sesiones de 1-2.5h, hasta 90g/h para sesiones
-  más largas (ACSM/ISSN). Por encima de ese techo, requiere fuentes múltiples (glucosa+fructosa)
-  para evitar malestar digestivo — SIEMPRE avisar esto si el cálculo lo supera.
+- Carbohidrato intra-entreno por duración/intensidad (Jeukendrup 2014; ACSM 2016): <45 min ~0 g/h;
+  45-75 min ~15 g/h si es intensa; 1-2 h ~30 g/h (45-60 si es intensa); 2-2.5 h ~60 g/h;
+  2.5-3 h 60-75 g/h; >3 h hasta 90 g/h. Tope práctico 90 g/h.
+- Una sola fuente (glucosa/maltodextrina) se satura en ~60 g/h. Por encima de eso se necesita mezcla
+  glucosa:fructosa (transportadores múltiples) y entrenar el intestino — SIEMPRE avisar si se supera.
 
 --- LÍMITES IMPORTANTES A RECONOCER ---
 

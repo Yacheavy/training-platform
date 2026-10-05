@@ -1,5 +1,6 @@
 import { dayKeyDate } from "../tz";
 import { prisma } from "@/lib/prisma";
+import { hrvSignal, restingHrSignal, type SignalMethod } from "./recovery-signals";
 
 export interface AvailabilityResult {
   status: "GREEN" | "AMBER" | "RED";
@@ -13,13 +14,17 @@ export interface AvailabilityResult {
   checkinToday: { fatigue: number | null; stress: number | null; muscleSoreness: number | null; sleepQuality: number | null } | null;
   signalsTriggered: string[];
   reasons: string[];
+  hrvMethod: SignalMethod;
+  restingHrMethod: SignalMethod;
+  /** Días desde el último dato de HRV/FC (0 = hoy). null si no hay datos. */
+  wellnessAgeDays: number | null;
 }
 
 /**
  * Fusión de marcadores según Alfonso, Clarke & Capdevila (2025,
  * Scientific Reports): HRV + FC de reposo + bienestar subjetivo supera
  * a usar HRV aislado en ciclistas. Requiere coincidencia de 2+ señales
- * para escalar a RED — nunca una sola señal aislada (Meeusen et al. 2013).
+ * para escalar a RED — nunca una sola señal aislada (criterio de diseño inspirado en Meeusen et al. 2013; no es un umbral validado en ensayos).
  *
  * El bienestar subjetivo usa las 4 dimensiones originales de
  * Hooper-Mackinnon (1995): sueño, fatiga, estrés, dolor muscular.
@@ -30,32 +35,29 @@ export interface AvailabilityResult {
 export async function calculateAvailability(athleteId: string): Promise<AvailabilityResult> {
   const thresholds = await prisma.athleteThresholds.findUnique({ where: { athleteId } });
   const hrvDropAlertPct = thresholds?.hrvDropAlertPct ?? 7.5;
-  const minTsb = thresholds?.minTsb ?? -25;
+  const minTsb = thresholds?.minTsb ?? -30;
 
   const latest = await prisma.wellness.findFirst({
     where: { athleteId, date: { lte: dayKeyDate(new Date()) } },
     orderBy: { date: "desc" },
   });
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const recent = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: sevenDaysAgo } },
-    select: { hrv: true, restingHr: true },
+  const todayKey = dayKeyDate(new Date());
+  const history = await prisma.wellness.findMany({
+    where: { athleteId, date: { gte: new Date(todayKey.getTime() - 61 * 24 * 60 * 60 * 1000), lte: todayKey } },
+    select: { date: true, hrv: true, restingHr: true },
+    orderBy: { date: "asc" },
   });
-
-  const hrvValues = recent.map((w) => w.hrv).filter((v): v is number => v != null);
-  const hrvAvg7d = hrvValues.length > 0 ? hrvValues.reduce((a, b) => a + b, 0) / hrvValues.length : null;
-
-  const rhrValues = recent.map((w) => w.restingHr).filter((v): v is number => v != null);
-  const restingHrAvg7d = rhrValues.length > 0 ? rhrValues.reduce((a, b) => a + b, 0) / rhrValues.length : null;
+  const hrvSig = hrvSignal(history, todayKey, hrvDropAlertPct);
+  const rhrSig = restingHrSignal(history, todayKey);
 
   const hrvToday = latest?.hrv ?? null;
-  const hrvDeltaPct =
-    hrvToday != null && hrvAvg7d != null && hrvAvg7d > 0 ? ((hrvToday - hrvAvg7d) / hrvAvg7d) * 100 : null;
-
+  const hrvAvg7d = hrvSig.rolling7;
+  const hrvDeltaPct = hrvSig.delta;
   const restingHrToday = latest?.restingHr ?? null;
-  const restingHrDeltaAbs =
-    restingHrToday != null && restingHrAvg7d != null ? restingHrToday - restingHrAvg7d : null;
+  const restingHrAvg7d = rhrSig.rolling7;
+  const restingHrDeltaAbs = rhrSig.delta;
+  const wellnessAgeDays = latest ? Math.round((todayKey.getTime() - latest.date.getTime()) / (24 * 60 * 60 * 1000)) : null;
 
   const tsb = latest?.ctl != null && latest?.atl != null ? latest.ctl - latest.atl : null;
 
@@ -68,28 +70,26 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const signalsTriggered: string[] = [];
   const reasons: string[] = [];
 
-  // Señal 1: HRV — umbral poblacional de referencia (TrainingPeaks/práctica
-  // clínica). NOTA: el umbral individualizado correcto según Plews (2013) es
-  // 0.5 × el coeficiente de variación personal del atleta, calculado sobre
-  // su línea base — esto todavía no está implementado (requiere AthleteBaseline
-  // calibrado con 4+ semanas de datos). Hasta entonces, este es un umbral
-  // genérico de la literatura, no personalizado.
-  if (hrvDeltaPct != null && hrvDeltaPct < -hrvDropAlertPct) {
+  // Señal 1: HRV contra tu línea base individual (ver recovery-signals.ts)
+  if (hrvSig.triggered) {
     signalsTriggered.push("hrv");
-    reasons.push(`HRV ${hrvDeltaPct.toFixed(1)}% bajo tu media de 7 días (umbral genérico: -${hrvDropAlertPct}%, no individualizado aún)`);
+    if (hrvSig.reason) reasons.push(hrvSig.reason);
+  } else if (hrvSig.method === "insufficient") {
+    reasons.push("HRV: datos insuficientes para evaluar (se necesitan al menos 4 de los últimos 7 días)");
   }
 
-  // Señal 2: FC de reposo — evidencia más débil que HRV (Alfonso et al. 2025
-  // la incluye como señal complementaria, no principal). Umbral: +5bpm sobre
-  // la media de 7 días.
-  if (restingHrDeltaAbs != null && restingHrDeltaAbs >= 5) {
+  // Señal 2: FC de reposo — evidencia más débil que HRV; señal complementaria
+  if (rhrSig.triggered) {
     signalsTriggered.push("resting_hr");
-    reasons.push(`FC de reposo ${restingHrDeltaAbs.toFixed(1)}bpm sobre tu media de 7 días`);
+    if (rhrSig.reason) reasons.push(rhrSig.reason);
+  }
+  if (wellnessAgeDays != null && wellnessAgeDays >= 1) {
+    reasons.push(`Último dato de HRV/FC de hace ${wellnessAgeDays} día${wellnessAgeDays === 1 ? "" : "s"} (todavía no sincronizó hoy)`);
   }
 
   // Señales 3-6: bienestar subjetivo (check-in), las 4 dimensiones de
-  // Hooper-Mackinnon. El estrés es el ítem más consistente día a día
-  // según Alfonso et al. 2025, pero las 4 son parte del cuestionario original.
+  // Hooper-Mackinnon. Los cortes absolutos (≥6 / ≤2 sobre 7) son
+  // un criterio práctico, no un valor publicado.
   if (checkinToday) {
     if ((checkinToday.fatigue ?? 0) >= 6) {
       signalsTriggered.push("fatigue");
@@ -112,10 +112,9 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     }
   }
 
-  // TSB se trata como señal de carga complementaria, no parte de la fusión
-  // de recuperación de Alfonso et al. (esa fusión es HRV+FCreposo+bienestar).
-  // Se mantiene como corte duro aparte porque refleja algo distinto: carga
-  // acumulada, no estado de recuperación del día.
+  // TSB: señal de CARGA acumulada, no de recuperación del día. Un TSB bajo es normal en una fase
+  // de construcción (Friel: −10 a −30 es la zona productiva); por sí solo solo da AMBER.
+  // RED exige TSB bajo el mínimo MÁS al menos una señal de recuperación, o 2+ señales de recuperación.
   const tsbAlert = tsb != null && tsb < minTsb;
   if (tsbAlert) {
     reasons.push(`TSB en ${tsb!.toFixed(1)}, por debajo de tu mínimo configurado (${minTsb})`);
@@ -123,9 +122,9 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
 
   const recoverySignalCount = signalsTriggered.length;
   let status: AvailabilityResult["status"];
-  if (tsbAlert || recoverySignalCount >= 2) {
+  if (recoverySignalCount >= 2 || (tsbAlert && recoverySignalCount >= 1)) {
     status = "RED";
-  } else if (recoverySignalCount === 1) {
+  } else if (recoverySignalCount === 1 || tsbAlert) {
     status = "AMBER";
   } else {
     status = "GREEN";
@@ -145,5 +144,8 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     checkinToday,
     signalsTriggered,
     reasons,
+    hrvMethod: hrvSig.method,
+    restingHrMethod: rhrSig.method,
+    wellnessAgeDays,
   };
 }

@@ -66,8 +66,22 @@ export function computeFtpTestWeekIndices(
   const indices = new Set<number>();
   if (weeksBetweenFtpTest <= 0) return indices;
   for (let w = weeksBetweenFtpTest - 1; w < totalWeeks; w += weeksBetweenFtpTest) {
-    let candidate = w;
-    if (mesocycleWeeks[candidate]?.isDeload) candidate = w - 1;
+    // Preferimos la primera semana tras un deload (atleta descansado → test válido).
+    let candidate = -1;
+    let bestDist = Infinity;
+    for (let i = 1; i < totalWeeks; i++) {
+      if (mesocycleWeeks[i - 1]?.isDeload && !mesocycleWeeks[i]?.isDeload) {
+        const d = Math.abs(i - w);
+        if (d <= 2 && d < bestDist && !indices.has(i)) {
+          candidate = i;
+          bestDist = d;
+        }
+      }
+    }
+    if (candidate < 0) {
+      candidate = mesocycleWeeks[w]?.isDeload ? w - 1 : w;
+      if (candidate >= 0 && indices.has(candidate)) continue;
+    }
     if (candidate >= 0 && !mesocycleWeeks[candidate]?.isDeload) indices.add(candidate);
   }
   return indices;
@@ -191,7 +205,7 @@ export function buildPlan(input: {
       stimulusType: effectiveStimulusType,
       blocks,
       tss: calculateTss(blocks, ftp),
-      fueling: calculateFueling(blocks),
+      fueling: calculateFueling(blocks, ftp),
       rationale: rationaleParts.join(" · "),
     });
   }

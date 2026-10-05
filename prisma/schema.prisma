@@ -211,7 +211,7 @@ model AthleteThresholds {
 
   maxCtlRampPerWeek  Float   @default(5.0)
   hrvDropAlertPct    Float   @default(7.5)
-  minTsb             Float   @default(-25)
+  minTsb             Float   @default(-30)
   maxConsecutiveBadSleepDays Int @default(2)
   weeksBetweenFtpTest Int    @default(5)
   ftpTestProtocol    String  @default("20min")
