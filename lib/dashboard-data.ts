@@ -8,15 +8,24 @@ export async function getDashboardData(athleteId: string) {
     orderBy: { date: "desc" },
   });
 
-  // Media de HRV de los últimos 7 días, para comparar contra hoy
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const recentWellness = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: sevenDaysAgo }, hrv: { not: null } },
-    select: { hrv: true },
+  // Cada métrica toma su último valor disponible (el de hoy llega recién cuando el
+  // reloj sincroniza a la mañana); se informa la fecha para mostrar "de ayer", etc.
+  const recent = await prisma.wellness.findMany({
+    where: { athleteId, date: { lte: dayKeyDate(new Date()) } },
+    orderBy: { date: "desc" },
+    take: 14,
+    select: { date: true, hrv: true, restingHr: true, sleepHours: true },
   });
-  const hrvValues = recentWellness.map((w) => w.hrv!).filter(Boolean);
+  const hrvRow = recent.find((w) => w.hrv != null) ?? null;
+  const rhrRow = recent.find((w) => w.restingHr != null) ?? null;
+  const sleepRow = recent.find((w) => w.sleepHours != null) ?? null;
+
+  // Media de los 7 días previos al dato más reciente (mínimo 4 días con dato)
+  const prior = hrvRow
+    ? recent.filter((w) => w.hrv != null && w.date < hrvRow.date).slice(0, 7)
+    : [];
   const hrvAvg7d =
-    hrvValues.length > 0 ? hrvValues.reduce((a, b) => a + b, 0) / hrvValues.length : null;
+    prior.length >= 4 ? prior.reduce((a, b) => a + b.hrv!, 0) / prior.length : null;
 
   // Últimas 7 actividades reales, para la lista/resumen
   const recentActivities = await prisma.activity.findMany({
@@ -33,10 +42,13 @@ export async function getDashboardData(athleteId: string) {
       latestWellness?.ctl != null && latestWellness?.atl != null
         ? Math.round((latestWellness.ctl - latestWellness.atl) * 10) / 10
         : null,
-    hrvToday: latestWellness?.hrv ?? null,
+    hrvToday: hrvRow?.hrv ?? null,
+    hrvDate: hrvRow?.date ?? null,
     hrvAvg7d: hrvAvg7d != null ? Math.round(hrvAvg7d * 10) / 10 : null,
-    restingHr: latestWellness?.restingHr ?? null,
-    sleepHours: latestWellness?.sleepHours ?? null,
+    restingHr: rhrRow?.restingHr ?? null,
+    restingHrDate: rhrRow?.date ?? null,
+    sleepHours: sleepRow?.sleepHours ?? null,
+    sleepDate: sleepRow?.date ?? null,
     lastWellnessDate: latestWellness?.date ?? null,
     recentActivities,
   };

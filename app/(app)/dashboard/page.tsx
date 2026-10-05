@@ -25,6 +25,14 @@ import { prisma } from "@/lib/prisma";
 
 const WARN_KEYWORDS = ["⚠", "bajando", "Ya alcanzaste", "RED", "AMBER"];
 
+function ageLabel(d: Date | null): string {
+  if (!d) return "";
+  const days = Math.round((dayKeyDate(new Date()).getTime() - d.getTime()) / 86400000);
+  if (days <= 0) return "hoy";
+  if (days === 1) return "(ayer)";
+  return `(hace ${days} d)`;
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -91,13 +99,13 @@ export default async function DashboardPage() {
           accent={data.tsb != null ? (data.tsb < -25 ? "red" : data.tsb > 5 ? "teal" : undefined) : undefined}
         />
         <StatCard
-          label="HRV hoy"
+          label={`HRV ${ageLabel(data.hrvDate)}`}
           value={data.hrvToday?.toFixed(0) ?? "—"}
           sub={hrvDeltaPct != null ? `${hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(hrvDeltaPct)}% vs 7d` : undefined}
           desc="Variabilidad cardíaca — se compara contra tu propia media de 7 días"
         />
-        <StatCard label="FC reposo" value={data.restingHr?.toFixed(0) ?? "—"} desc="Pulsaciones al despertar, tendencia de fatiga acumulada" />
-        <StatCard label="Sueño" value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} desc="Horas dormidas la última noche" />
+        <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} desc="Pulsaciones al despertar, tendencia de fatiga acumulada" />
+        <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} desc="Horas dormidas la última noche" />
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
