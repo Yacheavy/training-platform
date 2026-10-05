@@ -13,12 +13,13 @@ function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
 
 /**
  * Calentamiento específico para sesiones de VO2max (base de conocimiento,
- * Chicharro & Vicente-Campos 2018): 10min a umbral láctico + 2 intervalos de
- * 1min a intensidad MLSS/VT2 con 30s de recuperación activa. Total: 13min.
+ * Chicharro & Vicente-Campos 2018): 10min a umbral láctico (VT1, ~72% FTP; NO
+ * el MLSS/VT2) + 2 intervalos de 1min a intensidad MLSS/VT2 (~FTP) con 30s de
+ * recuperación activa. Total: 13min.
  */
 function buildWarmupVo2(ftp: number): WorkoutBlock[] {
   const z1Watts = Math.round(ftp * 0.5);
-  const thresholdWatts = Math.round(ftp * 0.95);
+  const thresholdWatts = Math.round(ftp * 0.72); // VT1 (umbral aeróbico)
   const primerWatts = ftp;
 
   return [
@@ -117,7 +118,7 @@ export function buildBlocks(
 
   if (stimulusType === "hiit_genuino") {
     const warmup = buildWarmupVo2(ftp);
-    const cooldownSec = 600;
+    const cooldownSec = 900; // libro: ~15 min suaves (70-80% de VT1)
 
     const progression = getHiitProgression(progressionStep);
     const intervalSec = progression.intervalSec;
@@ -130,7 +131,8 @@ export function buildBlocks(
     // Base de conocimiento (Chicharro & Vicente-Campos 2018): HIIT genuino al 100% de la
     // potencia en VO2max y recuperación activa ~50%. Sin dato medido se usa el %FTP de la librería.
     const intervalWatts = pvo2maxWatts ? Math.round(pvo2maxWatts) : targetWatts;
-    const recoveryWatts = pvo2maxWatts ? Math.round(pvo2maxWatts * 0.5) : z2Watts;
+    // Sin PAM medida, la recuperación también es ~50% de la potencia objetivo del intervalo (no Z2 de la librería).
+    const recoveryWatts = Math.round(intervalWatts * 0.5);
 
     const blocks: WorkoutBlock[] = [...warmup];
     for (let i = 0; i < reps; i++) {
@@ -197,10 +199,17 @@ export function buildBlocks(
     const numSeries = seriesOverride ?? defaultSeries;
     const restBetweenSeriesSec = 180;
 
+    // Libro (cap. 2): HIIT corto a 100-110% de la PAM. Con PAM medida se usa 105%, con tope de
+    // 140% FTP (carga neuromuscular); sin PAM, el %FTP de la librería.
+    const shortWatts =
+      pvo2maxWatts && stimulusType !== "rst"
+        ? Math.min(Math.round(pvo2maxWatts * 1.05), Math.round(ftp * 1.4))
+        : targetWatts;
+
     const blocks: WorkoutBlock[] = [...buildWarmupVo2(ftp)];
     for (let s = 0; s < numSeries; s++) {
       for (let i = 0; i < repsPerSeries; i++) {
-        blocks.push({ type: "interval", durationSec: shortInterval, targetWatts });
+        blocks.push({ type: "interval", durationSec: shortInterval, targetWatts: shortWatts });
         blocks.push({ type: "recovery", durationSec: shortRecovery, targetWatts: z2Watts });
       }
       if (s < numSeries - 1) {

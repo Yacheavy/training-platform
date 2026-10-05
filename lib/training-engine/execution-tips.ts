@@ -11,6 +11,9 @@ export function getExecutionTips(stimulusType: string): string[] {
       "No salgas fuerte en el primer intervalo — el objetivo es sostener la potencia target en los 7, no quemarte en el primero.",
       "Si en el intervalo 4-5 no llegás al watt objetivo, priorizá terminar la cantidad de repeticiones antes que la potencia exacta.",
       "La recuperación activa (no pasiva) ayuda a llegar mejor al siguiente intervalo — no pares del todo.",
+      "Guiate por la potencia, no por la frecuencia cardíaca: en los primeros minutos la FC sube más rápido que el VO2 y después se estanca; es el peor indicador de intensidad en HIIT.",
+      "Hacelo en llano o con rampa mínima: en subida la fatiga muscular te impide llegar al estrés cardiovascular buscado.",
+      "Criterio de ajuste: tenés que poder completar los 7 intervalos y no más. Si no llegás, anotalo; si te sobra, anotalo también.",
     ],
     sweet_spot: [
       "Evitá arrancar el primer bloque muy fuerte — sweet spot se siente 'cómodo' al principio pero acumula fatiga real.",

@@ -11,11 +11,14 @@ HIIT GENUINO (Chicharro & Vicente-Campos, 2018, "HIIT: de la teoría a la práct
 - Número de repeticiones: objetivo de ~10min acumulados ≥95% VO2max. Con intervalos de 3min, la
   relación tiempo-en-VO2max/tiempo-total-ejercicio es ~44% → 7 intervalos de 3min es el punto de
   partida estándar (21min ejercicio × 0.44 ≈ 9'14" en zona)
-- Calentamiento específico: 10min a umbral láctico + 2 intervalos de 1min a intensidad de
+- Calentamiento específico: 10min a umbral láctico/VT1 (~70-75% FTP, NO a MLSS) + 2 intervalos de 1min a intensidad de
   MLSS/VT2 con 30s de recuperación activa, antes del bloque principal
 - Frecuencia: MÁXIMO 1 sesión de HIIT genuino real por semana. Recuperación entre sesiones: 48-72h
 - Progresión (cada 4-6 semanas, en este orden): 1) duración 3→4min, 2) repeticiones 7→10,
   3) recuperación 3→2min (la más difícil de lograr)
+- Vuelta a la calma: ~15min suaves (70-80% de VT1)
+- Controlar por potencia (patrón oro) > RPE 18-19 > FC (peor indicador: meseta, deriva, sobreestima al inicio)
+- Criterio "7RM": debe poder completar 7 intervalos y no más; si no llega alargar la recuperación, si le sobra acortarla
 - Evitar pendiente positiva: con 4-5% de pendiente la relación tiempo-en-VO2max cae de 44% a 27%
 
 SWEET SPOT: 88-94% FTP, 2-3x15-20min. Evidencia MÁS DÉBIL que otros métodos (es un concepto
