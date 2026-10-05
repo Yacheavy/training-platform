@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { syncIfStale } from "@/lib/intervals-sync";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { CalendarGrid } from "@/components/CalendarGrid";
@@ -10,6 +11,7 @@ export default async function CalendarPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  await syncIfStale(session.user.id);
 
   const user = await prisma.user.findUnique({ where: { id: session.user.id } });
 

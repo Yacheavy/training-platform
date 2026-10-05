@@ -19,5 +19,6 @@ export async function GET(req: Request) {
 
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  return NextResponse.json(await syncIntervals(session.user.id, 14));
+  const days = Number(new URL(req.url).searchParams.get("days")) || 14;
+  return NextResponse.json(await syncIntervals(session.user.id, days));
 }

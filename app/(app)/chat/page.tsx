@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { syncIfStale } from "@/lib/intervals-sync";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { sendChatMessage } from "@/lib/chat-actions";
@@ -7,6 +8,7 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
   const { workoutId } = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  await syncIfStale(session.user.id);
 
   const messages = await prisma.chatMessage.findMany({
     where: { athleteId: session.user.id },

@@ -1,37 +1,8 @@
 import { getActivities } from "@/lib/intervals-client";
+import { mapActivity } from "@/lib/intervals-sync";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-
-function mapActivity(a: any, userId: string) {
-  return {
-    athleteId: userId,
-    intervalsActivityId: a.id,
-    date: new Date(a.start_date_local),
-    type: a.type ?? "Unknown",
-    name: a.name ?? null,
-    durationSec: a.moving_time ?? 0,
-    distanceM: a.icu_distance,
-    avgPower: a.icu_average_watts,
-    normalizedPower: a.icu_weighted_avg_watts,
-    avgHr: a.average_heartrate,
-    maxHr: a.max_heartrate,
-    avgCadence: a.average_cadence,
-    kilojoules: a.icu_joules,
-    tss: a.icu_training_load,
-    intensityFactor: a.icu_intensity,
-    elevationGainM: a.total_elevation_gain,
-    powerBalanceLeft: a.avg_lr_balance,
-    decouplingPct: a.decoupling,
-    hrLoad: a.hr_load,
-    trimp: a.trimp,
-    efficiencyFactor: a.icu_efficiency_factor,
-    variabilityIndex: a.icu_variability_index,
-    polarizationIndex: a.polarization_index,
-    hrrValue: a.icu_hrr?.hrr ?? null,
-    rawStreamsJson: a.icu_zone_times ? { zoneTimes: a.icu_zone_times } : undefined,
-  };
-}
 
 export async function GET() {
   const session = await auth();

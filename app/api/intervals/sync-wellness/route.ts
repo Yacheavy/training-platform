@@ -1,24 +1,8 @@
 import { getWellness } from "@/lib/intervals-client";
+import { mapWellness } from "@/lib/intervals-sync";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-
-function mapWellness(w: any, userId: string) {
-  return {
-    athleteId: userId,
-    date: new Date(w.id), // en wellness, Intervals usa "id" como la fecha (YYYY-MM-DD)
-    hrv: w.hrv,
-    restingHr: w.restingHR,
-    sleepScore: w.sleepScore,
-    sleepHours: w.sleepSecs ? w.sleepSecs / 3600 : null,
-    steps: w.steps,
-    spo2: w.spO2,
-    stressScore: w.stress,
-    ctl: w.ctl,
-    atl: w.atl,
-    rampRate: w.rampRate,
-  };
-}
 
 export async function GET() {
   const session = await auth();

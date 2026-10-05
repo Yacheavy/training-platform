@@ -29,7 +29,17 @@ export function mapActivity(a: any, userId: string) {
     variabilityIndex: a.icu_variability_index,
     polarizationIndex: a.polarization_index,
     hrrValue: a.icu_hrr?.hrr ?? null,
-    rawStreamsJson: a.icu_zone_times ? { zoneTimes: a.icu_zone_times } : undefined,
+    // Cajón flexible: zonas, resumen de intervalos en texto ("7x 3m 335w") y CTL/ATL al momento de la sesión
+    rawStreamsJson:
+      a.icu_zone_times || a.interval_summary || a.icu_ctl != null
+        ? {
+            zoneTimes: a.icu_zone_times ?? null,
+            hrZoneTimes: a.icu_hr_zone_times ?? null,
+            intervalSummary: a.interval_summary ?? null,
+            ctl: a.icu_ctl ?? null,
+            atl: a.icu_atl ?? null,
+          }
+        : undefined,
   };
 }
 
@@ -64,6 +74,7 @@ export interface SyncResult {
  * Las rutas de historial completo siguen existiendo para cargas iniciales.
  */
 export async function syncIntervals(userId: string, days = 14): Promise<SyncResult> {
+  days = Math.min(Math.max(days, 1), 800);
   const apiKey = process.env.INTERVALS_API_KEY_DEV;
   const athleteId = process.env.INTERVALS_ATHLETE_ID_DEV;
   const result: SyncResult = { activities: 0, wellness: 0, errors: [] };
@@ -78,14 +89,19 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
 
   try {
     const activities = await getActivities(athleteId, apiKey, oldest, newest);
-    for (const a of activities as any[]) {
-      try {
-        const mapped = mapActivity(a, userId);
-        await prisma.activity.upsert({ where: { intervalsActivityId: mapped.intervalsActivityId }, update: mapped, create: mapped });
-        result.activities++;
-      } catch (err) {
-        result.errors.push(`Activity ${a?.id}: ${String(err)}`);
-      }
+    const list = activities as any[];
+    for (let i = 0; i < list.length; i += 10) {
+      await Promise.all(
+        list.slice(i, i + 10).map(async (a) => {
+          try {
+            const mapped = mapActivity(a, userId);
+            await prisma.activity.upsert({ where: { intervalsActivityId: mapped.intervalsActivityId }, update: mapped, create: mapped });
+            result.activities++;
+          } catch (err) {
+            result.errors.push(`Activity ${a?.id}: ${String(err)}`);
+          }
+        })
+      );
     }
   } catch (err) {
     result.errors.push(`Actividades ${oldest}→${newest}: ${String(err)}`);
@@ -93,14 +109,19 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
 
   try {
     const wellness = await getWellness(athleteId, apiKey, oldest, newest);
-    for (const w of wellness as any[]) {
-      try {
-        const mapped = mapWellness(w, userId);
-        await prisma.wellness.upsert({ where: { date: mapped.date }, update: mapped, create: mapped });
-        result.wellness++;
-      } catch (err) {
-        result.errors.push(`Wellness ${w?.id}: ${String(err)}`);
-      }
+    const wl = wellness as any[];
+    for (let i = 0; i < wl.length; i += 10) {
+      await Promise.all(
+        wl.slice(i, i + 10).map(async (w) => {
+          try {
+            const mapped = mapWellness(w, userId);
+            await prisma.wellness.upsert({ where: { date: mapped.date }, update: mapped, create: mapped });
+            result.wellness++;
+          } catch (err) {
+            result.errors.push(`Wellness ${w?.id}: ${String(err)}`);
+          }
+        })
+      );
     }
   } catch (err) {
     result.errors.push(`Wellness ${oldest}→${newest}: ${String(err)}`);
@@ -113,13 +134,38 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
   return result;
 }
 
-/** Sincroniza si la última sync tiene más de `maxAgeMin` minutos. Nunca lanza ni bloquea más de `timeoutMs`. */
-export async function syncIfStale(userId: string, maxAgeMin = 20, timeoutMs = 9000): Promise<void> {
+const inFlight = new Map<string, Promise<SyncResult>>();
+
+/** Días a re-sincronizar: lo mínimo (14) o, si hace mucho que no hay datos nuevos, desde el último dato conocido (+3 de margen). */
+async function catchUpDays(userId: string): Promise<number> {
+  const [lastAct, lastWell] = await Promise.all([
+    prisma.activity.findFirst({ where: { athleteId: userId }, orderBy: { date: "desc" }, select: { date: true } }),
+    prisma.wellness.findFirst({ where: { athleteId: userId }, orderBy: { date: "desc" }, select: { date: true } }),
+  ]);
+  const known = Math.min(lastAct?.date.getTime() ?? 0, lastWell?.date.getTime() ?? 0);
+  if (!known) return 14;
+  const gap = Math.ceil((Date.now() - known) / DAY_MS) + 3;
+  return Math.min(Math.max(14, gap), 400);
+}
+
+/**
+ * Sincroniza al abrir la app si la última sync tiene más de `maxAgeMin` minutos.
+ * Nunca lanza, comparte la ejecución si ya hay una en curso y espera como máximo `timeoutMs`.
+ */
+export async function syncIfStale(userId: string, maxAgeMin = 5, timeoutMs = 12000): Promise<void> {
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { intervalsLastSyncAt: true } });
     const last = user?.intervalsLastSyncAt?.getTime() ?? 0;
     if (Date.now() - last < maxAgeMin * 60 * 1000) return;
-    await Promise.race([syncIntervals(userId), new Promise((r) => setTimeout(r, timeoutMs))]);
+
+    let run = inFlight.get(userId);
+    if (!run) {
+      run = catchUpDays(userId)
+        .then((d) => syncIntervals(userId, d))
+        .finally(() => inFlight.delete(userId));
+      inFlight.set(userId, run);
+    }
+    await Promise.race([run, new Promise((r) => setTimeout(r, timeoutMs))]);
   } catch (err) {
     console.error("syncIfStale falló:", err);
   }
