@@ -1,6 +1,9 @@
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
-import { dayKeyDate } from "@/lib/tz";
+import Link from "next/link";
+import { ActivityIcon } from "@/components/ActivityIcon";
+import { STIMULUS_LABELS } from "@/lib/labels";
+import { ATHLETE_TZ, dayKeyDate } from "@/lib/tz";
 import { syncIfStale } from "@/lib/intervals-sync";
 import { syncNow } from "@/lib/sync-actions";
 import { auth } from "@/auth";
@@ -307,25 +310,52 @@ export default async function DashboardPage() {
             </button>
           </ActionForm>
         </div>
-        {data.recentActivities.map((a, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "10px 0",
-              borderBottom: i < data.recentActivities.length - 1 ? "1px solid var(--surface-2)" : "none",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: "13px" }}>{a.name ?? a.type}</div>
-              <div style={{ fontSize: "11px", color: "var(--text-dim)" }}>{new Date(a.date).toLocaleDateString("es-AR")}</div>
-            </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--text-muted)" }}>
-              {a.tss ? `${Math.round(a.tss)} TSS` : "—"} · {Math.round(a.durationSec / 60)}min
-            </div>
-          </div>
-        ))}
+        {data.recentActivities.length === 0 && (
+          <div style={{ fontSize: "12.5px", color: "var(--text-dim)" }}>Todavía no hay actividades sincronizadas.</div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {data.recentActivities.map((a) => {
+            const mins = Math.round(a.durationSec / 60);
+            const dur = mins >= 60 ? `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}` : `${mins} min`;
+            const chips: string[] = [];
+            if (a.normalizedPower) chips.push(`${Math.round(a.normalizedPower)} W NP`);
+            else if (a.avgPower) chips.push(`${Math.round(a.avgPower)} W`);
+            if (a.avgHr) chips.push(`${Math.round(a.avgHr)} lpm`);
+            if (a.distanceM) chips.push(`${(a.distanceM / 1000).toFixed(1)} km`);
+            return (
+              <Link key={a.id} href={`/activities/${a.id}`} className="activity-card" style={{ textDecoration: "none", color: "inherit" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px", border: "1px solid var(--border)", borderRadius: "12px", background: "var(--surface-2, transparent)" }}>
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(79,209,197,.1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <ActivityIcon type={a.type} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "13.5px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{a.name ?? a.type}</span>
+                      {a.type === "Ride" && (
+                        <span style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "1px 8px", whiteSpace: "nowrap" }}>
+                          {STIMULUS_LABELS[a.stimulus] ?? a.stimulus}
+                        </span>
+                      )}
+                      {a.deviationFlag !== "NONE" && (
+                        <span style={{ fontSize: "10px", color: "var(--amber)", whiteSpace: "nowrap" }}>
+                          {a.deviationFlag === "HARDER_THAN_PLANNED" ? "▲ más duro que el plan" : "▼ más suave que el plan"}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "3px" }}>
+                      {new Date(a.date).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", timeZone: ATHLETE_TZ })}
+                      {chips.length > 0 && <span> · {chips.join(" · ")}</span>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0, fontFamily: "var(--font-mono)" }}>
+                    <div style={{ fontSize: "14px", fontWeight: 600 }}>{a.tss ? Math.round(a.tss) : "—"}<span style={{ fontSize: "10px", color: "var(--text-dim)", marginLeft: "3px" }}>TSS</span></div>
+                    <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>{dur}</div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

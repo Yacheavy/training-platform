@@ -198,3 +198,7 @@ a.row-link:active > div {
 @media (prefers-reduced-motion: reduce) {
   .btn, .spinner, .toast-in, .week-fade { animation: none !important; transition: none !important; }
 }
+a.activity-card:hover > div { border-color: var(--teal); background: rgba(79,209,197,.05) !important; }
+a.activity-card:active > div { transform: scale(0.99); }
+a.activity-card > div { transition: border-color .15s ease, background-color .15s ease, transform .08s ease; }
+.nav-link { transition: color .15s ease, background-color .15s ease; }

@@ -1,13 +1,7 @@
-import Link from "next/link";
+import { NavLinks } from "@/components/NavLinks";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Toaster } from "@/components/Toaster";
-
-const NAV_ITEMS = [
-  { href: "/dashboard", icon: "◆", label: "Hoy" },
-  { href: "/settings", icon: "⚙", label: "Ajustes" },
-  { href: "/chat", icon: "✉", label: "Chat" },
-];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -52,25 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         >
           i
         </div>
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--text-dim)",
-              fontSize: "18px",
-              textDecoration: "none",
-            }}
-          >
-            {item.icon}
-          </Link>
-        ))}
+        <NavLinks variant="side" />
       </div>
 
       {/* Mobile bottom nav */}
@@ -91,25 +67,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "3px",
-              color: "var(--text-dim)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "9px",
-              textDecoration: "none",
-            }}
-          >
-            <span style={{ fontSize: "18px" }}>{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+        <NavLinks variant="bottom" />
       </div>
 
       <div className="app-content" style={{ paddingBottom: "76px" }}>

@@ -1,5 +1,6 @@
 import { dayKeyDate, dayRangeLocal, weekRangeLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
+import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
 
 export async function getDashboardData(athleteId: string) {
   // Nunca "mañana": Intervals proyecta CTL/ATL a fechas futuras sin HRV/FC/sueño
@@ -27,13 +28,21 @@ export async function getDashboardData(athleteId: string) {
   const hrvAvg7d =
     prior.length >= 4 ? prior.reduce((a, b) => a + b.hrv!, 0) / prior.length : null;
 
-  // Últimas 7 actividades reales, para la lista/resumen
-  const recentActivities = await prisma.activity.findMany({
+  // Últimas 7 actividades reales, con lo necesario para mostrarlas como tarjetas
+  const rawActivities = await prisma.activity.findMany({
     where: { athleteId },
     orderBy: { date: "desc" },
     take: 7,
-    select: { date: true, name: true, type: true, tss: true, durationSec: true },
+    select: {
+      id: true, date: true, name: true, type: true, tss: true, durationSec: true,
+      distanceM: true, avgPower: true, normalizedPower: true, avgHr: true,
+      intensityFactor: true, deviationFlag: true, rawStreamsJson: true,
+    },
   });
+  const recentActivities = rawActivities.map(({ rawStreamsJson, ...a }) => ({
+    ...a,
+    stimulus: classifyStimulusType({ type: a.type, name: a.name, intensityFactor: a.intensityFactor, rawStreamsJson }),
+  }));
 
   return {
     ctl: latestWellness?.ctl ?? null,
