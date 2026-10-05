@@ -1,4 +1,5 @@
 import { ATHLETE_TZ, dayOfWeekLocal, weekRangeLocal } from "@/lib/tz";
+import Link from "next/link";
 import { WorkoutMiniChart } from "./WorkoutMiniChart";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -12,6 +13,10 @@ const TYPE_LABELS: Record<string, string> = {
   rst: "RST",
   sweet_spot: "Sweet spot",
   umbral: "Umbral",
+  billat_30_30: "Billat",
+  ftp_test: "Test FTP (20min)",
+  ftp_test_8min: "Test FTP (8min)",
+  ftp_test_5min: "Test FTP (5min)",
   test_20min: "Test FTP (20min)",
   test_8min: "Test FTP (8min)",
   test_5min: "Test FTP (5min)",
@@ -53,7 +58,7 @@ export function WeekList({ workouts }: { workouts: WeekWorkout[] }) {
         const isToday = dayOfWeek === todayDow;
         const totalMin = workout ? Math.round(workout.blocksJson.reduce((s, b) => s + b.durationSec, 0) / 60) : 0;
 
-        return (
+        const row = (
           <div
             key={dayOfWeek}
             style={{
@@ -99,6 +104,13 @@ export function WeekList({ workouts }: { workouts: WeekWorkout[] }) {
               <div style={{ flex: 1, fontSize: "12px", color: "var(--text-dim)" }}>—</div>
             )}
           </div>
+        );
+        return workout ? (
+          <Link key={dayOfWeek} href={`/workouts/${workout.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+            {row}
+          </Link>
+        ) : (
+          row
         );
       })}
     </div>

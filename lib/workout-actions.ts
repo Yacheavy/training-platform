@@ -21,6 +21,7 @@ export async function approveWorkout(formData: FormData) {
   });
 
   revalidatePath("/dashboard");
+  revalidatePath(`/workouts/${workoutId}`);
 }
 
 export async function sendWorkoutToIntervals(formData: FormData) {
@@ -65,4 +66,5 @@ export async function sendWorkoutToIntervals(formData: FormData) {
   });
 
   revalidatePath("/dashboard");
+  revalidatePath(`/workouts/${workoutId}`);
 }

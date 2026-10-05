@@ -14,6 +14,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Falta el parámetro blockId" }, { status: 400 });
   }
 
-  const result = await generateFullPlan(trainingBlockId);
+  const result = await generateFullPlan(trainingBlockId, { athleteId: session.user.id });
   return NextResponse.json(result);
 }

@@ -4,9 +4,9 @@ import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 import { dateKeyLocal } from "../tz";
 
-export async function generateFullPlan(trainingBlockId: string) {
+export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string }) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
-  if (!block) throw new Error("Bloque no encontrado");
+  if (!block || (opts?.athleteId && block.athleteId !== opts.athleteId)) throw new Error("Bloque no encontrado");
 
   const user = await prisma.user.findUnique({ where: { id: block.athleteId } });
   if (!user?.ftp) throw new Error("Configurá tu FTP antes de generar un plan completo");
@@ -36,6 +36,7 @@ export async function generateFullPlan(trainingBlockId: string) {
   const skipped: string[] = [];
 
   for (const day of plan) {
+    if (opts?.fromDate && day.date < opts.fromDate) continue;
     const key = dateKeyLocal(day.date);
     try {
       const existing = await prisma.generatedWorkout.findFirst({

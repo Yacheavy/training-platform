@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { regeneratePlan } from "@/lib/plan-actions";
 import { redirect } from "next/navigation";
 import { getSettingsData, saveTemplateSlot, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
 import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
@@ -6,7 +7,8 @@ import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const STIMULUS_OPTIONS = ["cycling", "gym", "rest"];
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; warnings?: string }> }) {
+  const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -21,6 +23,23 @@ export default async function SettingsPage() {
   return (
     <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "24px" }}>Configuración</h1>
+
+      {/* Plan */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Plan de entrenamiento</h2>
+        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+          Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Solo se reemplazan las sesiones
+          planificadas desde hoy; las del pasado y las que ya aprobaste o enviaste a Intervals no se tocan.
+        </p>
+        <form action={regeneratePlan}>
+          <button type="submit" style={btnStyle}>Regenerar plan desde hoy</button>
+        </form>
+        {sp.regenerated != null && (
+          <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
+            Listo: {sp.regenerated} sesiones nuevas.{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
+          </div>
+        )}
+      </div>
 
       {/* Rendimiento: curva de potencia y configuración de deporte (Intervals) */}
       {(() => {

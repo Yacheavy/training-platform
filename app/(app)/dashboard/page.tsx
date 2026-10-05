@@ -256,6 +256,12 @@ export default async function DashboardPage() {
             </div>
 
             <a
+              href={`/workouts/${todayWorkout.id}`}
+              style={{ color: "var(--teal)", fontSize: "12px", display: "inline-block", marginBottom: "8px", marginRight: "16px", textDecoration: "none" }}
+            >
+              Ver detalle completo →
+            </a>
+            <a
               href={`/chat?workoutId=${todayWorkout.id}`}
               style={{ color: "var(--teal)", fontSize: "12px", display: "inline-block", marginBottom: "14px", textDecoration: "none" }}
             >
