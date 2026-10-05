@@ -81,7 +81,24 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       const maxW = Math.max(0, ...d.blocks.filter((b) => b.type === "interval").map((b) => b.targetWatts));
       if (maxW && maxW < ctx.ftp) w.push(`${label(d)}: intervalos por debajo del FTP (${maxW} W)`);
     }
+    // Informativo: el protocolo manda sobre el tiempo del slot, pero conviene avisarlo
+    if (d.slotTargetMin && VO2_STIMULI.has(d.stimulusType) && dur / 60 > d.slotTargetMin * 1.25) {
+      w.push(`INFO: ${label(d)}: el protocolo dura ${Math.round(dur / 60)} min vs ${d.slotTargetMin} min del slot (+${Math.round((dur / 60 / d.slotTargetMin - 1) * 100)}%)`);
+    }
     if (!Number.isFinite(d.tss) || d.tss < 0 || d.tss > 400) w.push(`${label(d)}: TSS fuera de rango (${d.tss})`);
+  }
+
+  // Informativo: velocidad de subida de la carga semanal (TSS) entre semanas de carga consecutivas.
+  // Referencia de práctica: rampas de CTL de ~5–8/semana son habituales; más es riesgoso (heurística).
+  const weekTss = [...weeks.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([wk, days]) => ({ wk, tss: days.reduce((s, d) => s + d.tss, 0), deload: days.some((d) => d.isDeload) }));
+  for (let i = 1; i < weekTss.length; i++) {
+    const prev = weekTss[i - 1];
+    const cur = weekTss[i];
+    if (prev.deload || cur.deload || prev.tss <= 0) continue;
+    const inc = (cur.tss - prev.tss) / prev.tss;
+    if (inc > 0.2) w.push(`INFO: semana ${cur.wk + 1}: la carga semanal sube ${Math.round(inc * 100)}% vs la anterior (TSS ${prev.tss}→${cur.tss})`);
   }
 
   // Deload: como máximo UNA sesión de VO2max (de mantenimiento) por semana

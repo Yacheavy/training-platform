@@ -44,6 +44,8 @@ export interface PlannedDay {
   tss: number;
   fueling: FuelingResult;
   rationale: string;
+  /** Duración objetivo del slot (min, ya con el multiplicador de carga), para avisar si el protocolo la excede. */
+  slotTargetMin?: number;
 }
 
 const MAINTAINABLE = new Set(["hiit_genuino", "ronnestad_30_15", "sweet_spot", "umbral"]);
@@ -235,6 +237,7 @@ export function buildPlan(input: {
       tss: calculateTss(blocks, ftp),
       fueling: calculateFueling(blocks, ftp),
       rationale: rationaleParts.join(" · "),
+      slotTargetMin: targetDuration,
     });
   }
 

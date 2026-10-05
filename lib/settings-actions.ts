@@ -47,27 +47,35 @@ export async function saveTemplateSlot(formData: FormData) {
 export async function saveThresholds(formData: FormData) {
   const athleteId = await requireUserId();
 
+  // Un campo vacío NO debe guardarse como 0 (Number("") === 0): se ignora y queda el valor actual
+  const num = (name: string, min: number, max: number): number | undefined => {
+    const raw = formData.get(name);
+    if (raw == null || String(raw).trim() === "") return undefined;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < min || n > max) return undefined;
+    return n;
+  };
+  const str = (name: string, allowed: string[]): string | undefined => {
+    const v = String(formData.get(name) ?? "");
+    return allowed.includes(v) ? v : undefined;
+  };
+
+  const data = {
+    maxCtlRampPerWeek: num("maxCtlRampPerWeek", 1, 20),
+    hrvDropAlertPct: num("hrvDropAlertPct", 1, 50),
+    minTsb: num("minTsb", -60, 0),
+    maxConsecutiveBadSleepDays: num("maxConsecutiveBadSleepDays", 1, 14),
+    weeksBetweenFtpTest: num("weeksBetweenFtpTest", 0, 26),
+    ftpTestProtocol: str("ftpTestProtocol", ["20min", "8min", "5min"]),
+    deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
+      ? String(formData.get("deloadRatio")).trim()
+      : undefined,
+  };
+
   await prisma.athleteThresholds.upsert({
     where: { athleteId },
-    update: {
-      maxCtlRampPerWeek: Number(formData.get("maxCtlRampPerWeek")),
-      hrvDropAlertPct: Number(formData.get("hrvDropAlertPct")),
-      minTsb: Number(formData.get("minTsb")),
-      maxConsecutiveBadSleepDays: Number(formData.get("maxConsecutiveBadSleepDays")),
-      weeksBetweenFtpTest: Number(formData.get("weeksBetweenFtpTest")),
-      ftpTestProtocol: String(formData.get("ftpTestProtocol")),
-      deloadRatio: String(formData.get("deloadRatio")),
-    },
-    create: {
-      athleteId,
-      maxCtlRampPerWeek: Number(formData.get("maxCtlRampPerWeek")),
-      hrvDropAlertPct: Number(formData.get("hrvDropAlertPct")),
-      minTsb: Number(formData.get("minTsb")),
-      maxConsecutiveBadSleepDays: Number(formData.get("maxConsecutiveBadSleepDays")),
-      weeksBetweenFtpTest: Number(formData.get("weeksBetweenFtpTest")),
-      ftpTestProtocol: String(formData.get("ftpTestProtocol")),
-      deloadRatio: String(formData.get("deloadRatio")),
-    },
+    update: data,
+    create: { athleteId, ...data },
   });
 
   revalidatePath("/settings");

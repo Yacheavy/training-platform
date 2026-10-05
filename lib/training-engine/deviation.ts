@@ -12,7 +12,9 @@ export interface DeviationResult {
  *
  * Umbrales:
  * - Desvío de TSS >25% en cualquier dirección → posible desvío real
- * - Decoupling >10% → señal adicional de que costó más de lo esperado,
+ *   (umbral HEURÍSTICO de práctica, no validado en la literatura)
+ * - Decoupling >10% (solo es interpretable en sesiones continuas Z2/sweet spot;
+ *   en intervalos la FC no se estabiliza y el desacople no significa lo mismo) → señal adicional de que costó más de lo esperado,
  *   aunque el TSS haya salido similar al plan (ver investigación:
  *   decoupling >10% es el umbral fuerte, no el de 5%)
  */

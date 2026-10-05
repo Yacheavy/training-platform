@@ -1,5 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { classifyStimulusType } from "./stimulus-classifier";
+import { dateKeyLocal } from "@/lib/tz";
+
+/** Mínimo de sesiones para guardar un perfil: con menos, el promedio es ruido. */
+const MIN_SESSIONS_FOR_PROFILE = 5;
+const DAY_MS = 86400000;
+/** Suma/resta días a una clave YYYY-MM-DD sin depender de la zona horaria del servidor. */
+const shiftKey = (key: string, days: number) =>
+  new Date(new Date(key + "T00:00:00Z").getTime() + days * DAY_MS).toISOString().slice(0, 10);
 
 /**
  * Recorre TODO el historial del atleta y calcula, por tipo de estímulo,
@@ -30,31 +38,25 @@ export async function updateAthleteResponseProfile(athleteId: string) {
 
   for (const activity of activities) {
     const stimulusType = classifyStimulusType(activity);
-    const activityDateStr = activity.date.toISOString().split("T")[0];
-    const activityDate = new Date(activityDateStr);
+    // Día LOCAL del atleta (una salida a la noche no debe caer en el día UTC siguiente)
+    const activityDateStr = dateKeyLocal(activity.date);
 
-    // Baseline: promedio de HRV de los 7 días ANTES de la actividad
+    // Baseline: media de LnRMSSD de los 7 días ANTES de la actividad (mín. 4 días con dato)
     const baselineValues: number[] = [];
     for (let i = 1; i <= 7; i++) {
-      const d = new Date(activityDate);
-      d.setDate(d.getDate() - i);
-      const w = wellnessByDate.get(d.toISOString().split("T")[0]);
-      if (w?.hrv) baselineValues.push(w.hrv);
+      const w = wellnessByDate.get(shiftKey(activityDateStr, -i));
+      if (w?.hrv && w.hrv > 0) baselineValues.push(Math.log(w.hrv));
     }
-    if (baselineValues.length < 3) continue; // sin suficiente baseline, saltamos
+    if (baselineValues.length < 4) continue; // sin suficiente baseline, saltamos
 
-    const baseline =
-      baselineValues.reduce((a, b) => a + b, 0) / baselineValues.length;
+    const baseline = baselineValues.reduce((a, b) => a + b, 0) / baselineValues.length;
 
     // HRV del día siguiente a la actividad
-    const nextDay = new Date(activityDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const nextDayWellness = wellnessByDate.get(
-      nextDay.toISOString().split("T")[0]
-    );
-    if (!nextDayWellness?.hrv) continue;
+    const nextDayWellness = wellnessByDate.get(shiftKey(activityDateStr, 1));
+    if (!nextDayWellness?.hrv || nextDayWellness.hrv <= 0) continue;
 
-    const pctImpact = ((nextDayWellness.hrv - baseline) / baseline) * 100;
+    // Impacto en % sobre la escala natural (exp de la diferencia de ln = cociente de HRV)
+    const pctImpact = (Math.exp(Math.log(nextDayWellness.hrv) - baseline) - 1) * 100;
 
     if (!impacts[stimulusType]) impacts[stimulusType] = [];
     impacts[stimulusType].push(pctImpact);
@@ -64,6 +66,11 @@ export async function updateAthleteResponseProfile(athleteId: string) {
   const results: Record<string, { avgImpact: number; count: number }> = {};
 
   for (const [stimulusType, values] of Object.entries(impacts)) {
+    if (values.length < MIN_SESSIONS_FOR_PROFILE) {
+      // Muestra insuficiente: no se publica un promedio engañoso (y se borra uno viejo)
+      await prisma.athleteResponseProfile.deleteMany({ where: { athleteId, stimulusType } });
+      continue;
+    }
     const avgImpact = values.reduce((a, b) => a + b, 0) / values.length;
 
     await prisma.athleteResponseProfile.upsert({

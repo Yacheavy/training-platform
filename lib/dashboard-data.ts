@@ -148,12 +148,12 @@ export async function getAvailabilityHistory(athleteId: string, days: number = 3
       const diff = (record.date.getTime() - r.date.getTime()) / (1000 * 60 * 60 * 24);
       return diff > 0 && diff <= 7 && r.hrv != null;
     });
-    const hrvAvg7d =
-      priorSeven.length > 0 ? priorSeven.reduce((s, r) => s + (r.hrv ?? 0), 0) / priorSeven.length : null;
+    // Sin datos suficientes no se inventa un puntaje (antes los faltantes contaban como 0 → 70 falso)
+    if (record.hrv == null || record.ctl == null || record.atl == null || priorSeven.length < 4) continue;
+    const hrvAvg7d = priorSeven.reduce((s, r) => s + (r.hrv ?? 0), 0) / priorSeven.length;
 
-    const hrvDeltaPct =
-      record.hrv != null && hrvAvg7d != null && hrvAvg7d > 0 ? ((record.hrv - hrvAvg7d) / hrvAvg7d) * 100 : 0;
-    const tsb = record.ctl != null && record.atl != null ? record.ctl - record.atl : 0;
+    const hrvDeltaPct = hrvAvg7d > 0 ? ((record.hrv - hrvAvg7d) / hrvAvg7d) * 100 : 0;
+    const tsb = record.ctl - record.atl;
 
     let score = 70;
     score += Math.max(-20, Math.min(20, hrvDeltaPct * 2));
