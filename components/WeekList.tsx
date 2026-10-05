@@ -40,10 +40,21 @@ interface WeekWorkout {
   blocksJson: { type: string; durationSec: number; targetWatts: number }[];
 }
 
-export function WeekList({ workouts }: { workouts: WeekWorkout[] }) {
-  const now = new Date();
-  const weekStart = weekRangeLocal(now).start;
-  const todayDow = dayOfWeekLocal(now);
+export function WeekList({
+  workouts,
+  weekStartISO,
+  todayISO,
+}: {
+  workouts: WeekWorkout[];
+  /** Inicio (domingo 00:00 local) de la semana a mostrar. Por defecto, la actual. */
+  weekStartISO?: string;
+  /** Instante "ahora" (del servidor) para resaltar el día de hoy solo si está en esta semana. */
+  todayISO?: string;
+}) {
+  const now = todayISO ? new Date(todayISO) : new Date();
+  const weekStart = weekStartISO ? new Date(weekStartISO) : weekRangeLocal(now).start;
+  const isCurrentWeek = weekRangeLocal(now).start.getTime() === weekStart.getTime();
+  const todayDow = isCurrentWeek ? dayOfWeekLocal(now) : -1;
 
   const byDay = new Map<number, WeekWorkout>();
   for (const w of workouts) {
@@ -106,7 +117,7 @@ export function WeekList({ workouts }: { workouts: WeekWorkout[] }) {
           </div>
         );
         return workout ? (
-          <Link key={dayOfWeek} href={`/workouts/${workout.id}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+          <Link key={dayOfWeek} href={`/workouts/${workout.id}`} className="row-link" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
             {row}
           </Link>
         ) : (

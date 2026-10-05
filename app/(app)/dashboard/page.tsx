@@ -1,3 +1,5 @@
+import { ActionForm } from "@/components/ActionForm";
+import { SubmitButton } from "@/components/SubmitButton";
 import { dayKeyDate } from "@/lib/tz";
 import { syncIfStale } from "@/lib/intervals-sync";
 import { syncNow } from "@/lib/sync-actions";
@@ -9,13 +11,13 @@ import {
   getDashboardData,
   getTodayWorkout,
   getLoadHistory,
-  getCurrentWeekWorkouts,
+  getPlanWorkouts,
   getHrvRhrHistory,
   getAvailabilityHistory,
   getUpcomingBlocks,
 } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
-import { WeekList } from "@/components/WeekList";
+import { PlanNavigator } from "@/components/PlanNavigator";
 import { HrvRhrChart } from "@/components/HrvRhrChart";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
 import { PhaseTimeline } from "@/components/PhaseTimeline";
@@ -41,7 +43,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData(session.user.id);
   const todayWorkout = await getTodayWorkout(session.user.id);
   const loadHistory = await getLoadHistory(session.user.id);
-  const currentWeekWorkouts = await getCurrentWeekWorkouts(session.user.id);
+  const planWorkouts = await getPlanWorkouts(session.user.id);
   const availability = await calculateAvailability(session.user.id);
   const todayStart = dayKeyDate(new Date());
   const existingCheckin = await prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: session.user.id, date: todayStart } } });
@@ -110,12 +112,12 @@ export default async function DashboardPage() {
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
         <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-          Semana actual
+          Plan de entrenamiento
         </div>
         <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "14px" }}>
-          Entrenamientos generados para esta semana
+          Navegá semana a semana con las flechas (o deslizando en el celular)
         </div>
-        <WeekList workouts={currentWeekWorkouts} />
+        <PlanNavigator workouts={planWorkouts} nowISO={new Date().toISOString()} />
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" }}>
@@ -277,16 +279,16 @@ export default async function DashboardPage() {
             </a>
             <div style={{ display: "flex", gap: "10px" }}>
               {todayWorkout.status === "SUGGESTED" && (
-                <form action={approveWorkout}>
+                <ActionForm action={approveWorkout} success="Sesión aprobada">
                   <input type="hidden" name="workoutId" value={todayWorkout.id} />
                   <ActionButton primary>Aprobar</ActionButton>
-                </form>
+                </ActionForm>
               )}
               {(todayWorkout.status === "APPROVED" || todayWorkout.status === "EDITED") && (
-                <form action={sendWorkoutToIntervals}>
+                <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
                   <input type="hidden" name="workoutId" value={todayWorkout.id} />
                   <ActionButton primary>Enviar a Intervals</ActionButton>
-                </form>
+                </ActionForm>
               )}
               {todayWorkout.status === "SENT_TO_INTERVALS" && (
                 <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals</span>
@@ -299,11 +301,11 @@ export default async function DashboardPage() {
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
         <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "14px" }}>
           Últimas actividades
-          <form action={syncNow} style={{ display: "inline", float: "right" }}>
+          <ActionForm action={syncNow} success="Datos actualizados desde Intervals" style={{ display: "inline", float: "right" }}>
             <button type="submit" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: "6px", padding: "2px 8px", fontSize: "11px", cursor: "pointer" }}>
               Sincronizar
             </button>
-          </form>
+          </ActionForm>
         </div>
         {data.recentActivities.map((a, i) => (
           <div
@@ -374,8 +376,8 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 function ActionButton({ children, primary }: { children: React.ReactNode; primary?: boolean }) {
   return (
-    <button
-      type="submit"
+    <SubmitButton
+      pendingText="Procesando…"
       style={{
         background: primary ? "var(--teal)" : "transparent",
         color: primary ? "#0A1310" : "var(--text-muted)",
@@ -388,6 +390,6 @@ function ActionButton({ children, primary }: { children: React.ReactNode; primar
       }}
     >
       {children}
-    </button>
+    </SubmitButton>
   );
 }

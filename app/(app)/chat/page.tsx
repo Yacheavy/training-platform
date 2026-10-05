@@ -1,3 +1,4 @@
+import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
 import { syncIfStale } from "@/lib/intervals-sync";
 import { redirect } from "next/navigation";
@@ -49,9 +50,9 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
           style={{ flex: 1, background: "var(--surface-3)", border: "1px solid var(--border)", borderRadius: "9px", color: "var(--text)", padding: "10px 14px", fontSize: "13px" }}
           required
         />
-        <button type="submit" style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "9px", padding: "10px 18px", fontWeight: 600, cursor: "pointer" }}>
+        <SubmitButton pendingText="Enviando…" style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "9px", padding: "10px 18px", fontWeight: 600, cursor: "pointer" }}>
           Enviar
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

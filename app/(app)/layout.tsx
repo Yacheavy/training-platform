@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { Toaster } from "@/components/Toaster";
 
 const NAV_ITEMS = [
   { href: "/dashboard", icon: "◆", label: "Hoy" },
@@ -114,6 +115,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="app-content" style={{ paddingBottom: "76px" }}>
         {children}
       </div>
+
+      <Toaster />
 
       <style>{`
         @media (min-width: 1024px) {

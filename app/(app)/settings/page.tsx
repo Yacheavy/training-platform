@@ -1,12 +1,13 @@
+import { TemplateEditor } from "@/components/TemplateEditor";
+import { ActionForm } from "@/components/ActionForm";
+import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
 import { regeneratePlan } from "@/lib/plan-actions";
 import { getAccessData, inviteAthlete, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
 import { redirect } from "next/navigation";
-import { getSettingsData, saveTemplateSlot, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
+import { getSettingsData, saveTemplate, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
 import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
 
-const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-const STIMULUS_OPTIONS = ["cycling", "gym", "rest"];
 
 export const maxDuration = 60;
 
@@ -17,8 +18,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   const { template, goals, thresholds, user } = await getSettingsData(session.user.id);
   const access = await getAccessData(session.user.id);
-  const slotByDay = new Map(template.map((t) => [t.dayOfWeek, t]));
-
+  
   const cardStyle = { background: "#171E27", border: "1px solid #2A3441", borderRadius: "14px", padding: "20px", marginBottom: "20px" };
   const labelStyle = { fontSize: "11px", color: "#8A97A6", textTransform: "uppercase" as const, marginBottom: "6px", display: "block" };
   const inputStyle = { background: "#242F3B", border: "1px solid #2A3441", borderRadius: "7px", color: "#E7ECF2", padding: "7px 9px", fontSize: "13px", width: "100%" };
@@ -43,7 +43,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ) : (
           <div style={{ fontSize: "12.5px", color: "#E8A33D", marginBottom: "12px" }}>Todavía no conectaste Intervals: no vas a ver tus actividades ni tu HRV.</div>
         )}
-        <form action={connectIntervals} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+        <ActionForm action={connectIntervals} success={null} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
           <div>
             <label style={labelStyle}>Athlete ID</label>
             <input name="athleteId" placeholder="i12345" autoComplete="off" style={inputStyle} required />
@@ -52,22 +52,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <label style={labelStyle}>API key</label>
             <input name="apiKey" type="password" autoComplete="off" placeholder="••••••••" style={inputStyle} required />
           </div>
-          <button type="submit" style={{ ...btnStyle, gridColumn: "1 / -1" }}>{access.intervals.connected ? "Reemplazar clave" : "Conectar"}</button>
-        </form>
+          <SubmitButton style={{ ...btnStyle, gridColumn: "1 / -1" }}>{access.intervals.connected ? "Reemplazar clave" : "Conectar"}</SubmitButton>
+        </ActionForm>
         {sp.intervals === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Conectado. Ya trajimos el último año; si querés más historial, usá el botón de abajo.</div>}
         {sp.intervals === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Revisá el Athlete ID (ej. i12345) y la clave.</div>}
         {sp.intervals === "rejected" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Intervals rechazó esas credenciales. Verificá que sean las tuyas.</div>}
         {sp.history != null && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Historial sincronizado: {sp.history} actividades.</div>}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
           {(access.intervals.connected || access.intervals.usingLegacyEnv) && (
-            <form action={syncFullHistory}>
-              <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</button>
-            </form>
+            <ActionForm action={syncFullHistory} success={null}>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</SubmitButton>
+            </ActionForm>
           )}
           {access.intervals.connected && (
-            <form action={disconnectIntervals}>
-              <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Desconectar</button>
-            </form>
+            <ActionForm action={disconnectIntervals} success="Intervals desconectado">
+              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Desconectar</SubmitButton>
+            </ActionForm>
           )}
         </div>
       </div>
@@ -79,10 +79,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
             Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
           </p>
-          <form action={inviteAthlete} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
+          <ActionForm action={inviteAthlete} success={null} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
             <input name="email" type="email" placeholder="email@gmail.com" style={{ ...inputStyle, flex: "1 1 220px", width: "auto" }} required />
-            <button type="submit" style={btnStyle}>Invitar</button>
-          </form>
+            <SubmitButton style={btnStyle}>Invitar</SubmitButton>
+          </ActionForm>
           {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada. Avisale que entre con esa cuenta de Google.</div>}
           {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginBottom: "10px" }}>Ese email no es válido.</div>}
           {access.invites.map((i) => (
@@ -94,10 +94,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               {i.isCoach ? (
                 <span style={{ color: "#5A6673", fontSize: "11px" }}>Entrenador</span>
               ) : (
-                <form action={removeInvite}>
+                <ActionForm action={removeInvite} success="Invitación eliminada">
                   <input type="hidden" name="email" value={i.email} />
-                  <button type="submit" style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</button>
-                </form>
+                  <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
+                </ActionForm>
               )}
             </div>
           ))}
@@ -111,9 +111,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Solo se reemplazan las sesiones
           planificadas desde hoy; las del pasado y las que ya aprobaste o enviaste a Intervals no se tocan.
         </p>
-        <form action={regeneratePlan}>
-          <button type="submit" style={btnStyle}>Regenerar plan desde hoy</button>
-        </form>
+        <ActionForm action={regeneratePlan} success={null}>
+          <SubmitButton style={btnStyle}>Regenerar plan desde hoy</SubmitButton>
+        </ActionForm>
         {sp.regenerated != null && (
           <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
             Listo: {sp.regenerated} sesiones nuevas.{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
@@ -140,7 +140,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               Cambiar el FTP no regenera un plan ya creado.
             </p>
 
-            <form action={saveMetrics} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "10px" }}>
+            <ActionForm action={saveMetrics} success="Rendimiento guardado" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "10px" }}>
               {fields.map((f) => (
                 <div key={f.name}>
                   <label style={labelStyle}>{f.label}</label>
@@ -154,18 +154,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   </div>
                 </div>
               ))}
-              <button type="submit" style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar rendimiento</button>
-            </form>
+              <SubmitButton style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar rendimiento</SubmitButton>
+            </ActionForm>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", margin: "14px 0" }}>
               {fields.map((f) =>
                 f.remote != null && f.remote !== f.value ? (
-                  <form key={f.name} action={applyIntervalsValue}>
+                  <ActionForm key={f.name} action={applyIntervalsValue} success="Valor aplicado">
                     <input type="hidden" name="field" value={f.name} />
-                    <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#4FD1C5", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+                    <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#4FD1C5", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
                       Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
-                    </button>
-                  </form>
+                    </SubmitButton>
+                  </ActionForm>
                 ) : null
               )}
             </div>
@@ -191,11 +191,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "10px" }}>
               {user?.powerCurveSyncedAt ? `Última lectura de Intervals: ${new Date(user.powerCurveSyncedAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : "Sin lectura de Intervals todavía"}
             </div>
-            <form action={refreshMetricsNow} style={{ marginTop: "8px" }}>
-              <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+            <ActionForm action={refreshMetricsNow} success="Datos de Intervals actualizados" style={{ marginTop: "8px" }}>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
                 Leer de Intervals ahora
-              </button>
-            </form>
+              </SubmitButton>
+            </ActionForm>
           </div>
         );
       })()}
@@ -206,7 +206,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "16px" }}>
           Esto le da contexto real al chat sobre quién sos — actualizalo cuando sientas que cambió algo, no hace falta que sea diario.
         </p>
-        <form action={saveProfile} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+        <ActionForm action={saveProfile} success="Perfil guardado" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           <div>
             <label style={labelStyle}>Trayectoria / experiencia</label>
             <textarea
@@ -239,39 +239,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               style={{ ...inputStyle, minHeight: "60px", resize: "vertical" as const }}
             />
           </div>
-          <button type="submit" style={btnStyle}>Guardar perfil</button>
-        </form>
+          <SubmitButton style={btnStyle}>Guardar perfil</SubmitButton>
+        </ActionForm>
       </div>
 
       {/* Plantilla semanal */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Plantilla semanal</h2>
-        {DAYS.map((dayName, dayOfWeek) => {
-          const slot = slotByDay.get(dayOfWeek);
-          return (
-             <form action={saveTemplateSlot} key={dayOfWeek} className="form-row-5" style={{ marginBottom: "10px" }}>
-              <input type="hidden" name="dayOfWeek" value={dayOfWeek} />
-              <div style={{ fontSize: "13px", paddingBottom: "8px" }}>{dayName}</div>
-              <div>
-                <label style={labelStyle}>Tipo de día</label>
-                <select name="stimulusType" defaultValue={slot?.stimulusType ?? "rest"} style={inputStyle}>
-                  {STIMULUS_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Calidad</label>
-                <input type="checkbox" name="isQualityDay" defaultChecked={slot?.isQualityDay ?? false} style={{ width: "20px", height: "20px" }} />
-              </div>
-              <div>
-                <label style={labelStyle}>Min</label>
-                <input type="number" name="targetDurationMin" defaultValue={slot?.targetDurationMin ?? ""} style={inputStyle} />
-              </div>
-              <button type="submit" style={{ ...btnStyle, padding: "7px 12px" }}>Guardar</button>
-            </form>
-          );
-        })}
+        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Días de entrenamiento</h2>
+        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+          Elegí qué hacés cada día, cuáles son de calidad (intensidad) y cuánto duran. Se guarda todo junto con un solo botón; después regenerá el plan para aplicarlo.
+        </p>
+        <TemplateEditor slots={template.map((t) => ({ dayOfWeek: t.dayOfWeek, stimulusType: t.stimulusType, isQualityDay: t.isQualityDay, targetDurationMin: t.targetDurationMin }))} action={saveTemplate} />
       </div>
 
             {/* Objetivos */}
@@ -290,13 +268,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <span>{g.name} — {g.eventDate ? new Date(g.eventDate).toLocaleDateString("es-AR") : "sin fecha"}</span>
               )}
             </div>
-            <form action={deleteGoal}>
+            <ActionForm action={deleteGoal} success="Objetivo eliminado">
               <input type="hidden" name="id" value={g.id} />
-              <button type="submit" style={{ background: "transparent", color: "#8A97A6", border: "none", cursor: "pointer", fontSize: "12px" }}>eliminar</button>
-            </form>
+              <SubmitButton style={{ background: "transparent", color: "#8A97A6", border: "none", cursor: "pointer", fontSize: "12px" }}>eliminar</SubmitButton>
+            </ActionForm>
           </div>
         ))}
-        <form action={addGoal} style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "14px" }}>
+        <ActionForm action={addGoal} success="Objetivo agregado" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "14px" }}>
           <div className="form-row-3">
             <select name="goalType" style={inputStyle}>
               <option value="EVENT">Evento</option>
@@ -315,14 +293,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <input name="baselineValue" type="number" step="0.1" placeholder="Valor actual" style={inputStyle} />
             <input name="targetValue" type="number" step="0.1" placeholder="Valor objetivo" style={inputStyle} />
           </div>
-          <button type="submit" style={{ ...btnStyle, alignSelf: "flex-start" }}>Agregar objetivo</button>
-        </form>
+          <SubmitButton style={{ ...btnStyle, alignSelf: "flex-start" }}>Agregar objetivo</SubmitButton>
+        </ActionForm>
       </div>
 
       {/* Umbrales */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Umbrales y guardrails</h2>
-        <form action={saveThresholds} className="form-row-3b">
+        <ActionForm action={saveThresholds} success="Umbrales guardados" className="form-row-3b">
           <div>
             <label style={labelStyle}>Ramp rate máx CTL/sem</label>
             <input name="maxCtlRampPerWeek" type="number" step="0.1" defaultValue={thresholds?.maxCtlRampPerWeek ?? 5.0} style={inputStyle} />
@@ -355,8 +333,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <label style={labelStyle}>Ciclo carga:descarga</label>
             <input name="deloadRatio" defaultValue={thresholds?.deloadRatio ?? "4:1"} style={inputStyle} />
           </div>
-          <button type="submit" style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar umbrales</button>
-        </form>
+          <SubmitButton style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar umbrales</SubmitButton>
+        </ActionForm>
       </div>
     </div>
   );

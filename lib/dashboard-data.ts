@@ -180,3 +180,32 @@ export async function getUpcomingBlocks(athleteId: string) {
     endDate: b.endDate.toISOString(),
   }));
 }
+/** Todo el plan visible: desde 4 semanas atrás hasta el último entrenamiento generado. */
+export async function getPlanWorkouts(athleteId: string) {
+  const { start: startOfWeek } = weekRangeLocal(new Date());
+  const from = new Date(startOfWeek.getTime() - 28 * 24 * 60 * 60 * 1000);
+
+  const workouts = await prisma.generatedWorkout.findMany({
+    where: { athleteId, date: { gte: from } },
+    orderBy: { date: "asc" },
+    select: {
+      id: true,
+      date: true,
+      workoutLibraryKey: true,
+      status: true,
+      estimatedTss: true,
+      blocksJson: true,
+      rationale: true,
+    },
+  });
+
+  return workouts.map((w) => ({
+    id: w.id,
+    date: w.date.toISOString(),
+    workoutLibraryKey: w.workoutLibraryKey,
+    status: w.status as string,
+    estimatedTss: w.estimatedTss,
+    blocksJson: w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[],
+    phase: (w.rationale?.includes("DELOAD") ? "DELOAD" : w.rationale?.includes("TAPER") ? "TAPER" : null) as "DELOAD" | "TAPER" | null,
+  }));
+}

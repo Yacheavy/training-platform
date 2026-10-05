@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { saveCheckin } from "@/lib/checkin-actions";
+import { ActionForm } from "./ActionForm";
+import { SubmitButton } from "./SubmitButton";
 
 const FIELDS = [
   { key: "sleepQuality", label: "Calidad de sueño", low: "1 = pésimo", high: "7 = excelente" },
@@ -27,7 +29,7 @@ export function CheckinForm({
   const complete = FIELDS.every((f) => values[f.key] != null);
 
   return (
-    <form action={saveCheckin} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+    <ActionForm action={saveCheckin} success="Check-in guardado" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
       {FIELDS.map((field) => (
         <div key={field.key}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
@@ -66,8 +68,8 @@ export function CheckinForm({
           resize: "vertical",
         }}
       />
-      <button
-        type="submit"
+      <SubmitButton
+        pendingText="Guardando…"
         disabled={!complete}
         style={{
           background: "var(--teal)",
@@ -81,7 +83,7 @@ export function CheckinForm({
         }}
       >
         {existing ? "Actualizar check-in" : "Guardar check-in de hoy"}
-      </button>
-    </form>
+      </SubmitButton>
+    </ActionForm>
   );
 }

@@ -1,3 +1,5 @@
+import { ActionForm } from "@/components/ActionForm";
+import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -197,16 +199,16 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           Pedir ajustes en el chat →
         </Link>
         {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
-          <form action={approveWorkout}>
+          <ActionForm action={approveWorkout} success="Sesión aprobada">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <button type="submit" style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Aprobar</button>
-          </form>
+            <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Aprobar</SubmitButton>
+          </ActionForm>
         )}
         {(workout.status === "APPROVED" || workout.status === "EDITED") && (
-          <form action={sendWorkoutToIntervals}>
+          <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <button type="submit" style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Enviar a Intervals</button>
-          </form>
+            <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Enviar a Intervals</SubmitButton>
+          </ActionForm>
         )}
         {workout.status === "SENT_TO_INTERVALS" && <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals</span>}
       </div>

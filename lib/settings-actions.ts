@@ -28,6 +28,36 @@ export async function getSettingsData(athleteId: string) {
   return { template, goals, thresholds, user };
 }
 
+/** Guarda los 7 días de la plantilla semanal en un solo paso (todo o nada). */
+export async function saveTemplate(formData: FormData) {
+  const athleteId = await requireUserId();
+
+  const rows = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
+    const type = String(formData.get(`type_${dayOfWeek}`) ?? "rest");
+    const stimulusType = ["cycling", "gym", "rest"].includes(type) ? type : "rest";
+    const isQualityDay = stimulusType === "cycling" && formData.get(`quality_${dayOfWeek}`) === "on";
+    const rawMin = Number(formData.get(`min_${dayOfWeek}`));
+    const targetDurationMin =
+      stimulusType === "rest" ? null : Number.isFinite(rawMin) && rawMin >= 15 && rawMin <= 600 ? Math.round(rawMin) : null;
+    if (stimulusType === "cycling" && targetDurationMin == null) {
+      throw new Error("Cada día de ciclismo necesita una duración entre 15 y 600 minutos");
+    }
+    return { dayOfWeek, stimulusType, isQualityDay, targetDurationMin };
+  });
+
+  await prisma.$transaction(
+    rows.map((r) =>
+      prisma.trainingTemplateSlot.upsert({
+        where: { athleteId_dayOfWeek: { athleteId, dayOfWeek: r.dayOfWeek } },
+        update: { stimulusType: r.stimulusType, isQualityDay: r.isQualityDay, targetDurationMin: r.targetDurationMin },
+        create: { athleteId, ...r, appliesInPhases: [] },
+      })
+    )
+  );
+
+  revalidatePath("/settings");
+}
+
 export async function saveTemplateSlot(formData: FormData) {
   const athleteId = await requireUserId();
   const dayOfWeek = Number(formData.get("dayOfWeek"));
