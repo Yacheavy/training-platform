@@ -60,7 +60,7 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const tsb = latest?.ctl != null && latest?.atl != null ? latest.ctl - latest.atl : null;
 
   const todayStart = dayKeyDate(new Date());
-  const checkin = await prisma.dailyCheckin.findUnique({ where: { date: todayStart } });
+  const checkin = await prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId, date: todayStart } } });
   const checkinToday = checkin
     ? { fatigue: checkin.fatigue, stress: checkin.stress, muscleSoreness: checkin.muscleSoreness, sleepQuality: checkin.sleepQuality }
     : null;

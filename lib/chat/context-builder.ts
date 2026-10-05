@@ -131,7 +131,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   }
 
   if (focusedWorkoutId) {
-    const workout = await prisma.generatedWorkout.findUnique({ where: { id: focusedWorkoutId } });
+    const workout = await prisma.generatedWorkout.findFirst({ where: { id: focusedWorkoutId, athleteId } });
     if (workout) {
       parts.push(
         `WORKOUT ENFOCADO (el atleta está viendo esta sesión ahora): ${workout.workoutLibraryKey}, TSS estimado ${workout.estimatedTss}, estado ${workout.status}, bloques: ${JSON.stringify(workout.blocksJson)}`

@@ -19,8 +19,7 @@ export async function updateAthleteResponseProfile(athleteId: string) {
     rawCounts[st] = (rawCounts[st] ?? 0) + 1;
   }
 
-  const wellness = await prisma.wellness.findMany({
-  });
+  const wellness = await prisma.wellness.findMany({ where: { athleteId } });
 
   const wellnessByDate = new Map(
     wellness.map((w) => [w.date.toISOString().split("T")[0], w])

@@ -37,5 +37,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   pages: {
     signIn: "/login",
+    error: "/login",
+  },
+  callbacks: {
+    // Acceso solo por invitación: el email tiene que estar en AllowedEmail
+    async signIn({ user }) {
+      const email = user.email?.toLowerCase();
+      if (!email) return false;
+      const allowed = await prisma.allowedEmail.findUnique({ where: { email } });
+      return !!allowed;
+    },
+  },
+  events: {
+    // El alumno queda vinculado al entrenador que lo invitó
+    async createUser({ user }) {
+      const email = user.email?.toLowerCase();
+      if (!email || !user.id) return;
+      const invite = await prisma.allowedEmail.findUnique({ where: { email } });
+      if (invite?.invitedById) await prisma.user.update({ where: { id: user.id }, data: { coachId: invite.invitedById } });
+    },
   },
 })

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getActivities, getWellness } from "@/lib/intervals-client";
 import { dateKeyLocal } from "@/lib/tz";
 import { refreshAthleteMetrics } from "@/lib/athlete-metrics";
+import { getIntervalsCreds } from "@/lib/intervals-creds";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function mapActivity(a: any, userId: string) {
@@ -75,14 +76,14 @@ export interface SyncResult {
  * Las rutas de historial completo siguen existiendo para cargas iniciales.
  */
 export async function syncIntervals(userId: string, days = 14): Promise<SyncResult> {
-  days = Math.min(Math.max(days, 1), 800);
-  const apiKey = process.env.INTERVALS_API_KEY_DEV;
-  const athleteId = process.env.INTERVALS_ATHLETE_ID_DEV;
+  days = Math.min(Math.max(days, 1), 2200);
   const result: SyncResult = { activities: 0, wellness: 0, errors: [] };
-  if (!apiKey || !athleteId) {
-    result.errors.push("Faltan credenciales de Intervals (INTERVALS_API_KEY_DEV / INTERVALS_ATHLETE_ID_DEV)");
+  const creds = await getIntervalsCreds(userId);
+  if (!creds) {
+    result.errors.push("Intervals no está conectado (cargá tu athlete ID y tu API key en Configuración)");
     return result;
   }
+  const { apiKey, athleteId } = creds;
 
   const now = new Date();
   const oldest = dateKeyLocal(new Date(now.getTime() - days * DAY_MS));
@@ -90,14 +91,21 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
   const newestWellness = dateKeyLocal(now); // wellness: Intervals proyecta CTL/ATL a días futuros sin datos reales
 
   try {
-    const activities = await getActivities(athleteId, apiKey, oldest, newest);
+    const activities: any[] = [];
+    // Ventanas de hasta 1 año para no pedirle a la API un rango gigante de una sola vez
+    for (let end = new Date(now.getTime() + DAY_MS); end.getTime() > now.getTime() - days * DAY_MS; end = new Date(end.getTime() - 365 * DAY_MS)) {
+      const start = new Date(Math.max(end.getTime() - 365 * DAY_MS, now.getTime() - days * DAY_MS));
+      activities.push(...(await getActivities(athleteId, apiKey, dateKeyLocal(start), dateKeyLocal(end))));
+    }
     const list = activities as any[];
     for (let i = 0; i < list.length; i += 10) {
       await Promise.all(
         list.slice(i, i + 10).map(async (a) => {
           try {
             const mapped = mapActivity(a, userId);
-            await prisma.activity.upsert({ where: { intervalsActivityId: mapped.intervalsActivityId }, update: mapped, create: mapped });
+            const { athleteId: _owner, ...rest } = mapped;
+            void _owner;
+            await prisma.activity.upsert({ where: { intervalsActivityId: mapped.intervalsActivityId }, update: rest, create: mapped });
             result.activities++;
           } catch (err) {
             result.errors.push(`Activity ${a?.id}: ${String(err)}`);
@@ -110,14 +118,20 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
   }
 
   try {
-    const wellness = await getWellness(athleteId, apiKey, oldest, newestWellness);
+    const wellness: any[] = [];
+    for (let end = now; end.getTime() > now.getTime() - days * DAY_MS; end = new Date(end.getTime() - 365 * DAY_MS)) {
+      const start = new Date(Math.max(end.getTime() - 365 * DAY_MS, now.getTime() - days * DAY_MS));
+      wellness.push(...(await getWellness(athleteId, apiKey, dateKeyLocal(start), dateKeyLocal(end))));
+    }
     const wl = wellness as any[];
     for (let i = 0; i < wl.length; i += 10) {
       await Promise.all(
         wl.slice(i, i + 10).map(async (w) => {
           try {
             const mapped = mapWellness(w, userId);
-            await prisma.wellness.upsert({ where: { date: mapped.date }, update: mapped, create: mapped });
+            const { athleteId: _owner, ...rest } = mapped;
+            void _owner;
+            await prisma.wellness.upsert({ where: { athleteId_date: { athleteId: userId, date: mapped.date } }, update: rest, create: mapped });
             result.wellness++;
           } catch (err) {
             result.errors.push(`Wellness ${w?.id}: ${String(err)}`);

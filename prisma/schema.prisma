@@ -30,6 +30,7 @@ model User {
   weight            Float?
   ftp               Int?
   ftpUpdatedAt      DateTime?
+  role              String   @default("ATHLETE")
   pvo2maxWatts      Int?
   pvo2maxUpdatedAt  DateTime?
   pvo2maxSource     String?
@@ -121,7 +122,7 @@ model Wellness {
   id           String   @id @default(cuid())
   athleteId    String
   athlete      User     @relation(fields: [athleteId], references: [id])
-  date         DateTime @unique
+  date         DateTime
 
   hrv          Float?
   restingHr    Float?
@@ -136,13 +137,15 @@ model Wellness {
   rampRate     Float?
 
   source       String   @default("intervals_sync")
+
+  @@unique([athleteId, date])
 }
 
 model DailyCheckin {
   id              String   @id @default(cuid())
   athleteId       String
   athlete         User     @relation(fields: [athleteId], references: [id])
-  date            DateTime @unique
+  date            DateTime
 
   sleepQuality    Int?
   fatigue         Int?
@@ -154,6 +157,8 @@ model DailyCheckin {
   aiSummary       String?
 
   createdAt       DateTime @default(now())
+
+  @@unique([athleteId, date])
 }
 
 model TrainingTemplateSlot {
@@ -377,4 +382,10 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model AllowedEmail {
+  email       String   @id
+  invitedById String?
+  createdAt   DateTime @default(now())
 }

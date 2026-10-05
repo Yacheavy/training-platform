@@ -5,6 +5,8 @@ import { auth } from "@/auth";
 import { createEvent } from "@/lib/intervals-client";
 import { buildStructuredWorkout } from "@/lib/training-engine/workout-description";
 import { revalidatePath } from "next/cache";
+import { getIntervalsCreds } from "@/lib/intervals-creds";
+import { dateKeyLocal } from "@/lib/tz";
 import { buildWorkoutName } from "@/lib/training-engine/workout-naming";
 
 export async function approveWorkout(formData: FormData) {
@@ -33,8 +35,10 @@ export async function sendWorkoutToIntervals(formData: FormData) {
   if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
   if (workout.status !== "APPROVED") throw new Error("Aprobalo primero");
 
-  const apiKey = process.env.INTERVALS_API_KEY_DEV!;
-  const athleteIntervalsId = process.env.INTERVALS_ATHLETE_ID_DEV!;
+  const creds = await getIntervalsCreds(session.user.id);
+  if (!creds) throw new Error("Conectá tu Intervals en Configuración antes de enviar sesiones");
+  const apiKey = creds.apiKey;
+  const athleteIntervalsId = creds.athleteId;
 
   const blocks = workout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
   const totalDurationSec = blocks.reduce((s, b) => s + b.durationSec, 0);
@@ -50,7 +54,7 @@ export async function sendWorkoutToIntervals(formData: FormData) {
     },
     workout.rationale
   );
-  const startDateLocal = new Date(workout.date).toISOString().split("T")[0] + "T07:00:00";
+  const startDateLocal = dateKeyLocal(new Date(workout.date)) + "T07:00:00";
 
   await createEvent(athleteIntervalsId, apiKey, {
     external_id: workout.id,

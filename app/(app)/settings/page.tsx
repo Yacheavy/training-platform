@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { regeneratePlan } from "@/lib/plan-actions";
+import { getAccessData, inviteAthlete, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
 import { redirect } from "next/navigation";
 import { getSettingsData, saveTemplateSlot, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
 import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
@@ -7,12 +8,15 @@ import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from 
 const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const STIMULUS_OPTIONS = ["cycling", "gym", "rest"];
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; warnings?: string }> }) {
+export const maxDuration = 60;
+
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; warnings?: string; invite?: string; intervals?: string; history?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
   const { template, goals, thresholds, user } = await getSettingsData(session.user.id);
+  const access = await getAccessData(session.user.id);
   const slotByDay = new Map(template.map((t) => [t.dayOfWeek, t]));
 
   const cardStyle = { background: "#171E27", border: "1px solid #2A3441", borderRadius: "14px", padding: "20px", marginBottom: "20px" };
@@ -23,6 +27,82 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "24px" }}>Configuración</h1>
+
+      {/* Conexión con Intervals (cada persona usa su propia cuenta) */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Conexión con Intervals.icu</h2>
+        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+          En Intervals: Settings → Developer Settings → API Key. Pegá tu Athlete ID (por ejemplo i12345) y la clave. Se guardan cifradas y solo se usan para traer tus datos y enviar tus sesiones.
+        </p>
+        {access.intervals.connected || access.intervals.usingLegacyEnv ? (
+          <div style={{ fontSize: "12.5px", marginBottom: "12px" }}>
+            <span style={{ color: "#4FD1C5" }}>✓ Conectado</span>
+            {access.intervals.athleteId ? ` (${access.intervals.athleteId})` : " (configuración del servidor)"}
+            {access.intervals.lastSyncAt ? ` · última sincronización: ${new Date(access.intervals.lastSyncAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}
+          </div>
+        ) : (
+          <div style={{ fontSize: "12.5px", color: "#E8A33D", marginBottom: "12px" }}>Todavía no conectaste Intervals: no vas a ver tus actividades ni tu HRV.</div>
+        )}
+        <form action={connectIntervals} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div>
+            <label style={labelStyle}>Athlete ID</label>
+            <input name="athleteId" placeholder="i12345" autoComplete="off" style={inputStyle} required />
+          </div>
+          <div>
+            <label style={labelStyle}>API key</label>
+            <input name="apiKey" type="password" autoComplete="off" placeholder="••••••••" style={inputStyle} required />
+          </div>
+          <button type="submit" style={{ ...btnStyle, gridColumn: "1 / -1" }}>{access.intervals.connected ? "Reemplazar clave" : "Conectar"}</button>
+        </form>
+        {sp.intervals === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Conectado. Ya trajimos el último año; si querés más historial, usá el botón de abajo.</div>}
+        {sp.intervals === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Revisá el Athlete ID (ej. i12345) y la clave.</div>}
+        {sp.intervals === "rejected" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Intervals rechazó esas credenciales. Verificá que sean las tuyas.</div>}
+        {sp.history != null && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Historial sincronizado: {sp.history} actividades.</div>}
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
+          {(access.intervals.connected || access.intervals.usingLegacyEnv) && (
+            <form action={syncFullHistory}>
+              <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</button>
+            </form>
+          )}
+          {access.intervals.connected && (
+            <form action={disconnectIntervals}>
+              <button type="submit" style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Desconectar</button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* Alumnos (solo entrenador) */}
+      {access.isCoach && (
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Alumnos</h2>
+          <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+            Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
+          </p>
+          <form action={inviteAthlete} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
+            <input name="email" type="email" placeholder="email@gmail.com" style={{ ...inputStyle, flex: "1 1 220px", width: "auto" }} required />
+            <button type="submit" style={btnStyle}>Invitar</button>
+          </form>
+          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada. Avisale que entre con esa cuenta de Google.</div>}
+          {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginBottom: "10px" }}>Ese email no es válido.</div>}
+          {access.invites.map((i) => (
+            <div key={i.email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #2A3441", fontSize: "13px" }}>
+              <div>
+                {i.email}
+                <span style={{ color: "#5A6673", fontSize: "11px", marginLeft: "8px" }}>{i.joined ? `ingresó${i.name ? ` · ${i.name}` : ""}` : "pendiente de ingresar"}</span>
+              </div>
+              {i.isCoach ? (
+                <span style={{ color: "#5A6673", fontSize: "11px" }}>Entrenador</span>
+              ) : (
+                <form action={removeInvite}>
+                  <input type="hidden" name="email" value={i.email} />
+                  <button type="submit" style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</button>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Plan */}
       <div style={cardStyle}>

@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const currentWeekWorkouts = await getCurrentWeekWorkouts(session.user.id);
   const availability = await calculateAvailability(session.user.id);
   const todayStart = dayKeyDate(new Date());
-  const existingCheckin = await prisma.dailyCheckin.findUnique({ where: { date: todayStart } });
+  const existingCheckin = await prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: session.user.id, date: todayStart } } });
   const hrvRhrHistory = await getHrvRhrHistory(session.user.id);
   const availabilityHistory = await getAvailabilityHistory(session.user.id);
   const upcomingBlocks = await getUpcomingBlocks(session.user.id);

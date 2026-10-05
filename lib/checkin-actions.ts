@@ -12,26 +12,25 @@ export async function saveCheckin(formData: FormData) {
   const athleteId = session.user.id;
   const today = dayKeyDate(new Date());
 
+  // Escala 1–7 obligatoria (sin esto Number(null) = 0 dispararía alertas falsas)
+  const scale = (name: string): number => {
+    const n = Number(formData.get(name));
+    if (!Number.isInteger(n) || n < 1 || n > 7) throw new Error(`Valor inválido en "${name}" (1 a 7)`);
+    return n;
+  };
+  const values = {
+    sleepQuality: scale("sleepQuality"),
+    fatigue: scale("fatigue"),
+    stress: scale("stress"),
+    muscleSoreness: scale("muscleSoreness"),
+    mood: scale("mood"),
+    freeText: String(formData.get("freeText") || "").slice(0, 500),
+  };
+
   await prisma.dailyCheckin.upsert({
-    where: { date: today },
-    update: {
-      sleepQuality: Number(formData.get("sleepQuality")),
-      fatigue: Number(formData.get("fatigue")),
-      stress: Number(formData.get("stress")),
-      muscleSoreness: Number(formData.get("muscleSoreness")),
-      mood: Number(formData.get("mood")),
-      freeText: String(formData.get("freeText") || ""),
-    },
-    create: {
-      athleteId,
-      date: today,
-      sleepQuality: Number(formData.get("sleepQuality")),
-      fatigue: Number(formData.get("fatigue")),
-      stress: Number(formData.get("stress")),
-      muscleSoreness: Number(formData.get("muscleSoreness")),
-      mood: Number(formData.get("mood")),
-      freeText: String(formData.get("freeText") || ""),
-    },
+    where: { athleteId_date: { athleteId, date: today } },
+    update: values,
+    create: { athleteId, date: today, ...values },
   });
 
   revalidatePath("/dashboard");

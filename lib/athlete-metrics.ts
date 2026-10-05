@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma";
 import { getPowerCurve, getSportSettings } from "@/lib/intervals-client";
+import { getIntervalsCreds } from "@/lib/intervals-creds";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const POWER_CURVE_DURATIONS = [5, 60, 300, 1200, 3600] as const;
@@ -61,10 +62,10 @@ export function parseSportSettings(res: any): StoredSportSettings {
 
 /** Trae curva de potencia (90 días) y configuración de deporte desde Intervals y las guarda. Nunca lanza. */
 export async function refreshAthleteMetrics(userId: string): Promise<string[]> {
-  const apiKey = process.env.INTERVALS_API_KEY_DEV;
-  const athleteId = process.env.INTERVALS_ATHLETE_ID_DEV;
   const errors: string[] = [];
-  if (!apiKey || !athleteId) return ["Faltan credenciales de Intervals"];
+  const creds = await getIntervalsCreds(userId);
+  if (!creds) return ["Intervals no está conectado"];
+  const { apiKey, athleteId } = creds;
 
   const data: Prisma.UserUpdateInput = {};
   try {

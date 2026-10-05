@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const isCron = !!cronSecret && req.headers.get("authorization") === `Bearer ${cronSecret}`;
 
   if (isCron) {
-    const users = await prisma.user.findMany({ where: { activities: { some: {} } }, select: { id: true } });
+    const users = await prisma.user.findMany({ where: { OR: [{ intervalsApiKeyEncrypted: { not: null } }, { role: "COACH" }] }, select: { id: true } });
     const results = [];
     for (const u of users) results.push(await syncIntervals(u.id, 14));
     return NextResponse.json({ cron: true, results });

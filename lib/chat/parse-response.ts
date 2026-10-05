@@ -1,23 +1,26 @@
 export interface ParsedResponse {
   text: string;
-  updatedBlocks: { type: string; durationSec: number; targetWatts: number }[] | null;
+  /** Contenido del bloque json_blocks SIN validar (hay que pasarlo por validateBlocks). */
+  updatedBlocks: unknown | null;
+  /** El modelo incluyó un bloque json_blocks pero no se pudo leer (mal formado o cortado). */
+  blocksUnreadable: boolean;
 }
 
 export function parseClaudeResponse(raw: string): ParsedResponse {
   const match = raw.match(/```json_blocks\s*([\s\S]*?)\s*```/);
 
   if (!match) {
-    return { text: raw.trim(), updatedBlocks: null };
+    // Bloque abierto pero sin cierre (respuesta cortada): no mostrar JSON a medias al usuario
+    const open = raw.indexOf("```json_blocks");
+    if (open >= 0) return { text: raw.slice(0, open).trim(), updatedBlocks: null, blocksUnreadable: true };
+    return { text: raw.trim(), updatedBlocks: null, blocksUnreadable: false };
   }
 
   const text = raw.replace(match[0], "").trim();
 
   try {
-    const updatedBlocks = JSON.parse(match[1]);
-    return { text, updatedBlocks };
+    return { text, updatedBlocks: JSON.parse(match[1]), blocksUnreadable: false };
   } catch {
-    // Si el JSON viene mal formado, no rompemos el chat — devolvemos
-    // solo el texto y dejamos los bloques sin tocar
-    return { text: raw.trim(), updatedBlocks: null };
+    return { text, updatedBlocks: null, blocksUnreadable: true };
   }
 }
