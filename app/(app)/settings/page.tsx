@@ -1,4 +1,7 @@
 import { TemplateEditor } from "@/components/TemplateEditor";
+import { GoalsCard } from "@/components/GoalsCard";
+import { ThresholdsCard } from "@/components/ThresholdsCard";
+import { dateKeyLocal } from "@/lib/tz";
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
@@ -252,90 +255,29 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <TemplateEditor slots={template.map((t) => ({ dayOfWeek: t.dayOfWeek, stimulusType: t.stimulusType, isQualityDay: t.isQualityDay, targetDurationMin: t.targetDurationMin }))} action={saveTemplate} />
       </div>
 
-            {/* Objetivos */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Objetivos</h2>
-        {goals.map((g) => (
-          <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", padding: "10px 0", borderBottom: "1px solid #1E2731" }}>
-            <div>
-              <span style={{ fontFamily: "monospace", fontSize: "11px", background: "#5C2A2E", color: "#E5636A", padding: "2px 8px", borderRadius: "6px", marginRight: "10px" }}>{g.priority}</span>
-              <span style={{ fontFamily: "monospace", fontSize: "10px", background: "#242F3B", color: "#8A97A6", padding: "2px 8px", borderRadius: "6px", marginRight: "10px" }}>
-                {g.goalType === "PERFORMANCE" ? "RENDIMIENTO" : "EVENTO"}
-              </span>
-              {g.goalType === "PERFORMANCE" ? (
-                <span>{g.name}: {g.metric} {g.baselineValue ?? "?"} → {g.targetValue ?? "?"}{g.eventDate ? ` (para ${new Date(g.eventDate).toLocaleDateString("es-AR")})` : ""}</span>
-              ) : (
-                <span>{g.name} — {g.eventDate ? new Date(g.eventDate).toLocaleDateString("es-AR") : "sin fecha"}</span>
-              )}
-            </div>
-            <ActionForm action={deleteGoal} success="Objetivo eliminado">
-              <input type="hidden" name="id" value={g.id} />
-              <SubmitButton style={{ background: "transparent", color: "#8A97A6", border: "none", cursor: "pointer", fontSize: "12px" }}>eliminar</SubmitButton>
-            </ActionForm>
-          </div>
-        ))}
-        <ActionForm action={addGoal} success="Objetivo agregado" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "14px" }}>
-          <div className="form-row-3">
-            <select name="goalType" style={inputStyle}>
-              <option value="EVENT">Evento</option>
-              <option value="PERFORMANCE">Rendimiento</option>
-            </select>
-            <input name="name" placeholder="Nombre (ej. 'FTP pre-temporada' o 'Maratón CABA')" style={inputStyle} required />
-            <select name="priority" style={inputStyle}>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-            </select>
-          </div>
-          <div className="form-row-4">
-            <input name="eventDate" type="date" style={inputStyle} placeholder="Fecha (opcional en rendimiento)" />
-            <input name="metric" placeholder="Métrica (ej. FTP, VO2max)" style={inputStyle} />
-            <input name="baselineValue" type="number" step="0.1" placeholder="Valor actual" style={inputStyle} />
-            <input name="targetValue" type="number" step="0.1" placeholder="Valor objetivo" style={inputStyle} />
-          </div>
-          <SubmitButton style={{ ...btnStyle, alignSelf: "flex-start" }}>Agregar objetivo</SubmitButton>
-        </ActionForm>
-      </div>
+      <GoalsCard
+        goals={goals.map((g) => ({
+          id: g.id,
+          goalType: g.goalType as "EVENT" | "PERFORMANCE",
+          name: g.name,
+          eventDate: g.eventDate ? g.eventDate.toISOString().slice(0, 10) : null,
+          priority: g.priority as "A" | "B" | "C",
+          metric: g.metric,
+          baselineValue: g.baselineValue,
+          targetValue: g.targetValue,
+        }))}
+        todayKey={dateKeyLocal(new Date())}
+        currentFtp={user?.ftp ?? null}
+        addAction={addGoal}
+        deleteAction={deleteGoal}
+        cardStyle={cardStyle}
+      />
 
-      {/* Umbrales */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Umbrales y guardrails</h2>
-        <ActionForm action={saveThresholds} success="Umbrales guardados" className="form-row-3b">
-          <div>
-            <label style={labelStyle}>Ramp rate máx CTL/sem</label>
-            <input name="maxCtlRampPerWeek" type="number" step="0.1" defaultValue={thresholds?.maxCtlRampPerWeek ?? 5.0} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Alerta caída HRV %</label>
-            <input name="hrvDropAlertPct" type="number" step="0.1" defaultValue={thresholds?.hrvDropAlertPct ?? 7.5} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>TSB mínimo</label>
-            <input name="minTsb" type="number" defaultValue={thresholds?.minTsb ?? -25} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Días sueño malo seguidos</label>
-            <input name="maxConsecutiveBadSleepDays" type="number" defaultValue={thresholds?.maxConsecutiveBadSleepDays ?? 2} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Semanas entre test FTP</label>
-            <input name="weeksBetweenFtpTest" type="number" defaultValue={thresholds?.weeksBetweenFtpTest ?? 5} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Protocolo de test FTP</label>
-            <select name="ftpTestProtocol" defaultValue={thresholds?.ftpTestProtocol ?? "20min"} style={inputStyle}>
-              <option value="20min">20 minutos (Coggan, x0.95)</option>
-              <option value="8min">8 minutos (2 reps)</option>
-              <option value="5min">5 minutos (extrapolado de VAM)</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Ciclo carga:descarga</label>
-            <input name="deloadRatio" defaultValue={thresholds?.deloadRatio ?? "4:1"} style={inputStyle} />
-          </div>
-          <SubmitButton style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar umbrales</SubmitButton>
-        </ActionForm>
-      </div>
+      <ThresholdsCard
+        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct, weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio } : null}
+        action={saveThresholds}
+        cardStyle={cardStyle}
+      />
     </div>
   );
 }

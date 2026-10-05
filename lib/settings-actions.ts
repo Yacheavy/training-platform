@@ -113,16 +113,20 @@ export async function saveThresholds(formData: FormData) {
 
 export async function addGoal(formData: FormData) {
   const athleteId = await requireUserId();
-  const eventDateStr = String(formData.get("eventDate"));
-  const goalType = String(formData.get("goalType")) as "EVENT" | "PERFORMANCE";
+  const eventDateStr = String(formData.get("eventDate") ?? "");
+  const goalType = String(formData.get("goalType")) === "PERFORMANCE" ? "PERFORMANCE" : "EVENT";
+  const name = String(formData.get("name") ?? "").trim().slice(0, 120);
+  if (!name) throw new Error("Poné un nombre para el objetivo");
+  if (goalType === "EVENT" && !/^\d{4}-\d{2}-\d{2}$/.test(eventDateStr)) throw new Error("Elegí la fecha del evento");
+  const priority = ["A", "B", "C"].includes(String(formData.get("priority"))) ? (String(formData.get("priority")) as "A" | "B" | "C") : "B";
 
   await prisma.athleteGoal.create({
     data: {
       athleteId,
       goalType,
-      name: String(formData.get("name")),
-      eventDate: eventDateStr ? new Date(eventDateStr) : null,
-      priority: String(formData.get("priority")) as "A" | "B" | "C",
+      name,
+      eventDate: /^\d{4}-\d{2}-\d{2}$/.test(eventDateStr) ? new Date(eventDateStr) : null,
+      priority,
       metric: goalType === "PERFORMANCE" ? String(formData.get("metric") || "") || null : null,
       baselineValue: goalType === "PERFORMANCE" && formData.get("baselineValue") ? Number(formData.get("baselineValue")) : null,
       targetValue: goalType === "PERFORMANCE" && formData.get("targetValue") ? Number(formData.get("targetValue")) : null,
@@ -133,9 +137,10 @@ export async function addGoal(formData: FormData) {
 }
 
 export async function deleteGoal(formData: FormData) {
-  await requireUserId();
+  const athleteId = await requireUserId();
   const id = String(formData.get("id"));
-  await prisma.athleteGoal.delete({ where: { id } });
+  // Solo se puede borrar un objetivo propio
+  await prisma.athleteGoal.deleteMany({ where: { id, athleteId } });
   revalidatePath("/settings");
 }
 export async function saveProfile(formData: FormData) {
