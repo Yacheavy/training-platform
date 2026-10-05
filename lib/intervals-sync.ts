@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getActivities, getWellness } from "@/lib/intervals-client";
-import { dateKeyLocal } from "@/lib/tz";
+import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
 import { refreshAthleteMetrics } from "@/lib/athlete-metrics";
 import { getIntervalsCreds } from "@/lib/intervals-creds";
 
@@ -182,7 +182,14 @@ export async function syncIfStale(userId: string, maxAgeMin = 5, timeoutMs = 120
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { intervalsLastSyncAt: true } });
     const last = user?.intervalsLastSyncAt?.getTime() ?? 0;
-    if (Date.now() - last < maxAgeMin * 60 * 1000) return;
+
+    // Si todavía falta el HRV de hoy (el reloj sube el dato por la mañana), se reintenta cada minuto
+    const todayRow = await prisma.wellness.findUnique({
+      where: { athleteId_date: { athleteId: userId, date: dayKeyDate(new Date()) } },
+      select: { hrv: true },
+    });
+    const effectiveMaxAge = todayRow?.hrv == null ? Math.min(maxAgeMin, 1) : maxAgeMin;
+    if (Date.now() - last < effectiveMaxAge * 60 * 1000) return;
 
     let run = inFlight.get(userId);
     if (!run) {

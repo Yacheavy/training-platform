@@ -16,6 +16,7 @@ export async function getActivities(
   const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/activities?oldest=${oldest}&newest=${newest}`;
   const res = await fetch(url, {
     headers: { Authorization: authHeader(apiKey) },
+    cache: "no-store",
   });
   if (!res.ok) {
     throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
@@ -32,6 +33,7 @@ export async function getWellness(
   const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/wellness?oldest=${oldest}&newest=${newest}`;
   const res = await fetch(url, {
     headers: { Authorization: authHeader(apiKey) },
+    cache: "no-store",
   });
   if (!res.ok) {
     throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
@@ -74,7 +76,7 @@ export async function createEvent(
 
 export async function getPowerCurve(athleteId: string, apiKey: string, curves = "90d", type = "Ride") {
   const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/power-curves?curves=${encodeURIComponent(curves)}&type=${encodeURIComponent(type)}`;
-  const res = await fetch(url, { headers: { Authorization: authHeader(apiKey) } });
+  const res = await fetch(url, { headers: { Authorization: authHeader(apiKey) }, cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
   }
@@ -83,7 +85,7 @@ export async function getPowerCurve(athleteId: string, apiKey: string, curves = 
 
 export async function getSportSettings(athleteId: string, apiKey: string) {
   const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/sport-settings`;
-  const res = await fetch(url, { headers: { Authorization: authHeader(apiKey) } });
+  const res = await fetch(url, { headers: { Authorization: authHeader(apiKey) }, cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
   }
