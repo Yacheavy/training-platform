@@ -1,11 +1,14 @@
 import { NavLinks } from "@/components/NavLinks";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Toaster } from "@/components/Toaster";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isCoach = me?.role === "COACH";
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -46,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         >
           i
         </div>
-        <NavLinks variant="side" />
+        <NavLinks variant="side" isCoach={isCoach} />
       </div>
 
       {/* Mobile bottom nav */}
@@ -67,7 +70,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        <NavLinks variant="bottom" />
+        <NavLinks variant="bottom" isCoach={isCoach} />
       </div>
 
       <div className="app-content" style={{ paddingBottom: "76px" }}>

@@ -380,3 +380,12 @@ a.activity-card > div { transition: border-color .15s ease, background-color .15
 }
 .prio input { display: none; }
 .prio label:has(input:checked) { border-color: var(--teal); background: rgba(79, 209, 197, 0.08); }
+
+.grid-2col-eq {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .grid-2col-eq { grid-template-columns: 1fr; }
+}

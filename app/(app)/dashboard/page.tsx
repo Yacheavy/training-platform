@@ -15,13 +15,15 @@ import {
   getTodayWorkout,
   getLoadHistory,
   getPlanWorkouts,
-  getHrvRhrHistory,
   getAvailabilityHistory,
   getUpcomingBlocks,
 } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
 import { PlanNavigator } from "@/components/PlanNavigator";
 import { HrvRhrChart } from "@/components/HrvRhrChart";
+import { IntensityChart } from "@/components/IntensityChart";
+import { PlanVsActualChart } from "@/components/PlanVsActualChart";
+import { getHrvBandData, getWeeklyIntensity, getPlanVsActual } from "@/lib/analytics";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
 import { PhaseTimeline } from "@/components/PhaseTimeline";
 import { calculateAvailability } from "@/lib/training-engine/availability";
@@ -50,7 +52,16 @@ export default async function DashboardPage() {
   const availability = await calculateAvailability(session.user.id);
   const todayStart = dayKeyDate(new Date());
   const existingCheckin = await prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: session.user.id, date: todayStart } } });
-  const hrvRhrHistory = await getHrvRhrHistory(session.user.id);
+  const [hrvBand, intensity, planVsActual] = await Promise.all([
+    getHrvBandData(session.user.id, 30),
+    getWeeklyIntensity(session.user.id, 10),
+    getPlanVsActual(session.user.id, 10),
+  ]);
+  const last4 = intensity.slice(-5, -1); // 4 semanas completas
+  const last4Total = last4.reduce((t, w) => t + w.totalH, 0);
+  const lowPct = last4Total > 0 ? Math.round((last4.reduce((t, w) => t + w.lowH, 0) / last4Total) * 100) : null;
+  const doneWeeks = planVsActual.slice(0, -1).filter((w) => w.compliancePct != null).slice(-4);
+  const avgCompliance = doneWeeks.length ? Math.round(doneWeeks.reduce((t, w) => t + (w.compliancePct ?? 0), 0) / doneWeeks.length) : null;
   const availabilityHistory = await getAvailabilityHistory(session.user.id);
   const upcomingBlocks = await getUpcomingBlocks(session.user.id);
 
@@ -145,7 +156,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid-2col" style={{ marginBottom: "16px" }}>
+      <div className="grid-2col-eq" style={{ marginBottom: "16px" }}>
         {loadHistory.length > 0 && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
             <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
@@ -158,17 +169,42 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {hrvRhrHistory.length > 0 && (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
-            <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
-              HRV vs. FC reposo
-            </div>
-            <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
-              Últimos 7 días
-            </div>
-            <HrvRhrChart data={hrvRhrHistory} />
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
+          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
+            HRV y FC de reposo — 30 días
           </div>
-        )}
+          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
+            {hrvBand.band
+              ? `La franja es tu rango habitual (${Math.round(hrvBand.band.low)}–${Math.round(hrvBand.band.high)} ms, calculado con tus últimos ${hrvBand.band.days} días). Si la línea gruesa se sale por debajo varios días, es una señal de fatiga.`
+              : "Todavía no hay 4 semanas de HRV para calcular tu rango habitual; mientras tanto se compara contra la media de los días previos."}
+          </div>
+          <HrvRhrChart points={hrvBand.points} band={hrvBand.band} />
+        </div>
+      </div>
+
+      <div className="grid-2col-eq" style={{ marginBottom: "16px" }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
+          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
+            Distribución de intensidad
+          </div>
+          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
+            {lowPct != null
+              ? `En las últimas 4 semanas el ${lowPct}% del tiempo fue en zona baja. La referencia para entrenamiento polarizado es cerca de 80%.`
+              : "Horas por semana en zona baja, media y alta."}
+          </div>
+          <IntensityChart data={intensity} />
+        </div>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px" }}>
+          <div style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "4px" }}>
+            Plan vs. realizado
+          </div>
+          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "10px" }}>
+            {avgCompliance != null
+              ? `Cumplimiento de las últimas semanas: ${avgCompliance}% de la carga planificada (TSS).`
+              : "Carga planificada contra la carga que hiciste, semana a semana."}
+          </div>
+          <PlanVsActualChart data={planVsActual} />
+        </div>
       </div>
 
       <div className="grid-2col-b" style={{ marginBottom: "16px" }}>
