@@ -88,7 +88,7 @@ export default async function StudentsPage() {
                 <div key={s.id} style={{ ...card, borderLeft: `3px solid ${st?.color ?? "var(--border)"}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "baseline" }}>
                     <div>
-                      <span style={{ fontSize: "15px", fontWeight: 600 }}>{s.name}</span>
+                      <Link href={`/alumnos/${s.id}`} style={{ fontSize: "15px", fontWeight: 600, color: "inherit", textDecoration: "none" }}>{s.name} →</Link>
                       <span style={{ fontSize: "12px", color: "var(--text-dim)", marginLeft: "8px" }}>{s.email}</span>
                     </div>
                     <div style={{ fontSize: "13px", fontWeight: 600, color: st?.color ?? "var(--text-dim)" }}>
