@@ -457,3 +457,6 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .chat-chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .chat-chips::-webkit-scrollbar { display: none; }
 .chat-chips .chip { white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 12px; }
+
+.msg-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; max-width: 100%; }
+.msg-option { text-align: left; white-space: normal; line-height: 1.3; border-color: var(--teal); }

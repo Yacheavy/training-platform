@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ATHLETE_TZ } from "@/lib/tz";
+import { splitOptions } from "@/lib/chat/parse-response";
 
 interface Msg {
   id: string;
@@ -226,12 +227,26 @@ export function ChatView({
           </div>
         )}
 
-        {messages.map((m) => (
-          <div key={m.id} className={`msg ${m.role === "user" ? "msg-user" : "msg-bot"}`}>
-            <div className="bubble">{m.role === "user" ? <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span> : renderContent(m.content)}</div>
-            <div className="msg-time">{timeLabel(m.createdAt)}</div>
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const isBot = m.role !== "user";
+          const { text: body, options } = isBot ? splitOptions(m.content) : { text: m.content, options: [] as string[] };
+          const isLast = i === messages.length - 1;
+          return (
+            <div key={m.id} className={`msg ${isBot ? "msg-bot" : "msg-user"}`}>
+              <div className="bubble">{isBot ? renderContent(body) : <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>}</div>
+              {isBot && options.length > 0 && isLast && !pending && (
+                <div className="msg-options" role="group" aria-label="Opciones de respuesta">
+                  {options.map((o) => (
+                    <button key={o} type="button" className="btn chip msg-option" onClick={() => sendSuggestion(o)}>
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="msg-time">{timeLabel(m.createdAt)}</div>
+            </div>
+          );
+        })}
 
         {pending && (
           <>

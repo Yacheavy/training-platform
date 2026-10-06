@@ -77,8 +77,26 @@ export async function sendChatMessage(formData: FormData) {
     revalidatePath("/chat");
     return;
   }
-  const parsed = parseClaudeResponse(reply.text);
+  let parsed = parseClaudeResponse(reply.text);
+
+  // El modelo a veces dice "listo, lo ajusté" sin mandar el json_blocks: no se guardaría nada.
+  // Se reintenta una vez pidiéndole solo el bloque.
+  const CLAIMS_CHANGE = /(list[oa]\b|ajustad[ao]|ajust[ée]\b|cambi[ée]\b|modifiqu[ée]|actualic[ée]|apliqu[ée]|qued[óo]\b)/i;
+  if (focusedWorkoutId && parsed.updatedBlocks === null && !parsed.blocksUnreadable && CLAIMS_CHANGE.test(parsed.text)) {
+    try {
+      const retry = await askClaude(
+        context,
+        "Aplicá ahora el cambio que acordamos. Respondé SOLO con una línea corta y el bloque json_blocks con el workout COMPLETO actualizado.",
+        [...history, { role: "user", content: messageText }, { role: "assistant", content: reply.text }]
+      );
+      const again = parseClaudeResponse(retry.text);
+      if (again.updatedBlocks !== null || again.blocksUnreadable) parsed = { ...parsed, updatedBlocks: again.updatedBlocks, blocksUnreadable: again.blocksUnreadable };
+    } catch (err) {
+      console.error("Reintento de json_blocks falló:", err);
+    }
+  }
   const { updatedBlocks, blocksUnreadable } = parsed;
+  const claimedButNoBlocks = !!focusedWorkoutId && updatedBlocks === null && !blocksUnreadable && CLAIMS_CHANGE.test(parsed.text);
   // Control automático: toda cita debe estar en la bibliografía cerrada; si no, se avisa
   const unverified = findUnverifiedCitations(parsed.text);
   const text = unverified.length
@@ -159,7 +177,11 @@ export async function sendChatMessage(formData: FormData) {
     }
   }
 
-  const finalText = notice ? `${notice.startsWith("✓") ? "" : "⚠ "}${notice}\n\n${text}` : reply.truncated ? `${text}\n\n(La respuesta se cortó por largo.)` : text;
+  if (!notice && claimedButNoBlocks)
+    notice = "No apliqué ningún cambio en la sesión (no llegó la versión modificada). Escribime «aplicalo» y lo intento de nuevo.";
+
+  const optionsBlock = parsed.options.length ? `\n\n\`\`\`opciones\n${JSON.stringify(parsed.options)}\n\`\`\`` : "";
+  const finalText = (notice ? `${notice.startsWith("✓") ? "" : "⚠ "}${notice}\n\n${text}` : reply.truncated ? `${text}\n\n(La respuesta se cortó por largo.)` : text) + optionsBlock;
   await saveAssistant(athleteId, finalText, focus);
 
   revalidatePath("/chat");
