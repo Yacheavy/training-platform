@@ -208,6 +208,8 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
 }
 
 const inFlight = new Map<string, Promise<SyncResult>>();
+/** Último intento fallido por usuario: evita reintentar (y esperar hasta 12 s) en cada carga de página. */
+const failedAt = new Map<string, number>();
 
 /** Días a re-sincronizar: lo mínimo (14) o, si hace mucho que no hay datos nuevos, desde el último dato conocido (+3 de margen). */
 async function catchUpDays(userId: string): Promise<number> {
@@ -238,10 +240,15 @@ export async function syncIfStale(userId: string, maxAgeMin = 5, timeoutMs = 120
     const effectiveMaxAge = todayRow?.hrv == null ? Math.min(maxAgeMin, 1) : maxAgeMin;
     if (Date.now() - last < effectiveMaxAge * 60 * 1000) return;
 
+    if (Date.now() - (failedAt.get(userId) ?? 0) < 5 * 60 * 1000) return;
     let run = inFlight.get(userId);
     if (!run) {
       run = catchUpDays(userId)
-        .then((d) => syncIntervals(userId, d))
+        .then(async (d) => {
+          const r = await syncIntervals(userId, d);
+          if (r.errors.length > 0 && r.activities === 0 && r.wellness === 0) failedAt.set(userId, Date.now());
+          return r;
+        })
         .finally(() => inFlight.delete(userId));
       inFlight.set(userId, run);
     }

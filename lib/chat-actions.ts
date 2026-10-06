@@ -32,7 +32,25 @@ async function saveAssistant(athleteId: string, content: string, focus: Focus = 
   await prisma.chatMessage.create({ data: { athleteId, role: "assistant", content, ...focusFields(focus) } });
 }
 
+/** Si algo falla después de guardar el mensaje, el atleta recibe igual una respuesta (no queda colgado). */
 export async function sendChatMessage(formData: FormData) {
+  try {
+    await sendChatMessageInner(formData);
+  } catch (err) {
+    const info = `${(err as { digest?: string })?.digest ?? ""} ${err instanceof Error ? err.message : String(err)}`;
+    if (/NEXT_REDIRECT|No autenticado/.test(info)) throw err;
+    console.error("sendChatMessage falló:", err);
+    const session = await auth();
+    if (session?.user?.id) {
+      const wid = formData.get("focusedWorkoutId") ? String(formData.get("focusedWorkoutId")) : undefined;
+      const aid = !wid && formData.get("focusedActivityId") ? String(formData.get("focusedActivityId")) : undefined;
+      await saveAssistant(session.user.id, "⚠ Tuve un problema técnico procesando tu mensaje y no apliqué ningún cambio. Probá de nuevo en un momento.", { workoutId: wid, activityId: aid });
+    }
+    revalidatePath("/chat");
+  }
+}
+
+async function sendChatMessageInner(formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
 

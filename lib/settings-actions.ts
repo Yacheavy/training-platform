@@ -11,23 +11,6 @@ async function requireUserId() {
   return session.user.id;
 }
 
-export async function getSettingsData(athleteId: string) {
-  const [template, goals, thresholds, user] = await Promise.all([
-    prisma.trainingTemplateSlot.findMany({
-      where: { athleteId },
-      orderBy: { dayOfWeek: "asc" },
-    }),
-    prisma.athleteGoal.findMany({
-      where: { athleteId },
-      orderBy: { eventDate: "asc" },
-    }),
-    prisma.athleteThresholds.findUnique({ where: { athleteId } }),
-    prisma.user.findUnique({ where: { id: athleteId } }),
-  ]);
-
-  return { template, goals, thresholds, user };
-}
-
 /** Guarda los 7 días de la plantilla semanal en un solo paso (todo o nada). */
 export async function saveTemplate(formData: FormData) {
   const athleteId = await requireUserId();
@@ -150,10 +133,10 @@ export async function saveProfile(formData: FormData) {
   await prisma.user.update({
     where: { id: athleteId },
     data: {
-      trainingBackground: String(formData.get("trainingBackground") || ""),
-      currentStateNote: String(formData.get("currentStateNote") || ""),
+      trainingBackground: String(formData.get("trainingBackground") || "").slice(0, 2000),
+      currentStateNote: String(formData.get("currentStateNote") || "").slice(0, 2000),
       currentStateUpdatedAt: new Date(),
-      preferences: String(formData.get("preferences") || ""),
+      preferences: String(formData.get("preferences") || "").slice(0, 2000),
     },
   });
 

@@ -190,7 +190,7 @@ export interface StudentRow {
 
 /** Resumen de todos los alumnos invitados por el entrenador (sin incluirlo a él). */
 export async function getCoachOverview(coachId: string): Promise<StudentRow[]> {
-  const invites = await prisma.allowedEmail.findMany({ select: { email: true } });
+  const invites = await prisma.allowedEmail.findMany({ where: { OR: [{ invitedById: coachId }, { invitedById: null }] }, select: { email: true } });
   const students = await prisma.user.findMany({
     where: { email: { in: invites.map((i) => i.email) }, role: { not: "COACH" }, id: { not: coachId } },
     select: { id: true, name: true, email: true, intervalsLastSyncAt: true, intervalsAthleteId: true },

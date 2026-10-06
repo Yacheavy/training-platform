@@ -7,15 +7,17 @@ import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
 import { regeneratePlan } from "@/lib/plan-actions";
-import { getAccessData, inviteAthlete, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
+import { getAccessData } from "@/lib/access-data";
+import { getSettingsData } from "@/lib/settings-data";
+import { inviteAthlete, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
 import { redirect } from "next/navigation";
-import { getSettingsData, saveTemplate, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
+import { saveTemplate, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
 import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
 
 
 export const maxDuration = 60;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; resent?: string; failed?: string; warnings?: string; invite?: string; intervals?: string; history?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; resent?: string; failed?: string; warnings?: string; invite?: string; intervals?: string; history?: string; historyErrors?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -63,7 +65,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         {sp.intervals === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Conectado. Ya trajimos el último año; si querés más historial, usá el botón de abajo.</div>}
         {sp.intervals === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Revisá el Athlete ID (ej. i12345) y la clave.</div>}
         {sp.intervals === "rejected" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Intervals rechazó esas credenciales. Verificá que sean las tuyas.</div>}
-        {sp.history != null && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Historial sincronizado: {sp.history} actividades.</div>}
+        {sp.history != null && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Historial sincronizado: {sp.history} actividades.{Number(sp.historyErrors) > 0 ? ` (${sp.historyErrors} errores: revisá la conexión con Intervals y repetí.)` : ""}</div>}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
           {(access.intervals.connected || access.intervals.usingLegacyEnv) && (
             <ActionForm action={syncFullHistory} success={null}>
