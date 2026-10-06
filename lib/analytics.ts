@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { dayKeyDate, weekRangeLocal } from "@/lib/tz";
+import { dayKeyDate, weekRangeLocal, dateKeyLocal, dayOfWeekLocal } from "@/lib/tz";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { MIN_BASELINE_DAYS, MIN_ROLLING_DAYS } from "@/lib/training-engine/recovery-signals";
 
@@ -120,11 +120,12 @@ export async function getPlanVsActual(athleteId: string, weeks = 10): Promise<We
   const from = new Date(firstStart);
   const to = new Date(currentStart + WEEK_MS);
 
-  const [planned, acts] = await Promise.all([
+  const [planned, slots, acts] = await Promise.all([
     prisma.generatedWorkout.findMany({
       where: { athleteId, date: { gte: from, lt: to }, workoutLibraryKey: { not: "gym" } },
-      select: { date: true, estimatedTss: true, blocksJson: true },
+      select: { date: true, estimatedTss: true, blocksJson: true, status: true },
     }),
+    prisma.trainingTemplateSlot.findMany({ where: { athleteId }, select: { dayOfWeek: true } }),
     prisma.activity.findMany({
       where: { athleteId, type: { in: RIDE_TYPES }, date: { gte: from, lt: to } },
       select: { date: true, tss: true, durationSec: true },
@@ -136,6 +137,7 @@ export async function getPlanVsActual(athleteId: string, weeks = 10): Promise<We
     isCurrent: i === weeks - 1,
     plannedMin: 0, plannedTss: 0, actualMin: 0, actualTss: 0, compliancePct: null,
   }));
+  const todayKey = dateKeyLocal(now);
   const idxOf = (d: Date) => Math.floor((weekRangeLocal(d).start.getTime() - firstStart) / WEEK_MS);
 
   // Lo planificado que todavía no pasó (semana actual) no cuenta para el cumplimiento
@@ -146,7 +148,8 @@ export async function getPlanVsActual(athleteId: string, weeks = 10): Promise<We
     const min = sumBlocks(p.blocksJson);
     w.plannedMin += min;
     w.plannedTss += p.estimatedTss ?? 0;
-    if (p.date.getTime() < now.getTime()) {
+    // "Vencida" = un día anterior a hoy (hora local) o una sesión ya completada; la de hoy sin hacer todavía no cuenta
+    if (dateKeyLocal(p.date) < todayKey || p.status === "COMPLETED") {
       plannedToDate[idxOf(p.date)].tss += p.estimatedTss ?? 0;
       plannedToDate[idxOf(p.date)].min += min;
     }
@@ -160,7 +163,12 @@ export async function getPlanVsActual(athleteId: string, weeks = 10): Promise<We
   // La primera semana del plan suele estar incompleta (se generó a mitad de semana): no sirve para medir cumplimiento
   const firstPlanned = planned.length ? planned.reduce((m, p) => (p.date < m ? p.date : m), planned[0].date) : null;
   const firstWeekIdx = firstPlanned ? idxOf(firstPlanned) : -1;
-  const startsMidWeek = firstPlanned ? firstPlanned.getTime() - (firstStart + firstWeekIdx * WEEK_MS) > 1.5 * DAY_MS : false;
+  // Semana incompleta = faltan sesiones que la plantilla pone ANTES del primer día planificado
+  // (si la plantilla simplemente descansa esos días, la semana está completa)
+  const templateDays = new Set(slots.map((x) => x.dayOfWeek));
+  const startsMidWeek = firstPlanned
+    ? Array.from({ length: dayOfWeekLocal(firstPlanned) }, (_, d) => d).some((d) => templateDays.has(d))
+    : false;
   out.forEach((w, i) => {
     const refTss = i === firstWeekIdx && startsMidWeek ? 0 : plannedToDate[i].tss;
     w.compliancePct = refTss > 0 ? Math.round((w.actualTss / refTss) * 100) : null;

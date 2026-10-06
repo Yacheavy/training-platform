@@ -43,6 +43,11 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   });
 
   const todayKey = dayKeyDate(new Date());
+  // Último dato de RECUPERACIÓN (HRV o FC de reposo): una fila de hoy que solo trae CTL/ATL no cuenta
+  const latestRecovery = await prisma.wellness.findFirst({
+    where: { athleteId, date: { lte: todayKey }, OR: [{ hrv: { not: null } }, { restingHr: { not: null } }] },
+    orderBy: { date: "desc" },
+  });
   const history = await prisma.wellness.findMany({
     where: { athleteId, date: { gte: new Date(todayKey.getTime() - 61 * 24 * 60 * 60 * 1000), lte: todayKey } },
     select: { date: true, hrv: true, restingHr: true },
@@ -51,13 +56,13 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const hrvSig = hrvSignal(history, todayKey, hrvDropAlertPct);
   const rhrSig = restingHrSignal(history, todayKey);
 
-  const hrvToday = latest?.hrv ?? null;
+  const hrvToday = latestRecovery?.date.getTime() === todayKey.getTime() ? (latestRecovery?.hrv ?? null) : null;
   const hrvAvg7d = hrvSig.rolling7;
   const hrvDeltaPct = hrvSig.delta;
-  const restingHrToday = latest?.restingHr ?? null;
+  const restingHrToday = latestRecovery?.date.getTime() === todayKey.getTime() ? (latestRecovery?.restingHr ?? null) : null;
   const restingHrAvg7d = rhrSig.rolling7;
   const restingHrDeltaAbs = rhrSig.delta;
-  const wellnessAgeDays = latest ? Math.round((todayKey.getTime() - latest.date.getTime()) / (24 * 60 * 60 * 1000)) : null;
+  const wellnessAgeDays = latestRecovery ? Math.round((todayKey.getTime() - latestRecovery.date.getTime()) / (24 * 60 * 60 * 1000)) : null;
 
   const tsb = latest?.ctl != null && latest?.atl != null ? latest.ctl - latest.atl : null;
 
