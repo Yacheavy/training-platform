@@ -17,6 +17,21 @@ function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
  * el MLSS/VT2) + 2 intervalos de 1min a intensidad MLSS/VT2 (~FTP) con 30s de
  * recuperación activa. Total: 13min.
  */
+/** Sprints del rodaje Z2 por paso de progresión (1→3). Mantenimiento (descarga): 3. */
+export const SPRINTS_BY_STEP = [5, 7, 9];
+export const MAINTENANCE_SPRINTS = 3;
+export function sprintCountFor(step: number, maintenance: boolean): number {
+  if (maintenance) return MAINTENANCE_SPRINTS;
+  return SPRINTS_BY_STEP[Math.min(SPRINTS_BY_STEP.length, Math.max(1, step)) - 1];
+}
+/** Reparte N sprints en series de hasta 3, lo más parejas posible (5→[3,2], 7→[3,2,2], 9→[3,3,3]). */
+export function sprintSetsLayout(n: number): number[] {
+  const sets = Math.ceil(n / 3);
+  const base = Math.floor(n / sets);
+  const extra = n % sets;
+  return Array.from({ length: sets }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
 export const VT1_PCT_FTP = 0.72; // VT1 (umbral aeróbico) ≈ 72% FTP — aproximación práctica, no medida
 
 function buildWarmupVo2(ftp: number): WorkoutBlock[] {
@@ -196,10 +211,10 @@ export function buildBlocks(
 
   /**
    * Rodaje Z2 con sprints (Rønnestad et al. 2020, Front Physiol): sesión de baja intensidad con
-   * 3 series de 3×30" a máxima potencia; 4' de recuperación activa entre sprints (100 W en el
-   * estudio, escalado aquí a ~33% FTP) y 15' de Z2 entre series. Mantuvo el rendimiento en 20' y
-   * la utilización fraccional del VO2max en ciclistas de élite (n=16, 3 semanas, periodo de
-   * transición): evidencia PRELIMINAR. La progresión 1→2→3 series es criterio propio.
+   * 3 series de 3×30" a máxima potencia (9 sprints); 4' de recuperación activa entre sprints (100 W
+   * en el estudio, escalado aquí a ~33% FTP) y 15' de Z2 entre series. Mantuvo el rendimiento en 20'
+   * y la utilización fraccional del VO2max en ciclistas de élite (n=16, 3 semanas, periodo de
+   * transición): evidencia PRELIMINAR. La progresión de 5 → 7 → 9 sprints (3 en descarga) es criterio propio.
    */
   if (stimulusType === "z2_sprints") {
     const sprintSec = 30;
@@ -207,22 +222,27 @@ export function buildBlocks(
     const recSec = 240;
     const recWatts = Math.round(ftp * 0.33);
     const betweenSetsSec = 900;
-    const setSec = 3 * sprintSec + 2 * recSec; // 9,5 min
     const warmupSec = Math.min(900, Math.round(totalSec * 0.15));
     const cooldownSec = Math.min(600, Math.round(totalSec * 0.1));
 
-    let numSets = Math.min(3, Math.max(1, seriesOverride ?? 3));
-    // Si el tiempo de la sesión no alcanza para las series pedidas, se reduce (mín. 1)
-    while (numSets > 1 && warmupSec + cooldownSec + numSets * setSec + (numSets - 1) * betweenSetsSec > totalSec) numSets--;
+    // seriesOverride = paso de progresión (1→3); maintenance (descarga) = 3 sprints
+    let nSprints = sprintCountFor(seriesOverride ?? 3, maintenance);
+    const layoutSec = (n: number) => {
+      const l = sprintSetsLayout(n);
+      return l.reduce((s, k) => s + k * sprintSec + (k - 1) * recSec, 0) + (l.length - 1) * betweenSetsSec;
+    };
+    // Si el tiempo de la sesión no alcanza, se baja al siguiente valor permitido (9 → 7 → 5 → 3)
+    while (nSprints > MAINTENANCE_SPRINTS && warmupSec + cooldownSec + layoutSec(nSprints) > totalSec) nSprints -= 2;
 
+    const layout = sprintSetsLayout(nSprints);
     const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
-    for (let s = 0; s < numSets; s++) {
-      for (let i = 0; i < 3; i++) {
+    layout.forEach((k, s) => {
+      for (let i = 0; i < k; i++) {
         blocks.push({ type: "interval", durationSec: sprintSec, targetWatts: sprintWatts });
-        if (i < 2) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: recWatts });
+        if (i < k - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: recWatts });
       }
-      if (s < numSets - 1) blocks.push({ type: "z2", durationSec: betweenSetsSec, targetWatts: z2Watts });
-    }
+      if (s < layout.length - 1) blocks.push({ type: "z2", durationSec: betweenSetsSec, targetWatts: z2Watts });
+    });
     const used = blocks.reduce((s, b) => s + b.durationSec, 0);
     const cooldownBlocks = buildCooldown(cooldownSec, ftp);
     const fillSec = totalSec - used - cooldownBlocks.reduce((s, b) => s + b.durationSec, 0);

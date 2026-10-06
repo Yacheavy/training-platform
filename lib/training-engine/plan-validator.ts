@@ -96,10 +96,9 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     }
     if (d.stimulusType === "z2_sprints") {
       const sprints = d.blocks.filter((b) => b.type === "interval");
-      const sets = sprints.length / 3;
-      if (!Number.isInteger(sets) || sets < 1 || sets > 3) w.push(`${label(d)}: ${sprints.length} sprints (debe ser 3×series, 1–3 series)`);
+      if (![3, 5, 7, 9].includes(sprints.length)) w.push(`${label(d)}: ${sprints.length} sprints (esperado 3, 5, 7 o 9)`);
       if (sprints.some((b) => b.durationSec !== 30)) w.push(`${label(d)}: los sprints deben durar 30 s`);
-      if (d.isDeload && sets > 1) w.push(`${label(d)}: en descarga el rodaje con sprints lleva 1 serie`);
+      if (d.isDeload && sprints.length > 3) w.push(`${label(d)}: en descarga el rodaje con sprints lleva 3 sprints`);
       const sprintSec = sprints.reduce((s, b) => s + b.durationSec, 0);
       const totalSec = d.blocks.reduce((s, b) => s + b.durationSec, 0);
       if (totalSec > 0 && sprintSec / totalSec > 0.05) w.push(`${label(d)}: demasiado tiempo de sprint (${Math.round((sprintSec / totalSec) * 100)}%)`);

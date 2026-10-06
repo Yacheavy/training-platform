@@ -29,7 +29,7 @@ export function getExecutionTips(stimulusType: string): string[] {
       "Es normal sentir acumulación fuerte hacia la serie 2-3, el objetivo es aguantar el patrón, no ir sobrado al principio.",
     ],
     z2_sprints: [
-      "Es un rodaje suave con 3 sprints de 30 s a máxima potencia por serie: el resto de la salida es Z2 de verdad, conversando.",
+      "Es un rodaje suave con sprints de 30 s a máxima potencia (en series de hasta 3): el resto de la salida es Z2 de verdad, conversando.",
       "Cada sprint es explosivo y sentado, arrancando a ~80 rpm y con resistencia alta; la potencia va a caer en el 2º y 3º (es normal). El número del plan es solo un piso de referencia: el esfuerzo es máximo y suele superarlo.",
       "Los 4 min entre sprints son suaves (~100 W): recuperá casi por completo antes del siguiente.",
       "Si el gimnasio del día anterior te dejó las piernas cargadas o te sentís mal, hacelo como Z2 puro y salteá los sprints.",

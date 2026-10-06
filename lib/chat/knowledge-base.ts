@@ -54,14 +54,14 @@ neuromuscular por las pausas cortas; el sistema ya NO lo usa como segundo estím
 con sprints, ver abajo), pero sigue disponible. La
 dosis progresiva de series que usa el sistema (1→3) es [PRÁCTICA].
 
-RODAJE Z2 CON SPRINTS (segundo estímulo semanal del sistema) [R36][R37]: sesión de baja intensidad con 3 series
-de 3×30 s a máxima potencia (sentado, explosivo), 4 min de recuperación activa entre sprints y 15 min de Z2 entre
-series. En 16 ciclistas de élite, hacerlo UNA vez por semana durante 3 semanas de transición (con ~60% menos de
+RODAJE Z2 CON SPRINTS (segundo estímulo semanal del sistema) [R36][R37]: sesión de baja intensidad con sprints de
+30 s a máxima potencia (sentado, explosivo), 4 min de recuperación activa entre sprints y 15 min de Z2 entre
+series de hasta 3 sprints. El estudio usó 3 series de 3 sprints (9 sprints) [R36]. En 16 ciclistas de élite, hacerlo UNA vez por semana durante 3 semanas de transición (con ~60% menos de
 carga) mantuvo el rendimiento en 20 min y la utilización fraccional del VO2max, mientras el grupo sin sprints
 bajó; el VO2max no cambió [R36]. Es evidencia PRELIMINAR (n=7 vs 9, 3 semanas, élite, en transición, no en plena
 temporada). Los sprints mejoran sobre todo la potencia anaeróbica [R37] y la potencia cae sprint a sprint [R37].
-La progresión del sistema de 1 → 2 → 3 series (1 serie en descarga) es [PRÁCTICA]: el estudio solo evaluó las 3
-series completas. La recuperación de 100 W del estudio está escalada a ~33% FTP en el sistema [PRÁCTICA]. La
+La progresión del sistema de 5 → 7 → 9 sprints (3 sprints en descarga) es [PRÁCTICA]: el estudio solo evaluó la
+dosis completa de 9 sprints. La recuperación de 100 W del estudio está escalada a ~33% FTP en el sistema [PRÁCTICA]. La
 potencia que muestra el plan para el sprint es un piso de referencia; el esfuerzo es máximo.
 
 FRECUENCIA DE SESIONES DURAS (por qué el sistema pone UN solo VO2max por semana):

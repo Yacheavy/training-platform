@@ -1,5 +1,5 @@
 import { buildMesocycleWeeks } from "./mesocycle-builder";
-import { buildBlocks } from "./block-builder";
+import { buildBlocks, sprintCountFor } from "./block-builder";
 import { calculateTss, WorkoutBlock } from "./tss";
 import { calculateFueling, FuelingResult } from "./fueling";
 import { OBJECTIVE_TO_STIMULUS, assignWeeklyQualityStimuli } from "./quality-assignment";
@@ -220,7 +220,7 @@ export function buildPlan(input: {
           : effectiveStimulusType === "ronnestad_30_15"
             ? ` · ${series} serie${series === 1 ? "" : "s"} de 13×(30s/15s) (progresivo 1→3)`
             : effectiveStimulusType === "z2_sprints"
-              ? ` · ${series} serie${series === 1 ? "" : "s"} de 3×30" a máxima potencia dentro de un rodaje Z2 (Rønnestad 2020; evidencia preliminar en ciclistas de élite; progresión 1→3 series = criterio propio)`
+              ? ` · ${sprintCountFor(series ?? 3, maintenance)} sprints de 30" a máxima potencia dentro de un rodaje Z2 (Rønnestad 2020 usó 9; evidencia preliminar en ciclistas de élite; progresión 5→7→9 = criterio propio)`
               : "";
       rationaleParts.push(
         `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : effectiveStimulusType === "z2_sprints" ? " (segundo estímulo de baja fatiga — máx. 1 por semana, ≥48h del principal)" : " (alternativa — máx. 1 por semana, ≥48h del estímulo principal)"}${detail}`
