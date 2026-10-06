@@ -277,7 +277,14 @@ export function ChatView({
         </div>
       )}
 
-      <form action={send} className="chat-composer">
+      <form
+        className="chat-composer"
+        onSubmit={(e) => {
+          // onSubmit (y no action=): con action, React retiene el estado "pendiente" hasta que termina la respuesta
+          e.preventDefault();
+          void send(new FormData(e.currentTarget));
+        }}
+      >
         {workoutId && <input type="hidden" name="focusedWorkoutId" value={workoutId} />}
         {activityId && <input type="hidden" name="focusedActivityId" value={activityId} />}
         {error && <div style={{ fontSize: "12px", color: "var(--red)", marginBottom: "6px" }}>{error}</div>}
