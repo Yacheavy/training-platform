@@ -88,10 +88,12 @@ function timeLabel(iso: string): string {
 export function ChatView({
   messages,
   workoutId,
+  activityId,
   action,
 }: {
   messages: Msg[];
   workoutId?: string;
+  activityId?: string;
   action: (formData: FormData) => Promise<unknown>;
 }) {
   const [text, setText] = useState("");
@@ -148,6 +150,13 @@ export function ChatView({
                 Hablando de una sesión de tu plan ·{" "}
                 <Link href={`/workouts/${workoutId}`} style={{ color: "var(--teal)", textDecoration: "none" }}>
                   ver sesión
+                </Link>
+              </>
+            ) : activityId ? (
+              <>
+                Hablando de una sesión que ya hiciste ·{" "}
+                <Link href={`/activities/${activityId}`} style={{ color: "var(--teal)", textDecoration: "none" }}>
+                  ver actividad
                 </Link>
               </>
             ) : (
@@ -210,6 +219,7 @@ export function ChatView({
 
       <form action={send} className="chat-composer">
         {workoutId && <input type="hidden" name="focusedWorkoutId" value={workoutId} />}
+        {activityId && <input type="hidden" name="focusedActivityId" value={activityId} />}
         {error && <div style={{ fontSize: "12px", color: "var(--red)", marginBottom: "6px" }}>{error}</div>}
         <div className="composer-box">
           <textarea

@@ -10,14 +10,25 @@ import { dayStartLocal } from "@/lib/tz";
 import { calculateTss } from "@/lib/training-engine/tss";
 import { calculateFueling } from "@/lib/training-engine/fueling";
 import { revalidatePath } from "next/cache";
+import { createEvent } from "@/lib/intervals-client";
+import { getIntervalsCreds } from "@/lib/intervals-creds";
+import { buildStructuredWorkout } from "@/lib/training-engine/workout-description";
+import { buildWorkoutName } from "@/lib/training-engine/workout-naming";
+import { dateKeyLocal } from "@/lib/tz";
 
 const DAILY_LIMIT = Number(process.env.CHAT_DAILY_LIMIT) || 30;
 const MAX_MESSAGE_CHARS = 2000;
 
-async function saveAssistant(athleteId: string, content: string, focusedWorkoutId?: string) {
-  await prisma.chatMessage.create({
-    data: { athleteId, role: "assistant", content, focusedEntityId: focusedWorkoutId ?? null, focusedEntityType: focusedWorkoutId ? "generated_workout" : null },
-  });
+type Focus = { workoutId?: string; activityId?: string };
+
+function focusFields(f: Focus) {
+  if (f.workoutId) return { focusedEntityId: f.workoutId, focusedEntityType: "generated_workout" };
+  if (f.activityId) return { focusedEntityId: f.activityId, focusedEntityType: "activity" };
+  return { focusedEntityId: null, focusedEntityType: null };
+}
+
+async function saveAssistant(athleteId: string, content: string, focus: Focus = {}) {
+  await prisma.chatMessage.create({ data: { athleteId, role: "assistant", content, ...focusFields(focus) } });
 }
 
 export async function sendChatMessage(formData: FormData) {
@@ -27,6 +38,8 @@ export async function sendChatMessage(formData: FormData) {
   const athleteId = session.user.id;
   const messageText = String(formData.get("message") ?? "").slice(0, MAX_MESSAGE_CHARS);
   const focusedWorkoutId = formData.get("focusedWorkoutId") ? String(formData.get("focusedWorkoutId")) : undefined;
+  const focusedActivityId = !focusedWorkoutId && formData.get("focusedActivityId") ? String(formData.get("focusedActivityId")) : undefined;
+  const focus: Focus = { workoutId: focusedWorkoutId, activityId: focusedActivityId };
 
   if (!messageText.trim()) return;
 
@@ -42,10 +55,10 @@ export async function sendChatMessage(formData: FormData) {
   }
 
   await prisma.chatMessage.create({
-    data: { athleteId, role: "user", content: messageText, focusedEntityId: focusedWorkoutId ?? null, focusedEntityType: focusedWorkoutId ? "generated_workout" : null },
+    data: { athleteId, role: "user", content: messageText, ...focusFields(focus) },
   });
 
-  const context = await buildChatContext(athleteId, focusedWorkoutId);
+  const context = await buildChatContext(athleteId, focusedWorkoutId, focusedActivityId);
 
   const recentHistory = await prisma.chatMessage.findMany({
     where: { athleteId },
@@ -59,7 +72,7 @@ export async function sendChatMessage(formData: FormData) {
     reply = await askClaude(context, messageText, history);
   } catch (err) {
     console.error("askClaude falló:", err);
-    await saveAssistant(athleteId, "No pude responder en este momento. Probá de nuevo en unos minutos.", focusedWorkoutId);
+    await saveAssistant(athleteId, "No pude responder en este momento. Probá de nuevo en unos minutos.", focus);
     revalidatePath("/chat");
     return;
   }
@@ -74,12 +87,14 @@ export async function sendChatMessage(formData: FormData) {
         ? "La respuesta se cortó antes de terminar el cambio, así que no lo apliqué. Pedímelo de nuevo."
         : "No pude leer el cambio propuesto, así que no lo apliqué. Pedímelo de nuevo.";
     } else if (!focusedWorkoutId) {
-      notice = "No apliqué ningún cambio: para editar una sesión abrí el chat desde «Pedir ajustes» en esa sesión.";
+      notice = focusedActivityId
+        ? "No apliqué ningún cambio: esa actividad ya se hizo y no se puede modificar. Para cambiar una sesión que viene, abrí el chat desde «Pedir ajustes» en esa sesión."
+        : "No apliqué ningún cambio: para editar una sesión abrí el chat desde «Pedir ajustes» en esa sesión.";
     } else {
       const workout = await prisma.generatedWorkout.findFirst({ where: { id: focusedWorkoutId, athleteId } });
       if (!workout) notice = "No encontré esa sesión, no apliqué el cambio.";
-      else if (workout.status === "SENT_TO_INTERVALS" || workout.status === "COMPLETED")
-        notice = "Esta sesión ya fue enviada a Intervals (o completada), por eso no apliqué el cambio: quedaría distinta a la del calendario.";
+      else if (workout.status === "COMPLETED")
+        notice = "Esta sesión ya se realizó, por eso no apliqué el cambio.";
       else if (!me?.ftp) notice = "Configurá tu FTP para poder editar sesiones; no apliqué el cambio.";
       else {
         const original = (workout.blocksJson as unknown as { durationSec: number }[]).reduce((s, b) => s + (b.durationSec ?? 0), 0);
@@ -89,7 +104,36 @@ export async function sendChatMessage(formData: FormData) {
           // Se recalcula TODO lo derivado (TSS, kJ, carbos) en el mismo paso
           const tss = calculateTss(check.blocks, me.ftp);
           const fueling = calculateFueling(check.blocks, me.ftp);
-          await prisma.generatedWorkout.update({
+          const wasSent = workout.status === "SENT_TO_INTERVALS";
+
+          // Si la sesión ya estaba en el calendario de Intervals, se actualiza ahí también (upsert por
+          // external_id). Primero Intervals: si falla, no se toca la sesión local y no quedan distintas.
+          let resyncFailed = false;
+          if (wasSent) {
+            try {
+              const creds = await getIntervalsCreds(athleteId);
+              if (!creds) throw new Error("sin credenciales");
+              const description = buildStructuredWorkout(
+                check.blocks,
+                me.ftp,
+                { totalKj: fueling.totalKj, suggestedCarbsG: fueling.suggestedCarbsG, suggestedCarbsGPerHour: fueling.suggestedCarbsGPerHour, requiresMultipleCarbSources: fueling.requiresMultipleCarbSources },
+                workout.rationale
+              );
+              await createEvent(creds.athleteId, creds.apiKey, {
+                external_id: workout.id,
+                name: buildWorkoutName(workout.workoutLibraryKey, check.blocks, me.ftp),
+                startDateLocal: dateKeyLocal(new Date(workout.date)) + "T07:00:00",
+                description,
+                movingTimeSec: check.blocks.reduce((s, b) => s + b.durationSec, 0),
+              });
+            } catch (err) {
+              console.error("Reenvío a Intervals falló:", err);
+              resyncFailed = true;
+              notice = "No pude actualizar la sesión en Intervals, así que no apliqué el cambio. Probá de nuevo en unos minutos.";
+            }
+          }
+
+          if (!resyncFailed) await prisma.generatedWorkout.update({
             where: { id: workout.id },
             data: {
               blocksJson: check.blocks,
@@ -98,17 +142,20 @@ export async function sendChatMessage(formData: FormData) {
               suggestedCarbsG: fueling.suggestedCarbsG,
               suggestedCarbsGPerHour: fueling.suggestedCarbsGPerHour,
               requiresMultipleCarbSources: fueling.requiresMultipleCarbSources,
-              status: "EDITED",
+              status: wasSent ? "SENT_TO_INTERVALS" : "EDITED",
+              ...(wasSent ? { sentToIntervalsAt: new Date() } : {}),
             },
           });
+          if (!resyncFailed && wasSent) notice = "✓ Actualicé la sesión también en tu calendario de Intervals.";
         }
       }
     }
   }
 
-  const finalText = notice ? `⚠ ${notice}\n\n${text}` : reply.truncated ? `${text}\n\n(La respuesta se cortó por largo.)` : text;
-  await saveAssistant(athleteId, finalText, focusedWorkoutId);
+  const finalText = notice ? `${notice.startsWith("✓") ? "" : "⚠ "}${notice}\n\n${text}` : reply.truncated ? `${text}\n\n(La respuesta se cortó por largo.)` : text;
+  await saveAssistant(athleteId, finalText, focus);
 
   revalidatePath("/chat");
   revalidatePath("/dashboard");
+  if (focusedWorkoutId) revalidatePath(`/workouts/${focusedWorkoutId}`);
 }

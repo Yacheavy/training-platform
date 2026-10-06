@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { dayKeyDate } from "@/lib/tz";
 import { calculateAvailability } from "@/lib/training-engine/availability";
+import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
 
-export async function buildChatContext(athleteId: string, focusedWorkoutId?: string): Promise<string> {
+export async function buildChatContext(athleteId: string, focusedWorkoutId?: string, focusedActivityId?: string): Promise<string> {
   const parts: string[] = [];
 
   const user = await prisma.user.findUnique({ where: { id: athleteId } });
@@ -136,6 +137,34 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       parts.push(
         `WORKOUT ENFOCADO (el atleta está viendo esta sesión ahora): ${workout.workoutLibraryKey}, TSS estimado ${workout.estimatedTss}, estado ${workout.status}, bloques: ${JSON.stringify(workout.blocksJson)}`
       );
+    }
+  }
+
+  if (focusedActivityId) {
+    const a = await prisma.activity.findFirst({
+      where: { id: focusedActivityId, athleteId },
+      include: { generatedWorkout: { select: { workoutLibraryKey: true, estimatedTss: true, blocksJson: true } } },
+    });
+    if (a) {
+      const zt = ((a.rawStreamsJson as { zoneTimes?: { id: string; secs: number }[] } | null)?.zoneTimes ?? [])
+        .filter((z) => z.secs > 0)
+        .map((z) => `${z.id} ${Math.round(z.secs / 60)}min`)
+        .join(", ");
+      const stimulus = classifyStimulusType({ type: a.type, name: a.name, intensityFactor: a.intensityFactor, rawStreamsJson: a.rawStreamsJson });
+      const f = (v: number | null | undefined, d = 0, u = "") => (v == null ? "?" : `${v.toFixed(d)}${u}`);
+      const lines = [
+        `ACTIVIDAD ENFOCADA (el atleta está viendo esta sesión YA REALIZADA; no se puede modificar, solo analizarla): ${a.date.toISOString().split("T")[0]} "${a.name ?? a.type}", tipo detectado ${stimulus}`,
+        `Duración ${Math.round(a.durationSec / 60)}min, TSS ${f(a.tss)}, IF ${f(a.intensityFactor, 2)}, NP ${f(a.normalizedPower, 0, "W")}, potencia media ${f(a.avgPower, 0, "W")}, VI ${f(a.variabilityIndex, 2)}`,
+        `FC media ${f(a.avgHr, 0, "lpm")}, FC máx ${f(a.maxHr, 0, "lpm")}, cadencia ${f(a.avgCadence, 0, "rpm")}, trabajo ${f(a.kilojoules, 0, "kJ")}, desacople Pw:HR ${f(a.decouplingPct, 1, "%")}`,
+        zt ? `Tiempo por zona: ${zt}` : `Tiempo por zona: sin datos`,
+      ];
+      if (a.deviationFlag !== "NONE") lines.push(`Desvío vs plan: ${a.deviationFlag}${a.deviationNotes ? ` — ${a.deviationNotes}` : ""}`);
+      if (a.generatedWorkout) {
+        lines.push(`Sesión planificada asociada: ${a.generatedWorkout.workoutLibraryKey}, TSS planeado ${a.generatedWorkout.estimatedTss}, bloques: ${JSON.stringify(a.generatedWorkout.blocksJson)}`);
+      } else {
+        lines.push(`Sin sesión planificada asociada (actividad libre).`);
+      }
+      parts.push(lines.join("\n"));
     }
   }
 

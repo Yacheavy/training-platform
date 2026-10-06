@@ -124,7 +124,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
       )}
 
-      <Link href={`/chat`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
+      <Link href={`/chat?activityId=${a.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
         Preguntarle al chat por esta sesión →
       </Link>
     </div>

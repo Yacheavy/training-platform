@@ -165,8 +165,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 f.remote != null && f.remote !== f.value ? (
                   <ActionForm key={f.name} action={applyIntervalsValue} success="Valor aplicado">
                     <input type="hidden" name="field" value={f.name} />
-                    <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#4FD1C5", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
-                      Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
+                    <SubmitButton style={{ ...btnStyle, background: "transparent", color: f.value != null && f.remote < f.value ? "#E8A33D" : "#4FD1C5", border: f.value != null && f.remote < f.value ? "1px solid #E8A33D" : "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+                      {f.value != null && f.remote < f.value ? "⚠ Menor que tu valor actual · " : ""}Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
                     </SubmitButton>
                   </ActionForm>
                 ) : null

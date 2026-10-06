@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { sendChatMessage } from "@/lib/chat-actions";
 import { ChatView } from "@/components/ChatView";
 
-export default async function ChatPage({ searchParams }: { searchParams: Promise<{ workoutId?: string }> }) {
-  const { workoutId } = await searchParams;
+export default async function ChatPage({ searchParams }: { searchParams: Promise<{ workoutId?: string; activityId?: string }> }) {
+  const { workoutId, activityId } = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   await syncIfStale(session.user.id);
@@ -19,5 +19,5 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
   });
   const messages = recent.reverse().map((m) => ({ id: m.id, role: m.role, content: m.content, createdAt: m.createdAt.toISOString() }));
 
-  return <ChatView messages={messages} workoutId={workoutId} action={sendChatMessage} />;
+  return <ChatView messages={messages} workoutId={workoutId} activityId={activityId} action={sendChatMessage} />;
 }
