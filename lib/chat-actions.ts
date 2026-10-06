@@ -73,9 +73,18 @@ async function sendChatMessageInner(formData: FormData) {
     }
   }
 
-  await prisma.chatMessage.create({
+  const savedUserMsg = await prisma.chatMessage.create({
     data: { athleteId, role: "user", content: messageText, ...focusFields(focus) },
   });
+  // Re-chequeo del límite DESPUÉS de guardar: si varios mensajes llegaron a la vez, solo pasan los primeros
+  if (me?.role !== "COACH") {
+    const total = await prisma.chatMessage.count({ where: { athleteId, role: "user", createdAt: { gte: dayStartLocal(new Date()) } } });
+    if (total > DAILY_LIMIT) {
+      await prisma.chatMessage.delete({ where: { id: savedUserMsg.id } });
+      revalidatePath("/chat");
+      return;
+    }
+  }
 
   const context = await buildChatContext(athleteId, focusedWorkoutId, focusedActivityId);
 

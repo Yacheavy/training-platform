@@ -13,12 +13,18 @@ export async function GET(req: Request) {
   if (isCron) {
     const users = await prisma.user.findMany({ where: { OR: [{ intervalsApiKeyEncrypted: { not: null } }, { role: "COACH" }] }, select: { id: true } });
     const results = [];
-    for (const u of users) results.push(await syncIntervals(u.id, 14));
+    for (const u of users) {
+      try {
+        results.push(await syncIntervals(u.id, 14));
+      } catch (err) {
+        results.push({ activities: 0, wellness: 0, errors: [`Usuario ${u.id}: ${String(err)}`] });
+      }
+    }
     return NextResponse.json({ cron: true, results });
   }
 
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  const days = Number(new URL(req.url).searchParams.get("days")) || 14;
+  const days = Math.min(Math.max(Number(new URL(req.url).searchParams.get("days")) || 14, 1), 30);
   return NextResponse.json(await syncIntervals(session.user.id, days));
 }

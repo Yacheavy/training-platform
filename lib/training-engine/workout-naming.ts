@@ -42,10 +42,12 @@ export function buildWorkoutName(
   blocks: WorkoutBlock[],
   ftp: number
 ): string {
-  const prefix = PREFIX[stimulusType] ?? stimulusType.toUpperCase();
+  // Un rodaje Z2 al que se le agregaron intervalos (por el chat) ya no es un Z2 puro
+  const prefix = stimulusType === "z2" && blocks.some((b) => b.type === "interval") ? "Z2+INT" : (PREFIX[stimulusType] ?? stimulusType.toUpperCase());
   if (stimulusType === "ftp_test" || stimulusType === "ftp_test_8min" || stimulusType === "ftp_test_5min") { return "TEST FTP"; }
 
-  if (stimulusType === "gym" || stimulusType === "z2") {
+  const hasIntervals = blocks.some((b) => b.type === "interval");
+  if (stimulusType === "gym" || (stimulusType === "z2" && !hasIntervals)) {
     const totalMin = Math.round(blocks.reduce((s, b) => s + b.durationSec, 0) / 60);
     return `${prefix} ${totalMin}'`;
   }
