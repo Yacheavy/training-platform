@@ -221,7 +221,7 @@ export function buildBlocks(
     }
 
     const usedSecBeforeCooldown = blocks.reduce((s, b) => s + b.durationSec, 0);
-    const cooldownBlocks = buildCooldown(cooldownSec, ftp);
+    const cooldownBlocks = buildCooldown(900, ftp); // libro: ~15 min suaves tras cualquier HIIT
     const cooldownSecTotal = cooldownBlocks.reduce((s, b) => s + b.durationSec, 0);
     const fillSec = totalSec - usedSecBeforeCooldown - cooldownSecTotal;
     if (fillSec > 60) blocks.push({ type: "z2_fill", durationSec: fillSec, targetWatts: z2Watts });
