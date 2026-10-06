@@ -28,6 +28,22 @@ export const ALTERNATIVE_TO_STIMULUS: Record<string, string> = {
 
 export const MIN_GAP_DAYS_BETWEEN_VO2MAX = 2;
 
+/** Opciones del estímulo de VO2max que puede elegir el atleta (objetivo VO2max). */
+export const VO2_STIMULUS_OPTIONS = ["hiit_genuino", "ronnestad_30_15", "alternate"] as const;
+
+/**
+ * Estímulo principal de la semana. Para el objetivo VO2max respeta la preferencia del atleta
+ * (HIIT genuino, Rønnestad 30/15 o alternar semanas: pares HIIT, impares Rønnestad); el resto
+ * de objetivos usa el mapa por defecto.
+ */
+export function primaryStimulusFor(objective: string, vo2Stimulus: string | null | undefined, weekIndex: number): string {
+  const base = OBJECTIVE_TO_STIMULUS[objective] ?? "sweet_spot";
+  if (objective !== "vo2max") return base;
+  if (vo2Stimulus === "ronnestad_30_15") return "ronnestad_30_15";
+  if (vo2Stimulus === "alternate") return weekIndex % 2 === 1 ? "ronnestad_30_15" : "hiit_genuino";
+  return "hiit_genuino";
+}
+
 function circularGapDays(a: number, b: number): number {
   const d = Math.abs(a - b);
   return Math.min(d, 7 - d);
@@ -37,11 +53,13 @@ function circularGapDays(a: number, b: number): number {
 export function assignWeeklyQualityStimuli(
   qualityDays: number[],
   objective: string,
-  primaryMaxPerWeek: number | null
+  primaryMaxPerWeek: number | null,
+  primaryOverride?: string
 ): string[] {
-  const primary = OBJECTIVE_TO_STIMULUS[objective] ?? "sweet_spot";
+  const primary = primaryOverride ?? OBJECTIVE_TO_STIMULUS[objective] ?? "sweet_spot";
   const alternative = ALTERNATIVE_TO_STIMULUS[objective] ?? "sweet_spot";
-  const cap = primaryMaxPerWeek ?? qualityDays.length;
+  // VO2max: un solo estímulo de VO2max por semana (sea HIIT genuino o Rønnestad)
+  const cap = objective === "vo2max" ? 1 : (primaryMaxPerWeek ?? qualityDays.length);
 
   if (objective !== "vo2max") {
     return qualityDays.map((_, i) => (i < cap ? primary : alternative));

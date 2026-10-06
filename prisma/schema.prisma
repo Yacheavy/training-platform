@@ -216,6 +216,8 @@ model AthleteThresholds {
   weeksBetweenFtpTest Int    @default(5)
   ftpTestProtocol    String  @default("20min")
   deloadRatio        String  @default("4:1")
+  /// Estímulo de VO2max preferido: null/"hiit_genuino" | "ronnestad_30_15" | "alternate" (alterna semanas)
+  vo2Stimulus        String?
 }
 
 model AthleteBaseline {

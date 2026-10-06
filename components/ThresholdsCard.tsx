@@ -7,6 +7,7 @@ interface Thresholds {
   weeksBetweenFtpTest: number;
   ftpTestProtocol: string;
   deloadRatio: string;
+  vo2Stimulus?: string | null;
 }
 
 function Field({ label, hint, unit, children }: { label: string; hint: string; unit?: string; children: React.ReactNode }) {
@@ -27,8 +28,10 @@ export function ThresholdsCard({
   thresholds,
   action,
   cardStyle,
+  activeObjective,
 }: {
   thresholds: Partial<Thresholds> | null;
+  activeObjective?: string | null;
   action: (formData: FormData) => Promise<unknown>;
   cardStyle: React.CSSProperties;
 }) {
@@ -88,6 +91,24 @@ export function ThresholdsCard({
                 <option value="2:1">2 de carga, 1 de descarga</option>
                 <option value="3:1">3 de carga, 1 de descarga</option>
                 <option value="4:1">4 de carga, 1 de descarga</option>
+              </select>
+            </Field>
+          </div>
+        </div>
+
+        <div className="group">
+          <h3 className="group-title">Estímulo de VO2max</h3>
+          <p className="group-desc">
+            {activeObjective === "vo2max"
+              ? "Tu bloque activo es de VO2max: se hace UNA sesión intensa por semana. Elegí cuál; el segundo día de calidad es un rodaje Z2 con sprints."
+              :`Se aplica cuando el bloque activo es de VO2max${activeObjective ? ` (el actual es «${activeObjective}», así que por ahora no cambia nada)` : ""}.`}
+          </p>
+          <div className="field-grid">
+            <Field label="Sesión de VO2max" hint="Sugerido para el objetivo VO2max: HIIT genuino (López Chicharro 2018). Rønnestad 30/15 tiene evidencia en ciclistas entrenados y progresa por series; alternar es criterio de práctica.">
+              <select name="vo2Stimulus" defaultValue={t.vo2Stimulus ?? "hiit_genuino"}>
+                <option value="hiit_genuino">HIIT genuino 7×3′ al 100% PAM — sugerido para VO2max</option>
+                <option value="ronnestad_30_15">Rønnestad 30/15 (3×13 de 30″/15″)</option>
+                <option value="alternate">Alternar semanas: HIIT genuino / Rønnestad</option>
               </select>
             </Field>
           </div>

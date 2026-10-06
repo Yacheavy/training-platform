@@ -4,7 +4,7 @@ import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 import { dateKeyLocal } from "../tz";
 
-export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string }) {
+export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date }) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
   if (!block || (opts?.athleteId && block.athleteId !== opts.athleteId)) throw new Error("Bloque no encontrado");
 
@@ -24,6 +24,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
       deloadRatio: thresholds?.deloadRatio ?? "4:1",
       weeksBetweenFtpTest: thresholds?.weeksBetweenFtpTest ?? 5,
       ftpTestProtocol: thresholds?.ftpTestProtocol,
+      vo2Stimulus: thresholds?.vo2Stimulus,
     },
     template,
     library,
@@ -38,6 +39,8 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   for (const day of plan) {
     if (opts?.fromDate && day.date < opts.fromDate) continue;
     const key = dateKeyLocal(day.date);
+    // Modo "regenerar esta sesión": solo ese día, y reemplaza la sesión existente (si no está completada)
+    if (opts?.replaceDate && key !== dateKeyLocal(opts.replaceDate)) continue;
     try {
       const existing = await prisma.generatedWorkout.findFirst({
         where: {
@@ -46,6 +49,27 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
           // Cualquier estado: si ya hay una sesión aprobada/editada/enviada ese día, no se duplica
         },
       });
+      if (existing && opts?.replaceDate && existing.status !== "COMPLETED") {
+        const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(existing.status);
+        await prisma.generatedWorkout.update({
+          where: { id: existing.id },
+          data: {
+            workoutLibraryKey: day.stimulusType,
+            // Si ya estaba aprobada/enviada queda aprobada, lista para (re)enviar a Intervals
+            status: wasConfirmed ? "APPROVED" : "PLANNED",
+            sentToIntervalsAt: null,
+            blocksJson: day.blocks as unknown as Prisma.InputJsonValue,
+            estimatedTss: day.tss,
+            estimatedKj: day.fueling.totalKj,
+            suggestedCarbsG: day.fueling.suggestedCarbsG,
+            suggestedCarbsGPerHour: day.fueling.suggestedCarbsGPerHour,
+            requiresMultipleCarbSources: day.fueling.requiresMultipleCarbSources,
+            rationale: day.rationale,
+          },
+        });
+        created.push(key);
+        continue;
+      }
       if (existing) {
         skipped.push(key);
         continue;

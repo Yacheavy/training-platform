@@ -19,6 +19,7 @@ export async function regeneratePlan() {
   const from = dayStartLocal(new Date());
 
   const blocks = await prisma.trainingBlock.findMany({ where: { athleteId, endDate: { gte: from } }, orderBy: { startDate: "asc" } });
+  const kept = await prisma.generatedWorkout.count({ where: { athleteId, status: { in: ["APPROVED", "EDITED", "SENT_TO_INTERVALS"] }, date: { gte: from } } });
   let created = 0;
   const warnings: string[] = [];
   for (const b of blocks) {
@@ -33,5 +34,5 @@ export async function regeneratePlan() {
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   revalidatePath("/settings");
-  redirect(`/settings?regenerated=${created}${warnings.length ? `&warnings=${warnings.length}` : ""}`);
+  redirect(`/settings?regenerated=${created}&kept=${kept}${warnings.length ? `&warnings=${warnings.length}` : ""}`);
 }

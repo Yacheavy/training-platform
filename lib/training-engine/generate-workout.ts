@@ -5,7 +5,7 @@ import { buildBlocks } from "./block-builder";
 import { calculateTss } from "./tss";
 import { calculateFueling } from "./fueling";
 import { buildMesocycleWeeks } from "./mesocycle-builder";
-import { OBJECTIVE_TO_STIMULUS, ALTERNATIVE_TO_STIMULUS, MIN_GAP_DAYS_BETWEEN_VO2MAX } from "./quality-assignment";
+import { primaryStimulusFor, ALTERNATIVE_TO_STIMULUS, MIN_GAP_DAYS_BETWEEN_VO2MAX } from "./quality-assignment";
 import { ronnestadSeriesFor } from "./plan-builder";
 import { dayOfWeekLocal, dayStartLocal, dayRangeLocal } from "../tz";
 
@@ -56,7 +56,7 @@ async function pickQualityStimulus(athleteId: string, today: Date, rationale: st
     return ctx("sweet_spot");
   }
 
-  const primary = OBJECTIVE_TO_STIMULUS[activeBlock.objective] ?? "sweet_spot";
+  const primary = primaryStimulusFor(activeBlock.objective, thresholds?.vo2Stimulus, weekIndex);
   rationale.push(`Bloque activo "${activeBlock.name}" (objetivo: ${activeBlock.objective}) → sugiere ${primary}`);
 
   const since = new Date(today.getTime() - 7 * DAY_MS);

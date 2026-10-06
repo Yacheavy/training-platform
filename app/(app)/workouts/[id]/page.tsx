@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ATHLETE_TZ } from "@/lib/tz";
-import { approveWorkout, sendWorkoutToIntervals } from "@/lib/workout-actions";
+import { approveWorkout, sendWorkoutToIntervals, regenerateWorkout } from "@/lib/workout-actions";
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
 import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
 
@@ -213,6 +213,12 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           </ActionForm>
         )}
         {workout.status === "SENT_TO_INTERVALS" && <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals</span>}
+        {workout.status !== "COMPLETED" && (
+          <ActionForm action={regenerateWorkout} success="Sesión regenerada con tus valores actuales">
+            <input type="hidden" name="workoutId" value={workout.id} />
+            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Regenerar esta sesión</SubmitButton>
+          </ActionForm>
+        )}
       </div>
     </div>
   );

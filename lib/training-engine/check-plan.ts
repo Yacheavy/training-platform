@@ -16,10 +16,11 @@ for (const [tn,tpl] of Object.entries(templates))
 for (const ratio of ["3:1","4:1"])
 for (const weeks of [4,6,8,12])
 for (const ftpP of [undefined,"20min","8min","5min"])
-for (const startDow of [0,3,6]) {
+for (const startDow of [0,3,6])
+for (const vo2Stimulus of [undefined,"ronnestad_30_15","alternate"]) {
   const start = new Date(Date.UTC(2026,9,3+((startDow-6+7)%7),20,12,10)); // Oct 3 2026 is Saturday(6)
   const end = new Date(start.getTime()+weeks*7*86400000);
-  const plan = buildPlan({block:{name:"t",objective,startDate:start,endDate:end},ftp:300,pvo2maxWatts:ftpP==="5min"?380:null,thresholds:{deloadRatio:ratio,weeksBetweenFtpTest:5,ftpTestProtocol:ftpP},template:tpl,library});
+  const plan = buildPlan({block:{name:"t",objective,startDate:start,endDate:end},ftp:300,pvo2maxWatts:ftpP==="5min"?380:null,thresholds:{deloadRatio:ratio,weeksBetweenFtpTest:5,ftpTestProtocol:ftpP,vo2Stimulus},template:tpl,library});
   const w = validatePlan(plan,{objective,ftp:300,pvo2maxWatts:ftpP==="5min"?380:null}).filter((x) => !x.startsWith("INFO")); n++;
   if (w.length){ bad++; if(bad<=15) console.log(objective,tn,ratio,weeks,ftpP,startDow,"\n  "+[...new Set(w)].slice(0,4).join("\n  ")); }
 }

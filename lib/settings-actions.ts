@@ -97,6 +97,7 @@ export async function saveThresholds(formData: FormData) {
     maxConsecutiveBadSleepDays: num("maxConsecutiveBadSleepDays", 1, 14),
     weeksBetweenFtpTest: num("weeksBetweenFtpTest", 0, 26),
     ftpTestProtocol: str("ftpTestProtocol", ["20min", "8min", "5min"]),
+    vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate"]),
     deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
       ? String(formData.get("deloadRatio")).trim()
       : undefined,

@@ -1,7 +1,8 @@
 import { TemplateEditor } from "@/components/TemplateEditor";
 import { GoalsCard } from "@/components/GoalsCard";
 import { ThresholdsCard } from "@/components/ThresholdsCard";
-import { dateKeyLocal } from "@/lib/tz";
+import { dateKeyLocal, dayStartLocal } from "@/lib/tz";
+import { prisma } from "@/lib/prisma";
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
@@ -14,13 +15,15 @@ import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from 
 
 export const maxDuration = 60;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; warnings?: string; invite?: string; intervals?: string; history?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; warnings?: string; invite?: string; intervals?: string; history?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
   const { template, goals, thresholds, user } = await getSettingsData(session.user.id);
   const access = await getAccessData(session.user.id);
+  const todayLocal = dayStartLocal(new Date());
+  const activeBlock = await prisma.trainingBlock.findFirst({ where: { athleteId: session.user.id, startDate: { lte: todayLocal }, endDate: { gte: todayLocal } } });
   
   const cardStyle = { background: "#171E27", border: "1px solid #2A3441", borderRadius: "14px", padding: "20px", marginBottom: "20px" };
   const labelStyle = { fontSize: "11px", color: "#8A97A6", textTransform: "uppercase" as const, marginBottom: "6px", display: "block" };
@@ -112,14 +115,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Plan de entrenamiento</h2>
         <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
           Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Solo se reemplazan las sesiones
-          planificadas desde hoy; las del pasado y las que ya aprobaste o enviaste a Intervals no se tocan.
+          planificadas desde hoy; las del pasado y las que ya aprobaste o enviaste a Intervals no se tocan (esas se actualizan una por una con «Regenerar esta sesión»). Si cambiás la potencia, guardá primero y recién después regenerá.
         </p>
         <ActionForm action={regeneratePlan} success={null}>
           <SubmitButton style={btnStyle}>Regenerar plan desde hoy</SubmitButton>
         </ActionForm>
         {sp.regenerated != null && (
           <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
-            Listo: {sp.regenerated} sesiones nuevas.{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
+            Listo: {sp.regenerated} sesiones nuevas.{Number(sp.kept) > 0 ? ` ${sp.kept} sesión(es) ya aprobadas o enviadas NO se tocaron: para actualizarlas entrá a cada una y usá «Regenerar esta sesión».` : ""}{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
           </div>
         )}
       </div>
@@ -274,8 +277,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       />
 
       <ThresholdsCard
-        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct, weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio } : null}
+        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct, weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio, vo2Stimulus: thresholds.vo2Stimulus } : null}
         action={saveThresholds}
+        activeObjective={activeBlock?.objective ?? null}
         cardStyle={cardStyle}
       />
     </div>

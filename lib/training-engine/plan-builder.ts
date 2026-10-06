@@ -2,7 +2,7 @@ import { buildMesocycleWeeks } from "./mesocycle-builder";
 import { buildBlocks, sprintCountFor } from "./block-builder";
 import { calculateTss, WorkoutBlock } from "./tss";
 import { calculateFueling, FuelingResult } from "./fueling";
-import { OBJECTIVE_TO_STIMULUS, assignWeeklyQualityStimuli } from "./quality-assignment";
+import { assignWeeklyQualityStimuli, primaryStimulusFor } from "./quality-assignment";
 import { dayOfWeekLocal } from "../tz";
 
 /**
@@ -20,6 +20,8 @@ export interface PlanThresholds {
   deloadRatio: string;
   weeksBetweenFtpTest: number;
   ftpTestProtocol?: string | null;
+  /** Preferencia de VO2max: hiit_genuino | ronnestad_30_15 | alternate (solo objetivo vo2max). */
+  vo2Stimulus?: string | null;
 }
 export interface PlanTemplateSlot {
   dayOfWeek: number;
@@ -133,12 +135,16 @@ export function buildPlan(input: {
   const ftpTestWeekIndices = computeFtpTestWeekIndices(totalWeeks, thresholds.weeksBetweenFtpTest, mesocycleWeeks);
   const ftpTestStimulusType = getFtpTestStimulusType(thresholds.ftpTestProtocol);
 
-  const primaryStimulus = OBJECTIVE_TO_STIMULUS[block.objective] ?? "sweet_spot";
-  const baseStimuliForWeek = assignWeeklyQualityStimuli(
-    qualityDaySlots.map((s) => s.dayOfWeek),
-    block.objective,
-    library[primaryStimulus]?.maxSessionsPerWeek ?? null
-  );
+  // La asignación semanal depende del estímulo principal de ESA semana (alternar → cambia por semana)
+  const assignedCache = new Map<string, string[]>();
+  const stimuliForWeek = (primary: string) => {
+    let a = assignedCache.get(primary);
+    if (!a) {
+      a = assignWeeklyQualityStimuli(qualityDaySlots.map((s) => s.dayOfWeek), block.objective, library[primary]?.maxSessionsPerWeek ?? null, primary);
+      assignedCache.set(primary, a);
+    }
+    return a;
+  };
 
   const days: PlannedDay[] = [];
 
@@ -153,6 +159,8 @@ export function buildPlan(input: {
     const mesocycleWeek = mesocycleWeeks[weekIndex] ?? mesocycleWeeks[mesocycleWeeks.length - 1];
     const isFtpTestWeek = ftpTestWeekIndices.has(weekIndex);
     const isFirstQualityDayOfWeek = qualityDaySlots.length > 0 && qualityDaySlots[0].dayOfWeek === dayOfWeek;
+    const primaryStimulus = primaryStimulusFor(block.objective, thresholds.vo2Stimulus, weekIndex);
+    const baseStimuliForWeek = stimuliForWeek(primaryStimulus);
 
     let effectiveStimulusType: string;
     let maintenance = false;

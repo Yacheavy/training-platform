@@ -51,7 +51,8 @@ intervalos largos igualados por esfuerzo [R3]; la muestra es muy pequeña (n=9 v
 Sin PAM medida el sistema usa ~125-130% FTP como aproximación [PRÁCTICA, no es un valor del estudio]. Para
 HIIT corto el libro da 100-110% de la PAM [R1]. Objetivo similar al HIIT genuino (VO2max) con menor costo
 neuromuscular por las pausas cortas; el sistema ya NO lo usa como segundo estímulo por defecto (ahora es el rodaje
-con sprints, ver abajo), pero sigue disponible. La
+con sprints, ver abajo), pero el atleta puede elegirlo como su sesión semanal de VO2max en Configuración
+(HIIT genuino, Rønnestad 30/15 o alternar semanas; HIIT genuino es el sugerido para el objetivo VO2max y alternar es [PRÁCTICA]). La
 dosis progresiva de series que usa el sistema (1→3) es [PRÁCTICA].
 
 RODAJE Z2 CON SPRINTS (segundo estímulo semanal del sistema) [R36][R37]: sesión de baja intensidad con sprints de
