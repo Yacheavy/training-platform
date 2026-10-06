@@ -347,6 +347,11 @@ model ChatMessage {
   focusedEntityId  String?
   focusedEntityType String?
 
+  /// Uso de la API en las respuestas del asistente (tokens totales de entrada incl. caché, salida y costo estimado en USD)
+  inputTokens      Int?
+  outputTokens     Int?
+  costUsd          Float?
+
   createdAt        DateTime @default(now())
 }
 

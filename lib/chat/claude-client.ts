@@ -119,7 +119,27 @@ pedir un cambio real, NO incluyas este bloque — respondé solo en texto.
 No calcules ni menciones un TSS estimado de memoria — el backend lo recalcula automáticamente
 a partir de los bloques que devuelvas, y ese valor es el que se usa siempre.`;
 
-export async function askClaude(context: string, userMessage: string, history: { role: string; content: string }[]): Promise<{ text: string; truncated: boolean }> {
+/** USD por millón de tokens: [entrada, salida, escritura de caché 5 min, lectura de caché] (platform.claude.com/docs/en/about-claude/pricing, oct. 2026). */
+const PRICING: Record<string, [number, number, number, number]> = {
+  "claude-haiku-4-5": [1, 5, 1.25, 0.1],
+  "claude-sonnet-5-5": [2, 10, 2.5, 0.2],
+  "claude-opus-5-5": [4, 20, 5, 0.2],
+};
+export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-4-5-20251001";
+
+export interface ChatUsage {
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+}
+
+export function costFor(model: string, u: { input: number; output: number; cacheWrite: number; cacheRead: number }): number {
+  const key = Object.keys(PRICING).find((k) => model.startsWith(k));
+  const [pin, pout, pw, pr] = PRICING[key ?? "claude-haiku-4-5"];
+  return (u.input * pin + u.output * pout + u.cacheWrite * pw + u.cacheRead * pr) / 1_000_000;
+}
+
+export async function askClaude(context: string, userMessage: string, history: { role: string; content: string }[]): Promise<{ text: string; truncated: boolean; usage: ChatUsage }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -129,9 +149,13 @@ export async function askClaude(context: string, userMessage: string, history: {
     },
     signal: AbortSignal.timeout(50_000),
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: CHAT_MODEL,
       max_tokens: 4000,
-      system: `${SYSTEM_PROMPT}\n\n${KNOWLEDGE_BASE}\n\nCONTEXTO ACTUAL DEL ATLETA (datos reales de hoy):\n${context}`,
+      // Parte fija (instrucciones + base de conocimiento) con caché: las lecturas de caché cuestan ~10% de la entrada normal
+      system: [
+        { type: "text", text: `${SYSTEM_PROMPT}\n\n${KNOWLEDGE_BASE}`, cache_control: { type: "ephemeral" } },
+        { type: "text", text: `CONTEXTO ACTUAL DEL ATLETA (datos reales de hoy):\n${context}` },
+      ],
       messages: [
         ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
         { role: "user", content: userMessage },
@@ -144,5 +168,11 @@ export async function askClaude(context: string, userMessage: string, history: {
   }
 
   const data = await res.json();
-  return { text: data.content?.[0]?.text ?? "No pude generar una respuesta.", truncated: data.stop_reason === "max_tokens" };
+  const u = data.usage ?? {};
+  const parts = { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0 };
+  return {
+    text: data.content?.[0]?.text ?? "No pude generar una respuesta.",
+    truncated: data.stop_reason === "max_tokens",
+    usage: { inputTokens: parts.input + parts.cacheWrite + parts.cacheRead, outputTokens: parts.output, costUsd: costFor(CHAT_MODEL, parts) },
+  };
 }

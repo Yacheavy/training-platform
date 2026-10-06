@@ -6,6 +6,7 @@ import { sendChatMessage } from "@/lib/chat-actions";
 import { ChatView, type ChatFocus } from "@/components/ChatView";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { ATHLETE_TZ } from "@/lib/tz";
+import { getChatUsage } from "@/lib/chat/usage";
 
 const fmtMin = (sec: number) => {
   const h = Math.floor(sec / 3600);
@@ -78,5 +79,6 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
     }
   }
 
-  return <ChatView messages={messages} workoutId={focus?.kind === "workout" ? workoutId : undefined} activityId={focus?.kind === "activity" ? activityId : undefined} focus={focus} action={sendChatMessage} />;
+  const usage = await getChatUsage(session.user.id);
+  return <ChatView usage={usage} messages={messages} workoutId={focus?.kind === "workout" ? workoutId : undefined} activityId={focus?.kind === "activity" ? activityId : undefined} focus={focus} action={sendChatMessage} />;
 }

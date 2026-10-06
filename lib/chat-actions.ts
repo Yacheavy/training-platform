@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { buildChatContext } from "@/lib/chat/context-builder";
-import { askClaude } from "@/lib/chat/claude-client";
+import { askClaude, type ChatUsage } from "@/lib/chat/claude-client";
 import { parseClaudeResponse } from "@/lib/chat/parse-response";
 import { validateBlocks } from "@/lib/chat/validate-blocks";
 import { findUnverifiedCitations } from "@/lib/chat/citation-check";
@@ -17,7 +17,7 @@ import { buildStructuredWorkout } from "@/lib/training-engine/workout-descriptio
 import { buildWorkoutName } from "@/lib/training-engine/workout-naming";
 import { dateKeyLocal } from "@/lib/tz";
 
-const DAILY_LIMIT = Number(process.env.CHAT_DAILY_LIMIT) || 30;
+import { DAILY_LIMIT } from "@/lib/chat/limits";
 const MAX_MESSAGE_CHARS = 2000;
 
 type Focus = { workoutId?: string; activityId?: string };
@@ -28,8 +28,10 @@ function focusFields(f: Focus) {
   return { focusedEntityId: null, focusedEntityType: null };
 }
 
-async function saveAssistant(athleteId: string, content: string, focus: Focus = {}) {
-  await prisma.chatMessage.create({ data: { athleteId, role: "assistant", content, ...focusFields(focus) } });
+async function saveAssistant(athleteId: string, content: string, focus: Focus = {}, usage?: ChatUsage) {
+  await prisma.chatMessage.create({
+    data: { athleteId, role: "assistant", content, ...focusFields(focus), ...(usage ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens, costUsd: usage.costUsd } : {}) },
+  });
 }
 
 /** Si algo falla después de guardar el mensaje, el atleta recibe igual una respuesta (no queda colgado). */
@@ -95,9 +97,12 @@ async function sendChatMessageInner(formData: FormData) {
   });
   const history = recentHistory.reverse().slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
 
-  let reply: { text: string; truncated: boolean };
+  let reply: { text: string; truncated: boolean; usage: ChatUsage };
+  const totalUsage: ChatUsage = { inputTokens: 0, outputTokens: 0, costUsd: 0 };
+  const addUsage = (u: ChatUsage) => { totalUsage.inputTokens += u.inputTokens; totalUsage.outputTokens += u.outputTokens; totalUsage.costUsd += u.costUsd; };
   try {
     reply = await askClaude(context, messageText, history);
+    addUsage(reply.usage);
   } catch (err) {
     console.error("askClaude falló:", err);
     await saveAssistant(athleteId, "No pude responder en este momento. Probá de nuevo en unos minutos.", focus);
@@ -120,6 +125,7 @@ async function sendChatMessageInner(formData: FormData) {
         "Aplicá ahora el cambio que acordamos. Respondé SOLO con una línea corta y el bloque json_blocks con el workout COMPLETO actualizado.",
         [...history, { role: "user", content: messageText }, { role: "assistant", content: reply.text }]
       );
+      addUsage(retry.usage);
       const again = parseClaudeResponse(retry.text);
       if (again.updatedBlocks !== null || again.blocksUnreadable) parsed = { ...parsed, updatedBlocks: again.updatedBlocks, blocksUnreadable: again.blocksUnreadable };
     } catch (err) {
@@ -213,7 +219,7 @@ async function sendChatMessageInner(formData: FormData) {
 
   const optionsBlock = parsed.options.length ? `\n\n\`\`\`opciones\n${JSON.stringify(parsed.options)}\n\`\`\`` : "";
   const finalText = (notice ? `${notice.startsWith("✓") ? "" : "⚠ "}${notice}\n\n${text}` : reply.truncated ? `${text}\n\n(La respuesta se cortó por largo.)` : text) + optionsBlock;
-  await saveAssistant(athleteId, finalText, focus);
+  await saveAssistant(athleteId, finalText, focus, totalUsage);
 
   revalidatePath("/chat");
   revalidatePath("/dashboard");

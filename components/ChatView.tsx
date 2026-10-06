@@ -4,6 +4,9 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ATHLETE_TZ } from "@/lib/tz";
 import { splitOptions } from "@/lib/chat/parse-response";
+import type { ChatUsageSummary } from "@/lib/chat/usage";
+
+const usd = (n: number) => `US$ ${n < 0.1 ? n.toFixed(3) : n.toFixed(2)}`.replace(".", ",");
 
 interface Msg {
   id: string;
@@ -102,7 +105,9 @@ export function ChatView({
   activityId,
   focus,
   action,
+  usage,
 }: {
+  usage?: ChatUsageSummary;
   messages: Msg[];
   workoutId?: string;
   activityId?: string;
@@ -178,6 +183,23 @@ export function ChatView({
           </div>
         </div>
       </header>
+
+      {usage && (
+        <div className="chat-usage" style={{ fontSize: "11.5px", color: "var(--text-muted)", padding: "6px 4px 10px", lineHeight: 1.5 }}>
+          {usage.remaining != null && (
+            <span style={{ color: usage.remaining <= 5 ? "var(--amber)" : "var(--text-muted)", fontWeight: 600 }}>
+              Te quedan {usage.remaining} de {usage.limit} mensajes hoy ·{" "}
+            </span>
+          )}
+          Hoy: {usage.todayTokens.toLocaleString("es-AR")} tokens ≈ {usd(usage.todayCostUsd)} · Este mes: {usd(usage.monthCostUsd)} en {usage.monthMessages} respuestas
+          {usage.avgCostPerMessageUsd != null && ` (≈ ${usd(usage.avgCostPerMessageUsd)} por respuesta)`}
+          {!usage.isCoach && (
+            <div style={{ color: "var(--text-dim)" }}>
+              El asistente usa una API de IA que tiene costo. Si querés colaborar con ese gasto, hablalo con tu entrenador.
+            </div>
+          )}
+        </div>
+      )}
 
       {focus && (
         <div className="chat-focus">

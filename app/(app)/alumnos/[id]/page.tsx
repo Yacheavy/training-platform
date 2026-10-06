@@ -8,6 +8,7 @@ import { getPlanVsActual } from "@/lib/analytics";
 import { getDashboardData } from "@/lib/dashboard-data";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
+import { getChatUsage } from "@/lib/chat/usage";
 
 const STATUS = {
   RED: { label: "Baja", color: "var(--red)" },
@@ -31,7 +32,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   if (!student) notFound();
 
   const todayKey = dateKeyLocal(new Date());
-  const [availability, data, weeks, upcoming, activities, checkin] = await Promise.all([
+  const [availability, data, weeks, upcoming, activities, checkin, chatUsage] = await Promise.all([
     calculateAvailability(id),
     getDashboardData(id),
     getPlanVsActual(id, 6),
@@ -41,6 +42,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     }),
     prisma.activity.findMany({ where: { athleteId: id }, orderBy: { date: "desc" }, take: 8, select: { id: true, date: true, name: true, type: true, tss: true, durationSec: true, deviationFlag: true } }),
     prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: id, date: dayKeyDate(new Date()) } } }),
+    getChatUsage(id),
   ]);
   const st = STATUS[availability.status];
   const days = upcoming.filter((w) => dateKeyLocal(w.date) >= todayKey);
@@ -118,6 +120,15 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               </span>
             </div>
           ))}
+        </div>
+      </div>
+      <div style={card}>
+        <h2 style={h}>Uso del asistente (chat)</h2>
+        <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.6 }}>
+          Hoy: {chatUsage.sentToday} de {chatUsage.limit} mensajes · {chatUsage.todayTokens.toLocaleString("es-AR")} tokens · US$ {chatUsage.todayCostUsd.toFixed(3)}
+          <br />
+          Este mes: {chatUsage.monthMessages} respuestas · US$ {chatUsage.monthCostUsd.toFixed(2)}
+          {chatUsage.avgCostPerMessageUsd != null ? ` (≈ US$ ${chatUsage.avgCostPerMessageUsd.toFixed(3)} por respuesta)` : ""}
         </div>
       </div>
       <p style={{ fontSize: "11.5px", color: "var(--text-dim)", lineHeight: 1.5 }}>Vista de solo lectura. Los ajustes de sesiones los hace cada alumno desde su cuenta.</p>
