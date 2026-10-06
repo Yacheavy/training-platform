@@ -6,6 +6,7 @@ import { buildChatContext } from "@/lib/chat/context-builder";
 import { askClaude } from "@/lib/chat/claude-client";
 import { parseClaudeResponse } from "@/lib/chat/parse-response";
 import { validateBlocks } from "@/lib/chat/validate-blocks";
+import { findUnverifiedCitations } from "@/lib/chat/citation-check";
 import { dayStartLocal } from "@/lib/tz";
 import { calculateTss } from "@/lib/training-engine/tss";
 import { calculateFueling } from "@/lib/training-engine/fueling";
@@ -76,7 +77,13 @@ export async function sendChatMessage(formData: FormData) {
     revalidatePath("/chat");
     return;
   }
-  const { text, updatedBlocks, blocksUnreadable } = parseClaudeResponse(reply.text);
+  const parsed = parseClaudeResponse(reply.text);
+  const { updatedBlocks, blocksUnreadable } = parsed;
+  // Control automático: toda cita debe estar en la bibliografía cerrada; si no, se avisa
+  const unverified = findUnverifiedCitations(parsed.text);
+  const text = unverified.length
+    ? `${parsed.text}\n\n⚠ Revisión automática: mencioné ${unverified.join(", ")}, que no figura en mi bibliografía verificada. Tomalo como no confirmado.`
+    : parsed.text;
 
   // Resultado REAL de la edición: el texto del modelo puede decir "listo, lo cambié" aunque no se haya aplicado
   let notice: string | null = null;
