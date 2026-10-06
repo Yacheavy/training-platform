@@ -15,7 +15,7 @@ import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from 
 
 export const maxDuration = 60;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; warnings?: string; invite?: string; intervals?: string; history?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; resent?: string; failed?: string; warnings?: string; invite?: string; intervals?: string; history?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -114,15 +114,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Plan de entrenamiento</h2>
         <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
-          Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Solo se reemplazan las sesiones
-          planificadas desde hoy; las del pasado y las que ya aprobaste o enviaste a Intervals no se tocan (esas se actualizan una por una con «Regenerar esta sesión»). Si cambiás la potencia, guardá primero y recién después regenerá.
+          Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Se reemplazan todas las sesiones
+          desde hoy, también las aprobadas o enviadas (las enviadas se actualizan solas en Intervals). No se tocan las del pasado, las completadas ni las editadas a mano. Si cambiás la potencia, guardá primero y recién después regenerá.
         </p>
         <ActionForm action={regeneratePlan} success={null}>
           <SubmitButton style={btnStyle}>Regenerar plan desde hoy</SubmitButton>
         </ActionForm>
         {sp.regenerated != null && (
           <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
-            Listo: {sp.regenerated} sesiones nuevas.{Number(sp.kept) > 0 ? ` ${sp.kept} sesión(es) ya aprobadas o enviadas NO se tocaron: para actualizarlas entrá a cada una y usá «Regenerar esta sesión».` : ""}{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
+            Listo: {sp.regenerated} sesiones nuevas.{Number(sp.resent) > 0 ? ` ${sp.resent} sesión(es) ya enviadas se actualizaron en Intervals.` : ""}{Number(sp.failed) > 0 ? ` ${sp.failed} no se pudieron reenviar a Intervals: abrilas y tocá «Enviar a Intervals».` : ""}{Number(sp.kept) > 0 ? ` ${sp.kept} sesión(es) editadas a mano se conservaron (usá «Regenerar esta sesión» si querés rehacerlas).` : ""}{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
           </div>
         )}
       </div>
@@ -169,7 +169,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <ActionForm key={f.name} action={applyIntervalsValue} success="Valor aplicado">
                     <input type="hidden" name="field" value={f.name} />
                     <SubmitButton style={{ ...btnStyle, background: "transparent", color: f.value != null && f.remote < f.value ? "#E8A33D" : "#4FD1C5", border: f.value != null && f.remote < f.value ? "1px solid #E8A33D" : "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
-                      {f.value != null && f.remote < f.value ? "⚠ Menor que tu valor actual · " : ""}Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
+                      {f.value != null && f.remote < f.value ? `⚠ Intervals es MENOR que tu valor (${f.value} ${f.unit}): aplicarlo lo baja · ` : ""}Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
                     </SubmitButton>
                   </ActionForm>
                 ) : null

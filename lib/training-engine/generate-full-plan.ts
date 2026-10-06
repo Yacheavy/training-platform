@@ -4,7 +4,7 @@ import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 import { dateKeyLocal } from "../tz";
 
-export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date }) {
+export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean }) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
   if (!block || (opts?.athleteId && block.athleteId !== opts.athleteId)) throw new Error("Bloque no encontrado");
 
@@ -35,12 +35,14 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
 
   const created: string[] = [];
   const skipped: string[] = [];
+  const resendIds: string[] = [];
 
   for (const day of plan) {
     if (opts?.fromDate && day.date < opts.fromDate) continue;
     const key = dateKeyLocal(day.date);
     // Modo "regenerar esta sesión": solo ese día, y reemplaza la sesión existente (si no está completada)
     if (opts?.replaceDate && key !== dateKeyLocal(opts.replaceDate)) continue;
+    const replacing = !!opts?.replaceDate || !!opts?.replaceAll;
     try {
       const existing = await prisma.generatedWorkout.findFirst({
         where: {
@@ -49,7 +51,8 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
           // Cualquier estado: si ya hay una sesión aprobada/editada/enviada ese día, no se duplica
         },
       });
-      if (existing && opts?.replaceDate && existing.status !== "COMPLETED") {
+      if (existing && replacing && existing.status !== "COMPLETED") {
+        const wasSent = existing.status === "SENT_TO_INTERVALS";
         const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(existing.status);
         await prisma.generatedWorkout.update({
           where: { id: existing.id },
@@ -68,6 +71,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
           },
         });
         created.push(key);
+        if (wasSent) resendIds.push(existing.id);
         continue;
       }
       if (existing) {
@@ -96,5 +100,5 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
     }
   }
 
-  return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped, warnings };
+  return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped, warnings, resendIds };
 }
