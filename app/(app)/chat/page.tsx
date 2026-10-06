@@ -12,7 +12,7 @@ const fmtMin = (sec: number) => {
   const m = Math.round((sec % 3600) / 60);
   return h > 0 ? `${h} h ${String(m).padStart(2, "0")} min` : `${m} min`;
 };
-const fmtDate = (d: Date) => d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: ATHLETE_TZ });
+const fmtDate = (d: Date, tz: string = ATHLETE_TZ) => d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: tz });
 
 export default async function ChatPage({ searchParams }: { searchParams: Promise<{ workoutId?: string; activityId?: string }> }) {
   const { workoutId, activityId } = await searchParams;
@@ -39,12 +39,20 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
         kind: "workout",
         tag: "Sesión de tu plan",
         title: STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey,
-        meta: [fmtDate(w.date), fmtMin(totalSec), w.estimatedTss != null ? `TSS ${Math.round(w.estimatedTss)}` : null].filter(Boolean).join(" · "),
+        meta: [fmtDate(w.date, "UTC"), fmtMin(totalSec), w.estimatedTss != null ? `TSS ${Math.round(w.estimatedTss)}` : null].filter(Boolean).join(" · "),
         href: `/workouts/${w.id}`,
         linkLabel: "Ver sesión",
         suggestions: editable
-          ? ["Explicame por qué esta sesión", "Hacela 15 minutos más corta", "Bajale un poco la intensidad", "Hoy estoy cansado, ¿cómo la adapto?"]
-          : ["Explicame esta sesión", "¿Cómo me fue respecto al plan?"],
+          ? [
+              { label: "¿Por qué esta sesión?", prompt: `Explicame por qué me toca esta sesión (${STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}, ${fmtDate(w.date, "UTC")}) y cómo ejecutarla.` },
+              { label: "Hacela más corta", prompt: "Hacé esta sesión 15 minutos más corta manteniendo el estímulo principal." },
+              { label: "Bajale la intensidad", prompt: "Bajale un poco la intensidad a esta sesión y explicame qué pierdo." },
+              { label: "Estoy cansado", prompt: "Hoy estoy cansado: ¿cómo adapto esta sesión?" },
+            ]
+          : [
+              { label: "Explicame la sesión", prompt: "Explicame esta sesión." },
+              { label: "¿Cómo me fue?", prompt: "¿Cómo me fue respecto al plan?" },
+            ],
       };
     }
   } else if (activityId) {
@@ -61,10 +69,10 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
         href: `/activities/${a.id}`,
         linkLabel: "Ver actividad",
         suggestions: [
-          "Analizá esta sesión",
-          ...(a.generatedWorkout ? ["¿Cumplí con lo planificado?"] : []),
-          "¿Cómo impacta en mi recuperación?",
-          "¿Qué debería hacer mañana?",
+          { label: "Analizá la sesión", prompt: `Analizá esta sesión (${a.name ?? a.type}, ${fmtDate(a.date)}) con todos sus datos.` },
+          ...(a.generatedWorkout ? [{ label: "¿Cumplí el plan?", prompt: "¿Cumplí con lo planificado en esta sesión? Compará lo hecho contra lo previsto." }] : []),
+          { label: "Impacto en recuperación", prompt: "¿Cómo impacta esta sesión en mi recuperación?" },
+          { label: "¿Qué hago mañana?", prompt: "Según esta sesión, ¿qué debería hacer mañana?" },
         ],
       };
     }

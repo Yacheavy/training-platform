@@ -1,10 +1,47 @@
 import { prisma } from "@/lib/prisma";
-import { dayKeyDate } from "@/lib/tz";
+import { dayKeyDate, dateKeyLocal, ATHLETE_TZ } from "@/lib/tz";
+import { STIMULUS_LABELS } from "@/lib/labels";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
 
+type Blk = { type: string; durationSec: number; targetWatts: number };
+const fmtDur = (s: number) => (s % 60 === 0 ? `${s / 60}min` : s < 60 ? `${s}s` : `${Math.floor(s / 60)}min ${s % 60}s`);
+
+/** Resumen legible de los bloques: agrupa los pares intervalo/recuperación repetidos. */
+function summarizeBlocks(blocks: Blk[]): string {
+  const out: string[] = [];
+  for (let i = 0; i < blocks.length; ) {
+    const b = blocks[i];
+    const r = blocks[i + 1];
+    if (b.type === "interval" && r && r.type === "recovery") {
+      let n = 1;
+      let j = i + 2;
+      while (blocks[j]?.type === "interval" && blocks[j].durationSec === b.durationSec && blocks[j].targetWatts === b.targetWatts && blocks[j + 1]?.type === "recovery") {
+        n++;
+        j += 2;
+      }
+      out.push(`${n}× (${fmtDur(b.durationSec)} a ${b.targetWatts}W / recuperación ${fmtDur(r.durationSec)} a ${r.targetWatts}W)`);
+      i = j;
+      continue;
+    }
+    out.push(`${b.type} ${fmtDur(b.durationSec)} a ${b.targetWatts}W`);
+    i++;
+  }
+  return out.join(" → ");
+}
+
+function relativeDay(dayKey: string): string {
+  const diff = Math.round((Date.parse(dayKey) - Date.parse(dateKeyLocal(new Date()))) / 86400000);
+  if (diff === 0) return "HOY";
+  if (diff === 1) return "MAÑANA";
+  if (diff === -1) return "AYER";
+  return diff > 0 ? `en ${diff} días` : `hace ${-diff} días`;
+}
+
 export async function buildChatContext(athleteId: string, focusedWorkoutId?: string, focusedActivityId?: string): Promise<string> {
   const parts: string[] = [];
+  // La sesión en foco va PRIMERO: es de lo que habla el atleta cuando dice "esta sesión"
+  const focusParts: string[] = [];
 
   const user = await prisma.user.findUnique({ where: { id: athleteId } });
   parts.push(`ATLETA: FTP ${user?.ftp ?? "no configurado"}W, peso ${user?.weight ?? "no configurado"}kg`);
@@ -134,8 +171,20 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   if (focusedWorkoutId) {
     const workout = await prisma.generatedWorkout.findFirst({ where: { id: focusedWorkoutId, athleteId } });
     if (workout) {
-      parts.push(
-        `WORKOUT ENFOCADO (el atleta está viendo esta sesión ahora): ${workout.workoutLibraryKey}, TSS estimado ${workout.estimatedTss}, estado ${workout.status}, bloques: ${JSON.stringify(workout.blocksJson)}`
+      const blocks = workout.blocksJson as unknown as Blk[];
+      const dayKey = new Date(workout.date).toISOString().split("T")[0];
+      const totalMin = Math.round(blocks.reduce((s, b) => s + (b.durationSec ?? 0), 0) / 60);
+      focusParts.push(
+        [
+          `SESIÓN EN FOCO — el atleta la tiene abierta ahora y es de lo que habla cuando dice "esta sesión", "la sesión" o "ella". Nunca le pidas que te la describa ni digas que no la ves: tenés todos sus datos acá.`,
+          `Es una sesión PLANIFICADA para ${relativeDay(dayKey)} (${new Date(workout.date).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}), tipo ${STIMULUS_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}, estado ${workout.status}.`,
+          `Duración ${totalMin}min, TSS estimado ${workout.estimatedTss ?? "?"}, ${workout.estimatedKj != null ? `${Math.round(workout.estimatedKj)} kJ, ` : ""}carbohidratos sugeridos ${workout.suggestedCarbsG ?? "?"} g.`,
+          `Estructura: ${summarizeBlocks(blocks)}`,
+          workout.rationale ? `Fundamento con el que el plan la eligió: ${workout.rationale}` : "",
+          `Bloques exactos (JSON; si pide un cambio, devolvé el array completo actualizado): ${JSON.stringify(workout.blocksJson)}`,
+        ]
+          .filter(Boolean)
+          .join("\n")
       );
     }
   }
@@ -153,7 +202,8 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       const stimulus = classifyStimulusType({ type: a.type, name: a.name, intensityFactor: a.intensityFactor, rawStreamsJson: a.rawStreamsJson });
       const f = (v: number | null | undefined, d = 0, u = "") => (v == null ? "?" : `${v.toFixed(d)}${u}`);
       const lines = [
-        `ACTIVIDAD ENFOCADA (el atleta está viendo esta sesión YA REALIZADA; no se puede modificar, solo analizarla): ${a.date.toISOString().split("T")[0]} "${a.name ?? a.type}", tipo detectado ${stimulus}`,
+        `SESIÓN EN FOCO — el atleta tiene abierta esta actividad YA REALIZADA y es de lo que habla cuando dice "esta sesión", "la sesión" o "ella". Nunca le pidas que te la describa ni digas que no la ves: tenés todos sus datos acá. No se puede modificar, solo analizarla.`,
+        `Actividad del ${a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: ATHLETE_TZ })} (${relativeDay(dateKeyLocal(a.date))}): "${a.name ?? a.type}", tipo detectado ${STIMULUS_LABELS[stimulus] ?? stimulus}`,
         `Duración ${Math.round(a.durationSec / 60)}min, TSS ${f(a.tss)}, IF ${f(a.intensityFactor, 2)}, NP ${f(a.normalizedPower, 0, "W")}, potencia media ${f(a.avgPower, 0, "W")}, VI ${f(a.variabilityIndex, 2)}`,
         `FC media ${f(a.avgHr, 0, "lpm")}, FC máx ${f(a.maxHr, 0, "lpm")}, cadencia ${f(a.avgCadence, 0, "rpm")}, trabajo ${f(a.kilojoules, 0, "kJ")}, desacople Pw:HR ${f(a.decouplingPct, 1, "%")}`,
         zt ? `Tiempo por zona: ${zt}` : `Tiempo por zona: sin datos`,
@@ -164,9 +214,9 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       } else {
         lines.push(`Sin sesión planificada asociada (actividad libre).`);
       }
-      parts.push(lines.join("\n"));
+      focusParts.push(lines.join("\n"));
     }
   }
 
-  return parts.join("\n\n");
+  return [...focusParts, ...parts].join("\n\n");
 }

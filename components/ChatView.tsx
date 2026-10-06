@@ -18,7 +18,7 @@ export interface ChatFocus {
   meta: string;
   href: string;
   linkLabel: string;
-  suggestions: string[];
+  suggestions: { label: string; prompt: string }[];
 }
 
 const SUGGESTIONS = [
@@ -168,19 +168,9 @@ export function ChatView({
           <h1 style={{ fontSize: "17px", fontWeight: 600, margin: 0 }}>Asistente de entrenamiento</h1>
           <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
             {workoutId ? (
-              <>
-                Hablando de una sesión de tu plan ·{" "}
-                <Link href={`/workouts/${workoutId}`} style={{ color: "var(--teal)", textDecoration: "none" }}>
-                  ver sesión
-                </Link>
-              </>
+              "Hablando de una sesión de tu plan"
             ) : activityId ? (
-              <>
-                Hablando de una sesión que ya hiciste ·{" "}
-                <Link href={`/activities/${activityId}`} style={{ color: "var(--teal)", textDecoration: "none" }}>
-                  ver actividad
-                </Link>
-              </>
+              "Hablando de una sesión que ya hiciste"
             ) : (
               "Conoce tu plan, tu carga y tu recuperación"
             )}
@@ -191,22 +181,15 @@ export function ChatView({
       {focus && (
         <div className="chat-focus">
           <div className="chat-focus-main">
-            <div className="chat-focus-tag">{focus.tag} · contexto cargado ✓</div>
-            <div className="chat-focus-title">{focus.title}</div>
-            <div className="chat-focus-meta" style={{ textTransform: "capitalize" }}>{focus.meta}</div>
+            <div className="chat-focus-line">
+              <span className="chat-focus-tag">✓ {focus.tag}</span>
+              <span className="chat-focus-title">{focus.title}</span>
+            </div>
+            <div className="chat-focus-meta">{focus.meta}</div>
           </div>
-          <Link href={focus.href} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
+          <Link href={focus.href} className="chat-focus-link">
             {focus.linkLabel} →
           </Link>
-          {(messages.length > 0 || pending) && (
-            <div className="chat-focus-chips">
-              {focus.suggestions.map((s) => (
-                <button key={s} type="button" className="btn chip" disabled={!!pending} onClick={() => sendSuggestion(s)}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -214,15 +197,8 @@ export function ChatView({
         {empty && focus && (
           <div className="chat-empty">
             <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>Ya tengo los datos de esta sesión</div>
-            <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "16px" }}>
-              Tocá una opción o escribime lo que quieras saber.
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
-              {focus.suggestions.map((s) => (
-                <button key={s} type="button" className="btn chip" onClick={() => sendSuggestion(s)}>
-                  {s}
-                </button>
-              ))}
+            <div style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>
+              Escribime lo que quieras saber o tocá una de las opciones de abajo.
             </div>
           </div>
         )}
@@ -275,6 +251,16 @@ export function ChatView({
         )}
         <div ref={bottomRef} />
       </div>
+
+      {focus && !pending && (
+        <div className="chat-chips" role="group" aria-label="Sugerencias">
+          {focus.suggestions.map((s) => (
+            <button key={s.label} type="button" className="btn chip" onClick={() => sendSuggestion(s.prompt)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form action={send} className="chat-composer">
         {workoutId && <input type="hidden" name="focusedWorkoutId" value={workoutId} />}
