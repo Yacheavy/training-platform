@@ -43,7 +43,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
         where: {
           athleteId: block.athleteId,
           date: { gte: day.date, lt: new Date(day.date.getTime() + 86400000) },
-          status: "PLANNED",
+          // Cualquier estado: si ya hay una sesión aprobada/editada/enviada ese día, no se duplica
         },
       });
       if (existing) {
