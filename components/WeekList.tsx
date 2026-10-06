@@ -9,6 +9,7 @@ const TYPE_LABELS: Record<string, string> = {
   z2: "Z2",
   hiit_genuino: "HIIT",
   ronnestad_30_15: "Rønnestad 30/15",
+  z2_sprints: "Z2 + sprints",
   billat: "Billat",
   rst: "RST",
   sweet_spot: "Sweet spot",

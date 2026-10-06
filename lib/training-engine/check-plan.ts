@@ -1,7 +1,7 @@
 import { buildPlan } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 const L = (lo:number|null,hi:number|null,mx:number|null=null)=>({intensityPctFtpLow:lo,intensityPctFtpHigh:hi,maxSessionsPerWeek:mx});
-const library:any = { z2:L(56,75), sweet_spot:L(88,94), umbral:L(95,105,2), hiit_genuino:L(108,115,1), ronnestad_30_15:L(125,135), billat_30_30:L(110,116), rst:L(150,180), gym:L(null,null) };
+const library:any = { z2:L(56,75), sweet_spot:L(88,94), umbral:L(95,105,2), hiit_genuino:L(108,115,1), ronnestad_30_15:L(125,135), z2_sprints:L(null,null), billat_30_30:L(110,116), rst:L(150,180), gym:L(null,null) };
 const T=(d:number,s:string,q:boolean,m:number|null)=>({dayOfWeek:d,stimulusType:s,isQualityDay:q,targetDurationMin:m});
 const templates:Record<string,any[]> = {
   user: [T(1,"cycling",true,60),T(2,"cycling",false,120),T(3,"gym",false,90),T(4,"cycling",true,120),T(5,"gym",false,90),T(6,"cycling",false,180),T(0,"cycling",false,240)],

@@ -3,7 +3,8 @@
  *
  * Para el objetivo VO2max aplica las reglas de la base de conocimiento:
  * - Máx. 1 sesión de HIIT genuino por semana (cupo del estímulo principal).
- * - Rønnestad 30/15 es la alternativa, pero NO se apila: máx. 1 por semana.
+ * - El segundo día de calidad es un rodaje Z2 con sprints (Rønnestad 2020), máx. 1 por semana.
+ *   (Rønnestad 30/15 sigue disponible como plantilla/chat, pero ya no es la alternativa por defecto).
  * - Entre dos sesiones de VO2max debe haber al menos 48h (2 días de distancia,
  *   contando la semana de forma circular). Los días de calidad que no cumplen
  *   esa separación pasan a Z2 (modelo 80/20: la mayoría del volumen es Z2).
@@ -19,7 +20,7 @@ export const OBJECTIVE_TO_STIMULUS: Record<string, string> = {
 };
 
 export const ALTERNATIVE_TO_STIMULUS: Record<string, string> = {
-  vo2max: "ronnestad_30_15",
+  vo2max: "z2_sprints", // un solo VO2max por semana; el segundo estímulo es un rodaje Z2 con sprints (baja fatiga)
   umbral: "sweet_spot",
   base: "z2",
   tapering: "z2",

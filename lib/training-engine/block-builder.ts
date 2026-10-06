@@ -195,6 +195,43 @@ export function buildBlocks(
   }
 
   /**
+   * Rodaje Z2 con sprints (Rønnestad et al. 2020, Front Physiol): sesión de baja intensidad con
+   * 3 series de 3×30" a máxima potencia; 4' de recuperación activa entre sprints (100 W en el
+   * estudio, escalado aquí a ~33% FTP) y 15' de Z2 entre series. Mantuvo el rendimiento en 20' y
+   * la utilización fraccional del VO2max en ciclistas de élite (n=16, 3 semanas, periodo de
+   * transición): evidencia PRELIMINAR. La progresión 1→2→3 series es criterio propio.
+   */
+  if (stimulusType === "z2_sprints") {
+    const sprintSec = 30;
+    const sprintWatts = Math.round(ftp * 1.5); // referencia mínima: el esfuerzo es MÁXIMO (suele superarla); el número es solo orientativo
+    const recSec = 240;
+    const recWatts = Math.round(ftp * 0.33);
+    const betweenSetsSec = 900;
+    const setSec = 3 * sprintSec + 2 * recSec; // 9,5 min
+    const warmupSec = Math.min(900, Math.round(totalSec * 0.15));
+    const cooldownSec = Math.min(600, Math.round(totalSec * 0.1));
+
+    let numSets = Math.min(3, Math.max(1, seriesOverride ?? 3));
+    // Si el tiempo de la sesión no alcanza para las series pedidas, se reduce (mín. 1)
+    while (numSets > 1 && warmupSec + cooldownSec + numSets * setSec + (numSets - 1) * betweenSetsSec > totalSec) numSets--;
+
+    const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
+    for (let s = 0; s < numSets; s++) {
+      for (let i = 0; i < 3; i++) {
+        blocks.push({ type: "interval", durationSec: sprintSec, targetWatts: sprintWatts });
+        if (i < 2) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: recWatts });
+      }
+      if (s < numSets - 1) blocks.push({ type: "z2", durationSec: betweenSetsSec, targetWatts: z2Watts });
+    }
+    const used = blocks.reduce((s, b) => s + b.durationSec, 0);
+    const cooldownBlocks = buildCooldown(cooldownSec, ftp);
+    const fillSec = totalSec - used - cooldownBlocks.reduce((s, b) => s + b.durationSec, 0);
+    if (fillSec > 60) blocks.push({ type: "z2_fill", durationSec: fillSec, targetWatts: z2Watts });
+    blocks.push(...cooldownBlocks);
+    return blocks;
+  }
+
+  /**
    * Rønnestad 30/15: 3 series de 13x(30s/15s), 3min entre series (protocolo real).
    * Billat 30-30: series de 30s/30s "hasta el fallo" — usamos 15 reps como
    * aproximación práctica de duración típica, no un tope fisiológico exacto.

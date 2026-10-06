@@ -26,6 +26,11 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     if (hiit.length > 1) w.push(`Semana ${wk + 1}: ${hiit.length} sesiones HIIT (máx. 1)`);
     const ron = days.filter((d) => d.stimulusType === "ronnestad_30_15");
     if (ron.length > 1) w.push(`Semana ${wk + 1}: ${ron.length} sesiones Rønnestad (máx. 1)`);
+    const spr = days.filter((d) => d.stimulusType === "z2_sprints");
+    if (spr.length > 1) w.push(`Semana ${wk + 1}: ${spr.length} rodajes con sprints (máx. 1)`);
+    // Un solo VO2max por semana (el segundo estímulo es de baja fatiga)
+    const vo2 = days.filter((d) => VO2_STIMULI.has(d.stimulusType) && !d.isDeload);
+    if (ctx.objective === "vo2max" && vo2.length > 1) w.push(`Semana ${wk + 1}: ${vo2.length} sesiones de VO2max (máx. 1 por semana)`);
 
     // Tiempo de Z2 mayoritario sobre el tiempo de ciclismo (modelo 80/20)
     const cyc = days.filter((d) => d.stimulusType !== "gym");
@@ -88,6 +93,16 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       if (reps < minReps || reps > 10) w.push(`${label(d)}: ${reps} repeticiones (esperado ${minReps}–10)`);
       const longestInt = Math.max(...d.blocks.filter((b) => b.type === "interval").map((b) => b.durationSec));
       if (longestInt > 5 * 60) w.push(`${label(d)}: intervalo de ${Math.round(longestInt / 60)} min (>5)`);
+    }
+    if (d.stimulusType === "z2_sprints") {
+      const sprints = d.blocks.filter((b) => b.type === "interval");
+      const sets = sprints.length / 3;
+      if (!Number.isInteger(sets) || sets < 1 || sets > 3) w.push(`${label(d)}: ${sprints.length} sprints (debe ser 3×series, 1–3 series)`);
+      if (sprints.some((b) => b.durationSec !== 30)) w.push(`${label(d)}: los sprints deben durar 30 s`);
+      if (d.isDeload && sets > 1) w.push(`${label(d)}: en descarga el rodaje con sprints lleva 1 serie`);
+      const sprintSec = sprints.reduce((s, b) => s + b.durationSec, 0);
+      const totalSec = d.blocks.reduce((s, b) => s + b.durationSec, 0);
+      if (totalSec > 0 && sprintSec / totalSec > 0.05) w.push(`${label(d)}: demasiado tiempo de sprint (${Math.round((sprintSec / totalSec) * 100)}%)`);
     }
     if (d.stimulusType === "ronnestad_30_15") {
       if (reps % 13 !== 0 || reps === 0 || reps > 39) w.push(`${label(d)}: ${reps} intervalos (debe ser 13×series, máx. 39)`);

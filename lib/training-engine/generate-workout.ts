@@ -158,7 +158,11 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   const progressionStep =
     ["hiit_genuino", "sweet_spot", "umbral"].includes(effectiveStimulusType) && quality ? Math.floor(quality.weekIndex / quality.cycleLength) : 0;
   const series =
-    effectiveStimulusType === "ronnestad_30_15" && quality ? ronnestadSeriesFor(quality.weekIndex, quality.cycleLength) : undefined;
+    (effectiveStimulusType === "ronnestad_30_15" || effectiveStimulusType === "z2_sprints") && quality
+      ? quality.maintenance
+        ? 1
+        : ronnestadSeriesFor(quality.weekIndex, quality.cycleLength)
+      : undefined;
 
   const blocks = buildBlocks(
     effectiveStimulusType,

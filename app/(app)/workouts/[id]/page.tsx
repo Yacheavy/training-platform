@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   z2: "Z2 / Base aeróbica",
   hiit_genuino: "HIIT genuino",
   ronnestad_30_15: "Rønnestad 30/15",
+  z2_sprints: "Z2 con sprints",
   billat_30_30: "Billat 30-30",
   rst: "RST",
   sweet_spot: "Sweet spot",

@@ -165,8 +165,11 @@ export function buildPlan(input: {
         // Deload/taper: se conserva UNA sesión de intensidad con volumen reducido
         // (la intensidad es lo que se mantiene; el volumen es lo que baja).
         const keep = isFirstQualityDayOfWeek && MAINTAINABLE.has(isTapering ? "hiit_genuino" : primaryStimulus);
-        effectiveStimulusType = keep ? (isTapering ? "hiit_genuino" : primaryStimulus) : "z2";
-        maintenance = keep;
+        const positionInWeek = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
+        // El rodaje con sprints (baja fatiga) se conserva en descarga con una sola serie
+        const keepSprints = !keep && !isTapering && baseStimuliForWeek[positionInWeek] === "z2_sprints";
+        effectiveStimulusType = keep ? (isTapering ? "hiit_genuino" : primaryStimulus) : keepSprints ? "z2_sprints" : "z2";
+        maintenance = keep || keepSprints;
       } else {
         const positionInWeek = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
         effectiveStimulusType = baseStimuliForWeek[positionInWeek] ?? primaryStimulus;
@@ -182,8 +185,9 @@ export function buildPlan(input: {
     const progressionStep = ["hiit_genuino", "sweet_spot", "umbral"].includes(effectiveStimulusType)
       ? Math.floor(weekIndex / cycleLength)
       : 0;
+    // Series: Rønnestad 30/15 y rodaje con sprints comparten la progresión 1→2→3 (criterio propio)
     const series =
-      effectiveStimulusType === "ronnestad_30_15"
+      effectiveStimulusType === "ronnestad_30_15" || effectiveStimulusType === "z2_sprints"
         ? maintenance
           ? 1
           : ronnestadSeriesFor(weekIndex, cycleLength)
@@ -215,9 +219,11 @@ export function buildPlan(input: {
           ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Configuración)"}`
           : effectiveStimulusType === "ronnestad_30_15"
             ? ` · ${series} serie${series === 1 ? "" : "s"} de 13×(30s/15s) (progresivo 1→3)`
-            : "";
+            : effectiveStimulusType === "z2_sprints"
+              ? ` · ${series} serie${series === 1 ? "" : "s"} de 3×30" a máxima potencia dentro de un rodaje Z2 (Rønnestad 2020; evidencia preliminar en ciclistas de élite; progresión 1→3 series = criterio propio)`
+              : "";
       rationaleParts.push(
-        `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (alternativa — máx. 1 por semana, ≥48h del estímulo principal)"}${detail}`
+        `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : effectiveStimulusType === "z2_sprints" ? " (segundo estímulo de baja fatiga — máx. 1 por semana, ≥48h del principal)" : " (alternativa — máx. 1 por semana, ≥48h del estímulo principal)"}${detail}`
       );
     } else if (slot.stimulusType === "gym") {
       rationaleParts.push("Día de gimnasio");

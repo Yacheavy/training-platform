@@ -6,6 +6,7 @@ const PREFIX: Record<string, string> = {
   umbral: "UMB",
   hiit_genuino: "HIIT",
   ronnestad_30_15: "30/15",
+  z2_sprints: "Z2+SPR",
   billat_30_30: "30/30",
   rst: "RST",
   gym: "GYM",

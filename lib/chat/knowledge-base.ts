@@ -50,8 +50,35 @@ intensidad sostenible; la recuperación es el 50% de la potencia del intervalo [
 intervalos largos igualados por esfuerzo [R3]; la muestra es muy pequeña (n=9 vs 4): evidencia PRELIMINAR.
 Sin PAM medida el sistema usa ~125-130% FTP como aproximación [PRÁCTICA, no es un valor del estudio]. Para
 HIIT corto el libro da 100-110% de la PAM [R1]. Objetivo similar al HIIT genuino (VO2max) con menor costo
-neuromuscular por las pausas cortas; alternativa cuando ya se usó el cupo semanal de HIIT genuino. La
+neuromuscular por las pausas cortas; el sistema ya NO lo usa como segundo estímulo por defecto (ahora es el rodaje
+con sprints, ver abajo), pero sigue disponible. La
 dosis progresiva de series que usa el sistema (1→3) es [PRÁCTICA].
+
+RODAJE Z2 CON SPRINTS (segundo estímulo semanal del sistema) [R36][R37]: sesión de baja intensidad con 3 series
+de 3×30 s a máxima potencia (sentado, explosivo), 4 min de recuperación activa entre sprints y 15 min de Z2 entre
+series. En 16 ciclistas de élite, hacerlo UNA vez por semana durante 3 semanas de transición (con ~60% menos de
+carga) mantuvo el rendimiento en 20 min y la utilización fraccional del VO2max, mientras el grupo sin sprints
+bajó; el VO2max no cambió [R36]. Es evidencia PRELIMINAR (n=7 vs 9, 3 semanas, élite, en transición, no en plena
+temporada). Los sprints mejoran sobre todo la potencia anaeróbica [R37] y la potencia cae sprint a sprint [R37].
+La progresión del sistema de 1 → 2 → 3 series (1 serie en descarga) es [PRÁCTICA]: el estudio solo evaluó las 3
+series completas. La recuperación de 100 W del estudio está escalada a ~33% FTP en el sistema [PRÁCTICA]. La
+potencia que muestra el plan para el sprint es un piso de referencia; el esfuerzo es máximo.
+
+FRECUENCIA DE SESIONES DURAS (por qué el sistema pone UN solo VO2max por semana):
+- El libro recomienda 1 sesión de HIIT genuino por microciclo y 48-72 h entre sesiones; dice que habitualmente
+  no se supera 2 HIT por semana [R1].
+- Seiler describe ~20% de las SESIONES como de alta intensidad en atletas bien entrenados [R7].
+- Más frecuencia no dio más adaptación en un ECA con adultos moderadamente entrenados (24 sesiones en 3 semanas vs
+  en 8 semanas) [R40], pero compara la misma dosis total, no 1 vs 2 por semana.
+- Una sola sesión semanal de HIIT produjo adaptación (+13% VO2max, 8 semanas) en jóvenes sin entrenamiento [R41];
+  NO es extrapolable a ciclistas entrenados.
+- Piramidal y polarizado funcionan por igual en ciclistas entrenados; lo común es mucho volumen bajo VT1 [R39].
+- Con gimnasio 2 veces por semana: el entrenamiento concurrente no comprometió hipertrofia ni fuerza máxima; la
+  fuerza explosiva se atenuó más en la misma sesión que separada ≥3 h [R38]. No hay un estudio que mida el efecto
+  del gimnasio de piernas sobre la sesión dura del día siguiente: decilo así.
+- Que el segundo estímulo semanal sea un rodaje con sprints y no un segundo VO2max o un sweet spot es una decisión de
+  diseño para limitar la fatiga con gimnasio [PRÁCTICA]; el sweet spot cuesta casi lo mismo que un HIIT en TSS y no
+  tiene ensayos que lo respalden (ver arriba).
 
 BILLAT 30-30: método de intervalos cortos alternados descrito en la literatura de carrera [R6]. El esquema
 exacto (~100%/~50% de vVO2max, series hasta el fallo) NO se pudo confirmar en el texto de la fuente: tratalo
