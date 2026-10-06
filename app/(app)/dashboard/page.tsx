@@ -29,6 +29,7 @@ import { PhaseTimeline } from "@/components/PhaseTimeline";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { CheckinForm } from "@/components/CheckinForm";
 import { Card, Section } from "@/components/Card";
+import { PendingLink } from "@/components/PendingLink";
 import { prisma } from "@/lib/prisma";
 
 const WARN_KEYWORDS = ["⚠", "bajando", "Ya alcanzaste", "RED", "AMBER"];
@@ -247,7 +248,7 @@ export default async function DashboardPage() {
 
               <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "14px" }}>
                 <Link href={`/workouts/${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Ver detalle completo</Link>
-                <Link href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat</Link>
+                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat</PendingLink>
               </div>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 {todayWorkout.status === "SUGGESTED" && (

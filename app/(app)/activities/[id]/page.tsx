@@ -6,6 +6,7 @@ import { ATHLETE_TZ } from "@/lib/tz";
 import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
 import { STIMULUS_LABELS, ZONE_LABELS } from "@/lib/labels";
 import { ActivityIcon } from "@/components/ActivityIcon";
+import { PendingLink } from "@/components/PendingLink";
 
 const ZONE_COLORS: Record<string, string> = {
   Z1: "#3A4A5C", Z2: "#2A8C82", Z3: "#6BAF5C", SS: "#C9B23A", Z4: "#E8A33D", Z5: "#E5636A", Z6: "#B04A8F", Z7: "#7A4AB0",
@@ -124,9 +125,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
       )}
 
-      <Link href={`/chat?activityId=${a.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
-        Preguntarle al chat por esta sesión →
-      </Link>
+      <PendingLink href={`/chat?activityId=${a.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
+        Analizar esta sesión con el chat →
+      </PendingLink>
     </div>
   );
 }

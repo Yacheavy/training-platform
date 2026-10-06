@@ -11,6 +11,16 @@ interface Msg {
   createdAt: string;
 }
 
+export interface ChatFocus {
+  kind: "workout" | "activity";
+  tag: string;
+  title: string;
+  meta: string;
+  href: string;
+  linkLabel: string;
+  suggestions: string[];
+}
+
 const SUGGESTIONS = [
   "¿Cómo estoy hoy para entrenar?",
   "Explicame la sesión de hoy",
@@ -89,11 +99,13 @@ export function ChatView({
   messages,
   workoutId,
   activityId,
+  focus,
   action,
 }: {
   messages: Msg[];
   workoutId?: string;
   activityId?: string;
+  focus?: ChatFocus;
   action: (formData: FormData) => Promise<unknown>;
 }) {
   const [text, setText] = useState("");
@@ -134,6 +146,16 @@ export function ChatView({
 
   const empty = messages.length === 0 && !pending;
 
+  // Una sugerencia se envía directo (un toque), con el foco de la sesión incluido
+  const sendSuggestion = (s: string) => {
+    if (pending) return;
+    const fd = new FormData();
+    fd.set("message", s);
+    if (workoutId) fd.set("focusedWorkoutId", workoutId);
+    if (activityId) fd.set("focusedActivityId", activityId);
+    void send(fd);
+  };
+
   return (
     <div className="chat-shell">
       <header className="chat-header">
@@ -166,8 +188,45 @@ export function ChatView({
         </div>
       </header>
 
+      {focus && (
+        <div className="chat-focus">
+          <div className="chat-focus-main">
+            <div className="chat-focus-tag">{focus.tag} · contexto cargado ✓</div>
+            <div className="chat-focus-title">{focus.title}</div>
+            <div className="chat-focus-meta" style={{ textTransform: "capitalize" }}>{focus.meta}</div>
+          </div>
+          <Link href={focus.href} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
+            {focus.linkLabel} →
+          </Link>
+          {(messages.length > 0 || pending) && (
+            <div className="chat-focus-chips">
+              {focus.suggestions.map((s) => (
+                <button key={s} type="button" className="btn chip" disabled={!!pending} onClick={() => sendSuggestion(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="chat-thread">
-        {empty && (
+        {empty && focus && (
+          <div className="chat-empty">
+            <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>Ya tengo los datos de esta sesión</div>
+            <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "16px" }}>
+              Tocá una opción o escribime lo que quieras saber.
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
+              {focus.suggestions.map((s) => (
+                <button key={s} type="button" className="btn chip" onClick={() => sendSuggestion(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {empty && !focus && (
           <div className="chat-empty">
             <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>Preguntame lo que necesites</div>
             <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "16px" }}>

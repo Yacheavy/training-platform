@@ -1,5 +1,6 @@
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
+import { PendingLink } from "@/components/PendingLink";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -195,9 +196,9 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-        <Link href={`/chat?workoutId=${workout.id}`} style={{ color: "var(--teal)", fontSize: "13px", textDecoration: "none", marginRight: "8px" }}>
+        <PendingLink href={`/chat?workoutId=${workout.id}`} style={{ color: "var(--teal)", fontSize: "13px", textDecoration: "none", marginRight: "8px" }}>
           Pedir ajustes en el chat →
-        </Link>
+        </PendingLink>
         {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
           <ActionForm action={approveWorkout} success="Sesión aprobada">
             <input type="hidden" name="workoutId" value={workout.id} />
