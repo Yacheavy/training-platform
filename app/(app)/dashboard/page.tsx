@@ -28,6 +28,8 @@ import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart"
 import { PhaseTimeline } from "@/components/PhaseTimeline";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { CheckinForm } from "@/components/CheckinForm";
+import { decideReadinessAdjustment } from "@/lib/readiness-actions";
+import { proposeReadinessAdjustment } from "@/lib/training-engine/readiness-adjust";
 import { Card, Section } from "@/components/Card";
 import { PendingLink } from "@/components/PendingLink";
 import { prisma } from "@/lib/prisma";
@@ -85,6 +87,11 @@ export default async function DashboardPage() {
         warn: WARN_KEYWORDS.some((kw) => text.includes(kw)),
       }))
     : [];
+
+  const adjustment =
+    todayWorkout && todayWorkout.status !== "COMPLETED" && availability.status !== "GREEN" && !(todayWorkout.rationale ?? "").includes(`[CHECKIN:${availability.status}:`)
+      ? proposeReadinessAdjustment(availability.status, todayWorkout.workoutLibraryKey, todayWorkout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[], (await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } }))?.ftp ?? 0)
+      : null;
 
   const sessionLabel = (k: string) => STIMULUS_LABELS[k] ?? k;
   const checkinSummary = existingCheckin
@@ -174,6 +181,27 @@ export default async function DashboardPage() {
       </div>
 
       <Section title="Hoy">
+        {adjustment && todayWorkout && (
+          <div className="dash-card" style={{ marginBottom: "14px", borderColor: availability.status === "RED" ? "var(--red, #E5636A)" : "var(--amber)" }}>
+            <h3 className="dash-card-title">Ajuste sugerido por tu estado de hoy ({availability.status === "RED" ? "semáforo rojo" : "semáforo ámbar"})</h3>
+            <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, margin: "8px 0 12px" }}>
+              {availability.reasons.join(" · ")}
+              <div style={{ color: "var(--text)", marginTop: "8px", fontWeight: 600 }}>{adjustment.label}</div>
+            </div>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <ActionForm action={decideReadinessAdjustment} success="Sesión ajustada">
+                <input type="hidden" name="workoutId" value={todayWorkout.id} />
+                <input type="hidden" name="decision" value="apply" />
+                <ActionButton primary>Aplicar ajuste</ActionButton>
+              </ActionForm>
+              <ActionForm action={decideReadinessAdjustment} success="Se mantiene la sesión">
+                <input type="hidden" name="workoutId" value={todayWorkout.id} />
+                <input type="hidden" name="decision" value="keep" />
+                <ActionButton>Mantener como está</ActionButton>
+              </ActionForm>
+            </div>
+          </div>
+        )}
         <div className="dash-row today">
           <Card
             title="Check-in de hoy"
@@ -251,7 +279,7 @@ export default async function DashboardPage() {
                 <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat</PendingLink>
               </div>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                {todayWorkout.status === "SUGGESTED" && (
+                {(todayWorkout.status === "SUGGESTED" || todayWorkout.status === "PLANNED") && (
                   <ActionForm action={approveWorkout} success="Sesión aprobada">
                     <input type="hidden" name="workoutId" value={todayWorkout.id} />
                     <ActionButton primary>Aprobar</ActionButton>
