@@ -44,6 +44,8 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   const focusParts: string[] = [];
 
   const user = await prisma.user.findUnique({ where: { id: athleteId } });
+  const todayKey = dateKeyLocal(new Date());
+  parts.push(`FECHA DE HOY: ${new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: ATHLETE_TZ })} (${todayKey}, hora de Argentina).`);
   parts.push(`ATLETA: FTP ${user?.ftp ?? "no configurado"}W, peso ${user?.weight ?? "no configurado"}kg`);
 
   if (user?.trainingBackground) {
@@ -160,6 +162,21 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
     parts.push(`ÚLTIMOS 10 DÍAS: sin actividades registradas`);
   }
 
+  // Próximas sesiones planificadas (para responder "qué hago mañana", "cómo viene la semana")
+  const todayStart = dayKeyDate(new Date());
+  const upcoming = await prisma.generatedWorkout.findMany({
+    where: { athleteId, date: { gte: new Date(todayStart.getTime() - 24 * 3600 * 1000), lt: new Date(todayStart.getTime() + 8 * 24 * 3600 * 1000) } },
+    orderBy: { date: "asc" },
+  });
+  const upcomingLines = upcoming
+    .filter((w) => dateKeyLocal(w.date) >= todayKey)
+    .map((w) => {
+      const k = dateKeyLocal(w.date);
+      const mins = Math.round((w.blocksJson as unknown as Blk[]).reduce((x, b) => x + (b.durationSec ?? 0), 0) / 60);
+      return `- ${k} (${relativeDay(k)}): ${STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}, ${mins}min, TSS ${w.estimatedTss ?? "?"}, estado ${w.status}`;
+    });
+  if (upcomingLines.length) parts.push(`PRÓXIMAS SESIONES PLANIFICADAS (7 días):\n${upcomingLines.join("\n")}`);
+
   const responseProfiles = await prisma.athleteResponseProfile.findMany({ where: { athleteId } });
   if (responseProfiles.length > 0) {
     const lines = responseProfiles.map(
@@ -203,16 +220,23 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       const f = (v: number | null | undefined, d = 0, u = "") => (v == null ? "?" : `${v.toFixed(d)}${u}`);
       const lines = [
         `SESIÓN EN FOCO — el atleta tiene abierta esta actividad YA REALIZADA y es de lo que habla cuando dice "esta sesión", "la sesión" o "ella". Nunca le pidas que te la describa ni digas que no la ves: tenés todos sus datos acá. No se puede modificar, solo analizarla.`,
-        `Actividad del ${a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: ATHLETE_TZ })} (${relativeDay(dateKeyLocal(a.date))}): "${a.name ?? a.type}", tipo detectado ${STIMULUS_LABELS[stimulus] ?? stimulus}`,
+        `Actividad del ${a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })} (${relativeDay(a.date.toISOString().slice(0, 10))}): "${a.name ?? a.type}", tipo detectado ${STIMULUS_LABELS[stimulus] ?? stimulus}`,
         `Duración ${Math.round(a.durationSec / 60)}min, TSS ${f(a.tss)}, IF ${f(a.intensityFactor, 2)}, NP ${f(a.normalizedPower, 0, "W")}, potencia media ${f(a.avgPower, 0, "W")}, VI ${f(a.variabilityIndex, 2)}`,
         `FC media ${f(a.avgHr, 0, "lpm")}, FC máx ${f(a.maxHr, 0, "lpm")}, cadencia ${f(a.avgCadence, 0, "rpm")}, trabajo ${f(a.kilojoules, 0, "kJ")}, desacople Pw:HR ${f(a.decouplingPct, 1, "%")}`,
         zt ? `Tiempo por zona: ${zt}` : `Tiempo por zona: sin datos`,
       ];
       if (a.deviationFlag !== "NONE") lines.push(`Desvío vs plan: ${a.deviationFlag}${a.deviationNotes ? ` — ${a.deviationNotes}` : ""}`);
+      const summary = (a.rawStreamsJson as { intervalSummary?: unknown } | null)?.intervalSummary;
+      if (summary) lines.push(`Intervalos detectados por Intervals.icu en la actividad (lo realmente hecho): ${JSON.stringify(summary)}`);
       if (a.generatedWorkout) {
-        lines.push(`Sesión planificada asociada: ${a.generatedWorkout.workoutLibraryKey}, TSS planeado ${a.generatedWorkout.estimatedTss}, bloques: ${JSON.stringify(a.generatedWorkout.blocksJson)}`);
+        const pb = a.generatedWorkout.blocksJson as unknown as Blk[];
+        lines.push(
+          `Sesión planificada asociada: ${STIMULUS_LABELS[a.generatedWorkout.workoutLibraryKey] ?? a.generatedWorkout.workoutLibraryKey}, TSS planeado ${a.generatedWorkout.estimatedTss}, duración planeada ${Math.round(pb.reduce((x, b) => x + (b.durationSec ?? 0), 0) / 60)}min.`,
+          `Estructura PLANIFICADA exacta: ${summarizeBlocks(pb)}`,
+          `Para comparar plan vs real usá SOLO esta estructura planificada y los datos reales de arriba; si un dato real (por ejemplo la cantidad de series o repeticiones) no figura, decí que no lo sabés en vez de suponerlo. Nunca inventes la estructura planificada.`
+        );
       } else {
-        lines.push(`Sin sesión planificada asociada (actividad libre).`);
+        lines.push(`Sin sesión planificada asociada (actividad libre o todavía no vinculada): no afirmes qué estaba planificado.`);
       }
       focusParts.push(lines.join("\n"));
     }

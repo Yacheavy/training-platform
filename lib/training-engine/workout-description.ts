@@ -3,6 +3,7 @@ import { WorkoutBlock } from "./tss";
 function formatDuration(sec: number): string {
   const min = Math.floor(sec / 60);
   const remSec = sec % 60;
+  if (min === 0) return `${remSec}s`;
   if (remSec === 0) return `${min}m`;
   return `${min}m${remSec}s`;
 }
@@ -11,31 +12,44 @@ function stepLine(b: WorkoutBlock, pct: (w: number) => string): string {
   return `- ${formatDuration(b.durationSec)} ${pct(b.targetWatts)}`;
 }
 
+const same = (a: WorkoutBlock, b: WorkoutBlock) => a.durationSec === b.durationSec && a.targetWatts === b.targetWatts;
+
 /**
- * Detecta si mainBlocks es un patrón uniforme intervalo/recuperación
- * repetido N veces — en ese caso usa la notación compacta "Main Set Nx".
- * Si no es uniforme, cae al listado plano.
+ * Serie principal conservando el ORDEN de los bloques. Las tandas consecutivas e idénticas de
+ * intervalo+recuperación se escriben con la notación de repetición de Intervals ("13x"), de modo
+ * que se vea claramente cuántas repeticiones tiene cada serie; el resto (Z2, relleno, descansos
+ * entre series) va como pasos sueltos.
  */
 function buildMainSetSection(mainBlocks: WorkoutBlock[], pct: (w: number) => string): string {
-  const isPair = mainBlocks.length >= 4 && mainBlocks.length % 2 === 0;
+  const sections: string[] = [];
+  let loose: string[] = [];
+  let setNo = 0;
+  const flushLoose = () => {
+    if (loose.length) sections.push(`${sections.length === 0 ? "Main Set" : "Pasos"}\n${loose.join("\n")}`);
+    loose = [];
+  };
 
-  if (isPair) {
-    const intervals = mainBlocks.filter((_, i) => i % 2 === 0);
-    const recoveries = mainBlocks.filter((_, i) => i % 2 === 1);
-    const sameInterval = intervals.every(
-      (b) => b.durationSec === intervals[0].durationSec && b.targetWatts === intervals[0].targetWatts
-    );
-    const sameRecovery = recoveries.every(
-      (b) => b.durationSec === recoveries[0].durationSec && b.targetWatts === recoveries[0].targetWatts
-    );
-
-    if (sameInterval && sameRecovery) {
-      return `Main Set ${intervals.length}x\n${stepLine(intervals[0], pct)}\n${stepLine(recoveries[0], pct)}`;
+  let i = 0;
+  while (i < mainBlocks.length) {
+    const iv = mainBlocks[i];
+    const rc = mainBlocks[i + 1];
+    if (iv.type === "interval" && rc && rc.type === "recovery") {
+      let n = 1;
+      while (
+        mainBlocks[i + n * 2]?.type === "interval" && mainBlocks[i + n * 2 + 1]?.type === "recovery" &&
+        same(mainBlocks[i + n * 2], iv) && same(mainBlocks[i + n * 2 + 1], rc)
+      ) n++;
+      flushLoose();
+      setNo++;
+      sections.push(`${setNo === 1 ? "Main Set" : `Serie ${setNo}`} ${n}x\n${stepLine(iv, pct)}\n${stepLine(rc, pct)}`);
+      i += n * 2;
+    } else {
+      loose.push(stepLine(iv, pct));
+      i++;
     }
   }
-
-  const lines = mainBlocks.map((b) => stepLine(b, pct));
-  return `Main Set\n${lines.join("\n")}`;
+  flushLoose();
+  return sections.join("\n\n");
 }
 
 export interface FuelingInfo {
@@ -80,6 +94,10 @@ export function buildStructuredWorkout(
   const structuredPart = sections.join("\n\n");
 
   const notesLines: string[] = [];
+  const reps = [...structuredPart.matchAll(/^(?:Main Set|Serie \d+) (\d+)x$/gm)].map((m) => Number(m[1]));
+  if (reps.length > 0) {
+    notesLines.push(`Estructura: ${reps.length === 1 ? "UNA sola serie" : `${reps.length} series`} — total ${reps.reduce((x, y) => x + y, 0)} repeticiones${reps.length > 1 ? ` (${reps.join(" + ")})` : ""}. No agregues series.`);
+  }
   if (fueling) {
     notesLines.push(
       `Nutrición sugerida: ${fueling.suggestedCarbsG}g de carbohidratos (~${fueling.suggestedCarbsGPerHour}g/h), ${fueling.totalKj} kJ estimados.`

@@ -2,11 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { createEvent } from "@/lib/intervals-client";
-import { buildStructuredWorkout } from "@/lib/training-engine/workout-description";
+import { pushWorkoutToIntervals } from "@/lib/push-workout";
 import { revalidatePath } from "next/cache";
-import { getIntervalsCreds } from "@/lib/intervals-creds";
-import { dateKeyLocal } from "@/lib/tz";
+import { dayStartLocal } from "@/lib/tz";
 
 export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
   const session = await auth();
@@ -14,47 +12,25 @@ export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
 
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
   if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (workout.status === "COMPLETED") throw new Error("La sesión ya se realizó");
 
-  const newDate = new Date(newDateISO);
-  newDate.setHours(0, 0, 0, 0);
+  const parsed = new Date(newDateISO);
+  if (Number.isNaN(parsed.getTime())) throw new Error("Fecha inválida");
+  // Mediodía del día local: el mismo día calendario tanto en hora local como en UTC
+  const newDate = new Date(dayStartLocal(parsed).getTime() + 12 * 3600 * 1000);
 
-  await prisma.generatedWorkout.update({
-    where: { id: workoutId },
-    data: { date: newDate },
-  });
-
+  await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { date: newDate } });
   if (workout.status === "SENT_TO_INTERVALS") {
-    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-    const creds = await getIntervalsCreds(session.user.id);
-    if (!creds) throw new Error("Conectá tu Intervals en Configuración");
-    const apiKey = creds.apiKey;
-    const athleteIntervalsId = creds.athleteId;
-
-    const blocks = workout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
-    const totalDurationSec = blocks.reduce((s, b) => s + b.durationSec, 0);
-    const description = buildStructuredWorkout(
-      blocks,
-      user!.ftp!,
-      {
-        totalKj: workout.estimatedKj ?? 0,
-        suggestedCarbsG: workout.suggestedCarbsG ?? 0,
-        suggestedCarbsGPerHour: workout.suggestedCarbsGPerHour ?? 0,
-        requiresMultipleCarbSources: workout.requiresMultipleCarbSources,
-      },
-      workout.rationale
-    );
-    const startDateLocal = dateKeyLocal(newDate) + "T07:00:00";
-
-    await createEvent(athleteIntervalsId, apiKey, {
-      external_id: workout.id,
-      name: `${workout.workoutLibraryKey} (movido)`,
-      startDateLocal,
-      description,
-      movingTimeSec: totalDurationSec,
-    });
+    try {
+      await pushWorkoutToIntervals(session.user.id, workoutId);
+    } catch (err) {
+      await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { date: workout.date } });
+      throw err;
+    }
   }
 
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }
 
 export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
@@ -69,6 +45,7 @@ export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
   if (workoutA.athleteId !== session.user.id || workoutB.athleteId !== session.user.id) {
     throw new Error("No autorizado");
   }
+  if (workoutA.status === "COMPLETED" || workoutB.status === "COMPLETED") throw new Error("Una de las sesiones ya se realizó");
 
   const dateA = workoutA.date;
   const dateB = workoutB.date;
@@ -78,41 +55,19 @@ export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
     prisma.generatedWorkout.update({ where: { id: workoutIdB }, data: { date: dateA } }),
   ]);
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  const creds = await getIntervalsCreds(session.user.id);
-  const apiKey = creds?.apiKey ?? "";
-  const athleteIntervalsId = creds?.athleteId ?? "";
-
-  const pairs: [typeof workoutA, Date][] = [
-    [workoutA, dateB],
-    [workoutB, dateA],
-  ];
-
-  for (const [workout, newDate] of pairs) {
-    if (workout.status === "SENT_TO_INTERVALS" && creds) {
-      const blocks = workout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
-      const totalDurationSec = blocks.reduce((s, b) => s + b.durationSec, 0);
-      const description = buildStructuredWorkout(
-        blocks,
-        user!.ftp!,
-        {
-          totalKj: workout.estimatedKj ?? 0,
-          suggestedCarbsG: workout.suggestedCarbsG ?? 0,
-          suggestedCarbsGPerHour: workout.suggestedCarbsGPerHour ?? 0,
-          requiresMultipleCarbSources: workout.requiresMultipleCarbSources,
-        },
-        workout.rationale
-      );
-      const startDateLocal = dateKeyLocal(newDate) + "T07:00:00";
-      await createEvent(athleteIntervalsId, apiKey, {
-        external_id: workout.id,
-        name: `${workout.workoutLibraryKey} (enroque)`,
-        startDateLocal,
-        description,
-        movingTimeSec: totalDurationSec,
-      });
+  try {
+    for (const w of [workoutA, workoutB]) {
+      if (w.status === "SENT_TO_INTERVALS") await pushWorkoutToIntervals(session.user.id, w.id);
     }
+  } catch (err) {
+    // Se revierte: la app y Intervals no deben quedar con fechas distintas
+    await prisma.$transaction([
+      prisma.generatedWorkout.update({ where: { id: workoutIdA }, data: { date: dateA } }),
+      prisma.generatedWorkout.update({ where: { id: workoutIdB }, data: { date: dateB } }),
+    ]);
+    throw err;
   }
 
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }

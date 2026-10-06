@@ -81,8 +81,12 @@ export async function sendChatMessage(formData: FormData) {
 
   // El modelo a veces dice "listo, lo ajusté" sin mandar el json_blocks: no se guardaría nada.
   // Se reintenta una vez pidiéndole solo el bloque.
-  const CLAIMS_CHANGE = /(list[oa]\b|ajustad[ao]|ajust[ée]\b|cambi[ée]\b|modifiqu[ée]|actualic[ée]|apliqu[ée]|qued[óo]\b)/i;
-  if (focusedWorkoutId && parsed.updatedBlocks === null && !parsed.blocksUnreadable && CLAIMS_CHANGE.test(parsed.text)) {
+  const CLAIMS_CHANGE = /(?<![\p{L}])(listo|ajustad[ao]|ajust[ée]|cambi[ée]|modifiqu[ée]|actualic[ée]|apliqu[ée]|quedó|quedo)(?![\p{L}])/iu;
+  // Solo se reintenta si el atleta pidió/confirmó un cambio (o venía de ofrecerle opciones)
+  const EDIT_INTENT = /(?<![\p{L}])(aplic|cambi|modific|ajust|pon[eé]|pasa|hac[eé]|agreg|quit|sac[aá]|sub[ií]|baj[aá]|dale|opci[oó]n|h[ií]brid|acept|confirm|(?:sí|si|ok|va)(?![\p{L}]))/iu;
+  const priorOffered = history.length > 0 && history[history.length - 1].role === "assistant" && history[history.length - 1].content.includes("```opciones");
+  const userAskedChange = EDIT_INTENT.test(messageText) || priorOffered;
+  if (focusedWorkoutId && userAskedChange && parsed.updatedBlocks === null && !parsed.blocksUnreadable && CLAIMS_CHANGE.test(parsed.text)) {
     try {
       const retry = await askClaude(
         context,
@@ -96,7 +100,7 @@ export async function sendChatMessage(formData: FormData) {
     }
   }
   const { updatedBlocks, blocksUnreadable } = parsed;
-  const claimedButNoBlocks = !!focusedWorkoutId && updatedBlocks === null && !blocksUnreadable && CLAIMS_CHANGE.test(parsed.text);
+  const claimedButNoBlocks = !!focusedWorkoutId && userAskedChange && updatedBlocks === null && !blocksUnreadable && CLAIMS_CHANGE.test(parsed.text);
   // Control automático: toda cita debe estar en la bibliografía cerrada; si no, se avisa
   const unverified = findUnverifiedCitations(parsed.text);
   const text = unverified.length
@@ -123,7 +127,7 @@ export async function sendChatMessage(formData: FormData) {
       else if (!me?.ftp) notice = "Configurá tu FTP para poder editar sesiones; no apliqué el cambio.";
       else {
         const original = (workout.blocksJson as unknown as { durationSec: number }[]).reduce((s, b) => s + (b.durationSec ?? 0), 0);
-        const check = validateBlocks(updatedBlocks, { ftp: me.ftp, originalTotalSec: original });
+        const check = validateBlocks(updatedBlocks, { ftp: me.ftp, originalTotalSec: original, originalTypes: (workout.blocksJson as unknown as { type: string }[]).map((b) => b.type) });
         if (!check.ok) notice = `No apliqué el cambio porque no pasó la validación (${check.reason}).`;
         else {
           // Se recalcula TODO lo derivado (TSS, kJ, carbos) en el mismo paso

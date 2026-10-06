@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ATHLETE_TZ } from "@/lib/tz";
 import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
 import { STIMULUS_LABELS, ZONE_LABELS } from "@/lib/labels";
 import { ActivityIcon } from "@/components/ActivityIcon";
@@ -30,8 +29,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const zoneTimes = ((a.rawStreamsJson as { zoneTimes?: { id: string; secs: number }[] } | null)?.zoneTimes ?? []).filter((z) => z.secs > 0);
   const zoneTotal = zoneTimes.reduce((s, z) => s + z.secs, 0);
 
-  const dateLabel = new Date(a.date).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: ATHLETE_TZ });
-  const timeLabel = new Date(a.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: ATHLETE_TZ });
+  const dateLabel = new Date(a.date).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  const timeLabel = new Date(a.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 
   const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" } as const;
   const h = { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "14px" } as const;

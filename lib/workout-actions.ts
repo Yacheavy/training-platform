@@ -14,6 +14,8 @@ export async function approveWorkout(formData: FormData) {
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
   if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
 
+  if (workout.status !== "PLANNED" && workout.status !== "SUGGESTED" && workout.status !== "EDITED") throw new Error("Esta sesión ya fue aprobada, enviada o completada");
+
   await prisma.generatedWorkout.update({
     where: { id: workoutId },
     data: { status: "APPROVED", approvedAt: new Date() },
@@ -57,6 +59,10 @@ export async function regenerateWorkout(formData: FormData) {
 
   const r = await generateFullPlan(block.id, { athleteId: session.user.id, fromDate: workout.date, replaceDate: workout.date });
   if (r.created === 0) throw new Error("El plan actual no tiene una sesión para ese día (revisá la plantilla semanal)");
+  // Si ya estaba en Intervals, se actualiza ahí en el mismo paso (si falla, queda aprobada para reenviar)
+  for (const id of r.resendIds) {
+    try { await pushWorkoutToIntervals(session.user.id, id); } catch (err) { console.error("Reenvío tras regenerar falló:", err); }
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/calendar");

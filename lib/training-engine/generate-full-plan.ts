@@ -51,7 +51,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
           // Cualquier estado: si ya hay una sesión aprobada/editada/enviada ese día, no se duplica
         },
       });
-      if (existing && replacing && existing.status !== "COMPLETED") {
+      if (existing && replacing && existing.status !== "COMPLETED" && !(opts?.replaceAll && !opts?.replaceDate && existing.status === "EDITED")) {
         const wasSent = existing.status === "SENT_TO_INTERVALS";
         const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(existing.status);
         await prisma.generatedWorkout.update({

@@ -40,38 +40,62 @@ export async function getWellness(
   }
   return res.json();
 }
-export async function createEvent(
-  athleteId: string,
-  apiKey: string,
-  event: {
-    external_id: string;
-    name: string;
-    startDateLocal: string; // "YYYY-MM-DDTHH:mm:ss"
-    description: string;
-    movingTimeSec: number;
-  }
-) {
-  const url = `${INTERVALS_BASE_URL}/athlete/${athleteId}/events?upsertOnUid=true`;
-  const res = await fetch(url, {
+export interface IntervalsEventInput {
+  external_id: string;
+  name: string;
+  startDateLocal: string; // "YYYY-MM-DDTHH:mm:ss"
+  description: string;
+  movingTimeSec: number;
+}
+
+/**
+ * Crea o ACTUALIZA el evento (por external_id) con el endpoint masivo con upsert=true.
+ * (El endpoint individual con upsertOnUid solo hace upsert por `uid`, que no enviamos:
+ * cada envío creaba un evento nuevo y el viejo quedaba con la descripción anterior.)
+ * Después borra, en ese mismo día, los eventos duplicados que tengan el mismo external_id.
+ */
+export async function createEvent(athleteId: string, apiKey: string, event: IntervalsEventInput) {
+  const base = `${INTERVALS_BASE_URL}/athlete/${athleteId}`;
+  const res = await fetch(`${base}/events/bulk?upsert=true`, {
     method: "POST",
-    headers: {
-      Authorization: authHeader(apiKey),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      external_id: event.external_id,
-      category: "WORKOUT",
-      start_date_local: event.startDateLocal,
-      name: event.name,
-      type: "Ride",
-      moving_time: event.movingTimeSec,
-      description: event.description,
-    }),
+    headers: { Authorization: authHeader(apiKey), "Content-Type": "application/json" },
+    body: JSON.stringify([
+      {
+        external_id: event.external_id,
+        category: "WORKOUT",
+        start_date_local: event.startDateLocal,
+        name: event.name,
+        type: "Ride",
+        moving_time: event.movingTimeSec,
+        description: event.description,
+      },
+    ]),
   });
   if (!res.ok) {
     throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
   }
-  return res.json();
+  const saved = (await res.json().catch(() => null)) as { id?: number }[] | null;
+  const keepId = Array.isArray(saved) ? saved[0]?.id : undefined;
+
+  // Limpieza de duplicados del mismo día (de envíos anteriores). Es opcional: nunca rompe el envío.
+  try {
+    const day = event.startDateLocal.slice(0, 10);
+    const list = await fetch(`${base}/events?oldest=${day}&newest=${day}&category=WORKOUT`, {
+      headers: { Authorization: authHeader(apiKey) },
+      cache: "no-store",
+    });
+    if (list.ok && keepId != null) {
+      const events = (await list.json()) as { id: number; external_id?: string | null }[];
+      for (const e of events) {
+        if (e.external_id === event.external_id && e.id !== keepId) {
+          await fetch(`${base}/events/${e.id}`, { method: "DELETE", headers: { Authorization: authHeader(apiKey) } });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Limpieza de duplicados en Intervals falló:", err);
+  }
+  return saved;
 }
 
 export async function getPowerCurve(athleteId: string, apiKey: string, curves = "90d", type = "Ride") {

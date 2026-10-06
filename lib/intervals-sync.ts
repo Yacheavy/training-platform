@@ -3,6 +3,7 @@ import { getActivities, getWellness } from "@/lib/intervals-client";
 import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
 import { refreshAthleteMetrics } from "@/lib/athlete-metrics";
 import { getIntervalsCreds } from "@/lib/intervals-creds";
+import { detectPlanDeviation } from "@/lib/training-engine/deviation";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function mapActivity(a: any, userId: string) {
@@ -64,6 +65,46 @@ export function mapWellness(w: any, userId: string) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+const RIDE_TYPES = new Set(["Ride", "VirtualRide", "GravelRide", "MountainBikeRide", "EBikeRide"]);
+
+/**
+ * Vincula cada actividad de ciclismo con la sesión planificada de ese día (hora local del atleta):
+ * guarda generatedWorkoutId, el TSS planeado y el desvío, y marca la sesión como COMPLETED.
+ * Las actividades se guardan con la hora local como si fuera UTC, por eso el día sale de toISOString().
+ * Una sesión se vincula con una sola actividad (la más larga del día, mínimo 20 min).
+ */
+export async function linkActivitiesToPlan(userId: string, sinceDays = 30): Promise<number> {
+  const since = new Date(Date.now() - sinceDays * DAY_MS);
+  const acts = await prisma.activity.findMany({
+    where: { athleteId: userId, date: { gte: since }, generatedWorkoutId: null },
+    orderBy: { durationSec: "desc" },
+  });
+  let linked = 0;
+  const used = new Set<string>();
+  for (const a of acts) {
+    if (!RIDE_TYPES.has(a.type) || a.durationSec < 20 * 60) continue;
+    const key = a.date.toISOString().slice(0, 10);
+    const dayMs = Date.parse(`${key}T00:00:00Z`);
+    const cands = await prisma.generatedWorkout.findMany({
+      where: { athleteId: userId, date: { gte: new Date(dayMs - DAY_MS), lt: new Date(dayMs + 2 * DAY_MS) }, workoutLibraryKey: { not: "gym" } },
+    });
+    const w = cands
+      .filter((c) => dateKeyLocal(c.date) === key && !used.has(c.id) && c.status !== "COMPLETED")
+      .sort((x, y) => (y.estimatedTss ?? 0) - (x.estimatedTss ?? 0))[0];
+    if (!w) continue;
+    used.add(w.id);
+    const planned = w.estimatedTss ?? null;
+    const dev = detectPlanDeviation({ tss: a.tss, plannedTss: planned, decouplingPct: a.decouplingPct });
+    await prisma.activity.update({
+      where: { id: a.id },
+      data: { generatedWorkoutId: w.id, plannedTss: planned, deviationFlag: dev.flag, deviationNotes: dev.notes },
+    });
+    await prisma.generatedWorkout.update({ where: { id: w.id }, data: { status: "COMPLETED" } });
+    linked++;
+  }
+  return linked;
+}
+
 export interface SyncResult {
   activities: number;
   wellness: number;
@@ -115,6 +156,12 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
     }
   } catch (err) {
     result.errors.push(`Actividades ${oldest}→${newest}: ${String(err)}`);
+  }
+
+  try {
+    await linkActivitiesToPlan(userId, Math.max(days, 30));
+  } catch (err) {
+    result.errors.push(`Vinculación con el plan: ${String(err)}`);
   }
 
   try {
