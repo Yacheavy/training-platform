@@ -18,7 +18,11 @@ interface QualityContext {
   loadMultiplier: number;
   weekIndex: number;
   cycleLength: number;
+  /** Deload: se conserva UNA sesión de intensidad con volumen reducido (igual que el planificador). */
+  maintenance: boolean;
 }
+
+const MAINTAINABLE = new Set(["hiit_genuino", "ronnestad_30_15", "sweet_spot", "umbral"]);
 
 /**
  * Elige el estímulo de calidad de HOY aplicando las MISMAS reglas que el
@@ -45,7 +49,7 @@ async function pickQualityStimulus(athleteId: string, today: Date, rationale: st
     isDeload = meso.isDeload;
     loadMultiplier = meso.loadMultiplier;
   }
-  const ctx = (stimulusType: string): QualityContext => ({ stimulusType, isDeload, loadMultiplier, weekIndex, cycleLength });
+  const ctx = (stimulusType: string, maintenance = false): QualityContext => ({ stimulusType, isDeload, loadMultiplier, weekIndex, cycleLength, maintenance });
 
   if (!activeBlock) {
     rationale.push("Sin bloque de entrenamiento activo configurado — usando sweet_spot como opción de calidad por defecto");
@@ -54,11 +58,6 @@ async function pickQualityStimulus(athleteId: string, today: Date, rationale: st
 
   const primary = OBJECTIVE_TO_STIMULUS[activeBlock.objective] ?? "sweet_spot";
   rationale.push(`Bloque activo "${activeBlock.name}" (objetivo: ${activeBlock.objective}) → sugiere ${primary}`);
-
-  if (isDeload) {
-    rationale.push("Semana de DELOAD → sin calidad, Z2");
-    return ctx("z2");
-  }
 
   const since = new Date(today.getTime() - 7 * DAY_MS);
   const recent = await prisma.generatedWorkout.findMany({
@@ -71,6 +70,18 @@ async function pickQualityStimulus(athleteId: string, today: Date, rationale: st
     .sort((x, y) => y - x)[0];
   if (lastVo2 != null && dayStartLocal(today).getTime() - dayStartLocal(new Date(lastVo2)).getTime() < MIN_GAP_DAYS_BETWEEN_VO2MAX * DAY_MS) {
     rationale.push(`Sesión VO2max hace menos de ${MIN_GAP_DAYS_BETWEEN_VO2MAX} días (≥48h de separación) → Z2`);
+    return ctx("z2");
+  }
+
+  if (isDeload) {
+    // Igual que el planificador: en la descarga baja el volumen y se mantiene la intensidad
+    // (una sesión, con la mitad de repeticiones), salvo que ya haya habido una esta semana.
+    const hadQuality = recent.some((r) => MAINTAINABLE.has(r.workoutLibraryKey));
+    if (MAINTAINABLE.has(primary) && !hadQuality) {
+      rationale.push(`Semana de DELOAD → una sesión de ${primary} de mantenimiento (mitad de repeticiones, misma intensidad)`);
+      return ctx(primary, true);
+    }
+    rationale.push("Semana de DELOAD → sin más calidad, Z2");
     return ctx("z2");
   }
 
@@ -143,8 +154,9 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
 
   const library = await prisma.workoutLibraryEntry.findUnique({ where: { key: effectiveStimulusType } });
   const duration = Math.round((slot.targetDurationMin ?? 60) * (quality?.loadMultiplier ?? 1));
+  // Mismo criterio que el planificador: un escalón por mesociclo en HIIT genuino, sweet spot y umbral
   const progressionStep =
-    effectiveStimulusType === "hiit_genuino" && quality ? Math.floor(quality.weekIndex / quality.cycleLength) : 0;
+    ["hiit_genuino", "sweet_spot", "umbral"].includes(effectiveStimulusType) && quality ? Math.floor(quality.weekIndex / quality.cycleLength) : 0;
   const series =
     effectiveStimulusType === "ronnestad_30_15" && quality ? ronnestadSeriesFor(quality.weekIndex, quality.cycleLength) : undefined;
 
@@ -156,7 +168,8 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
     library?.intensityPctFtpHigh ?? null,
     progressionStep,
     series,
-    user.pvo2maxWatts
+    user.pvo2maxWatts,
+    quality?.maintenance ?? false
   );
 
   const tss = calculateTss(blocks, user.ftp);

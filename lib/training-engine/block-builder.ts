@@ -17,9 +17,11 @@ function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
  * el MLSS/VT2) + 2 intervalos de 1min a intensidad MLSS/VT2 (~FTP) con 30s de
  * recuperación activa. Total: 13min.
  */
+export const VT1_PCT_FTP = 0.72; // VT1 (umbral aeróbico) ≈ 72% FTP — aproximación práctica, no medida
+
 function buildWarmupVo2(ftp: number): WorkoutBlock[] {
   const z1Watts = Math.round(ftp * 0.5);
-  const thresholdWatts = Math.round(ftp * 0.72); // VT1 (umbral aeróbico)
+  const thresholdWatts = Math.round(ftp * VT1_PCT_FTP);
   const primerWatts = ftp;
 
   return [
@@ -39,6 +41,18 @@ function buildCooldown(totalSec: number, ftp: number): WorkoutBlock[] {
   return [
     { type: "cooldown_z2", durationSec: z2Sec, targetWatts: z2Watts },
     { type: "cooldown_z1", durationSec: z1Sec, targetWatts: z1Watts },
+  ];
+}
+
+/**
+ * Vuelta a la calma tras HIIT (Chicharro & Vicente-Campos 2018): ~15 min continuos suaves al
+ * 70–80% del umbral láctico/VT1. Primera parte al 80% del VT1, segunda al 72%.
+ */
+function buildCooldownVo2(ftp: number): WorkoutBlock[] {
+  const vt1 = ftp * VT1_PCT_FTP;
+  return [
+    { type: "cooldown_z2", durationSec: 540, targetWatts: Math.round(vt1 * 0.8) },
+    { type: "cooldown_z1", durationSec: 360, targetWatts: Math.round(vt1 * 0.72) },
   ];
 }
 
@@ -118,7 +132,6 @@ export function buildBlocks(
 
   if (stimulusType === "hiit_genuino") {
     const warmup = buildWarmupVo2(ftp);
-    const cooldownSec = 900; // libro: ~15 min suaves (70-80% de VT1)
 
     const progression = getHiitProgression(progressionStep);
     const intervalSec = progression.intervalSec;
@@ -141,7 +154,7 @@ export function buildBlocks(
     }
 
     const usedSecBeforeCooldown = blocks.reduce((s, b) => s + b.durationSec, 0);
-    const cooldownBlocks = buildCooldown(cooldownSec, ftp);
+    const cooldownBlocks = buildCooldownVo2(ftp);
     const cooldownSecTotal = cooldownBlocks.reduce((s, b) => s + b.durationSec, 0);
     const fillSec = totalSec - usedSecBeforeCooldown - cooldownSecTotal;
     if (fillSec > 60) blocks.push({ type: "z2_fill", durationSec: fillSec, targetWatts: z2Watts });
@@ -221,7 +234,7 @@ export function buildBlocks(
     }
 
     const usedSecBeforeCooldown = blocks.reduce((s, b) => s + b.durationSec, 0);
-    const cooldownBlocks = buildCooldown(900, ftp); // libro: ~15 min suaves tras cualquier HIIT
+    const cooldownBlocks = buildCooldownVo2(ftp); // libro: ~15 min al 70–80% VT1 tras cualquier HIIT
     const cooldownSecTotal = cooldownBlocks.reduce((s, b) => s + b.durationSec, 0);
     const fillSec = totalSec - usedSecBeforeCooldown - cooldownSecTotal;
     if (fillSec > 60) blocks.push({ type: "z2_fill", durationSec: fillSec, targetWatts: z2Watts });

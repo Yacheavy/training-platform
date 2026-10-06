@@ -13,7 +13,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const isCoolType = (t: string) => t.startsWith("cooldown");
 const isWarmType = (t: string) => t.startsWith("warmup");
 
-export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: number }): string[] {
+export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: number; pvo2maxWatts?: number | null }): string[] {
   const w: string[] = [];
   const label = (d: PlannedDay) => `${d.date.toISOString().slice(0, 10)} (${d.stimulusType})`;
 
@@ -65,6 +65,23 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     }
 
     const reps = d.blocks.filter((b) => b.type === "interval").length;
+    if (VO2_STIMULI.has(d.stimulusType)) {
+      // Invariantes del libro (Chicharro & Vicente-Campos 2018) para todo HIIT
+      const coolSec = d.blocks.filter((b) => isCoolType(b.type)).reduce((s, b) => s + b.durationSec, 0);
+      if (coolSec < 900) w.push(`${label(d)}: vuelta a la calma de ${Math.round(coolSec / 60)} min (<15)`);
+      const vt1 = ctx.ftp * 0.72;
+      const coolMax = Math.max(0, ...d.blocks.filter((b) => isCoolType(b.type)).map((b) => b.targetWatts));
+      if (coolMax > vt1 * 0.8 + 1) w.push(`${label(d)}: vuelta a la calma a ${coolMax} W (> 80% del VT1 = ${Math.round(vt1 * 0.8)} W)`);
+      const wu = d.blocks.filter((b) => isWarmType(b.type));
+      if (wu.length && Math.abs(wu[0].targetWatts - vt1) > 2) w.push(`${label(d)}: calentamiento a ${wu[0].targetWatts} W (esperado ~VT1 = ${Math.round(vt1)} W)`);
+      if (wu.filter((b) => b.type === "warmup_activation").length !== 2) w.push(`${label(d)}: el calentamiento debe llevar 2 activaciones de 1 min`);
+      const ivs = d.blocks.filter((b) => b.type === "interval");
+      const recs = d.blocks.filter((b) => b.type === "recovery" && b.targetWatts < ivs[0]?.targetWatts);
+      if (ctx.pvo2maxWatts && d.stimulusType !== "rst") {
+        const ratio = recs.length && ivs.length ? recs[0].targetWatts / ivs[0].targetWatts : 0.5;
+        if (Math.abs(ratio - 0.5) > 0.02 && d.stimulusType !== "billat_30_30") w.push(`${label(d)}: recuperación al ${Math.round(ratio * 100)}% del intervalo (esperado ~50%)`);
+      }
+    }
     if (d.stimulusType === "hiit_genuino") {
       // En deload/taper la sesión de mantenimiento lleva la mitad de repeticiones (mín. 3)
       const minReps = d.isDeload || d.rationale.includes("TAPER") ? 3 : 7;

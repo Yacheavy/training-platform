@@ -30,7 +30,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   });
 
   // Red de seguridad: si el plan viola una regla del protocolo se avisa en la respuesta.
-  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp });
+  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts });
 
   const created: string[] = [];
   const skipped: string[] = [];
