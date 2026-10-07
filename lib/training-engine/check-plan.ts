@@ -1,5 +1,6 @@
 import { buildPlan } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
+import { progressionAdjustments, intensityGuard, type ExecutionRecord } from "./autoregulation";
 const L = (lo:number|null,hi:number|null,mx:number|null=null)=>({intensityPctFtpLow:lo,intensityPctFtpHigh:hi,maxSessionsPerWeek:mx});
 const library:any = { z2:L(56,75), sweet_spot:L(88,94), umbral:L(95,105,2), hiit_genuino:L(108,115,1), ronnestad_30_15:L(125,135), z2_sprints:L(null,null), billat_30_30:L(110,116), rst:L(150,180), gym:L(null,null), z2_progressive:L(56,75), endurance_tempo:L(78,86,2), over_under:L(92,106,1), vo2_long:L(108,115,1), sprint_neuro:L(null,null,1), long_durability:L(84,90,1), torque_low_cadence:L(70,76,1) };
 const T=(d:number,s:string,q:boolean,m:number|null)=>({dayOfWeek:d,stimulusType:s,isQualityDay:q,targetDurationMin:m});
@@ -36,4 +37,32 @@ for (const objective of ["vo2max","umbral","base"]) for (const level of ["conser
   console.log(objective.padEnd(7), level.padEnd(12), keys.size, "variantes:", [...keys.entries()].map(([k,v])=>k+":"+v).join(" "));
   if (level!=="conservative" && keys.size<5) { console.log("  FALTA VARIEDAD"); bad++; }
 }
+
+// Autorregulación: reglas puras
+const R = (key:string, at:number, tssRatio:number|null, deviation:any="NONE", decouplingPct:number|null=null):ExecutionRecord => ({key,at,tssRatio,deviation,decouplingPct});
+const chk = (name:string, ok:boolean) => { if(!ok){ console.log("FALLA autorregulación:",name); bad++; } };
+chk("2 cortas → -1", progressionAdjustments([R("umbral",1,0.7),R("umbral",2,0.75)]).umbral.adjust === -1);
+chk("3 buenas → +1", progressionAdjustments([R("umbral",1,1),R("umbral",2,0.95),R("umbral",3,1.05)]).umbral.adjust === 1);
+chk("1 sola → 0", progressionAdjustments([R("umbral",1,0.5)]).umbral.adjust === 0);
+chk("mixtas → 0", progressionAdjustments([R("umbral",1,0.7),R("umbral",2,1)]).umbral.adjust === 0);
+chk("desacople alto en continua impide +1", progressionAdjustments([R("sweet_spot",1,1,"NONE",9),R("sweet_spot",2,1),R("sweet_spot",3,1)]).sweet_spot.adjust === 0);
+chk("más duras con desacople >10 dos veces → -1", progressionAdjustments([R("z2",1,1.3,"HARDER_THAN_PLANNED",12),R("z2",2,1.3,"HARDER_THAN_PLANNED",11)]).z2.adjust === -1);
+chk("guard alto", intensityGuard({lowH:6,midH:1,highH:3})?.dropSecondary === true);
+chk("guard gris", intensityGuard({lowH:6,midH:4,highH:0.3})?.avoidMid === true);
+chk("guard sin datos", intensityGuard({lowH:2,midH:1,highH:0.5}) === null);
+chk("guard ok", intensityGuard({lowH:8,midH:1,highH:1.5}) === null);
+
+// Con ajustes y guard activos el plan sigue sin advertencias
+for (const objective of ["vo2max","umbral","base"]) for (const adjust of [-1,1]) for (const g of [{dropSecondary:true,avoidMid:false},{dropSecondary:false,avoidMid:true},{dropSecondary:true,avoidMid:true}]) for (const tn of Object.keys(templates)) {
+  const start = new Date(Date.UTC(2026,9,5,12,0,0)); const end = new Date(start.getTime()+10*7*86400000);
+  const execution:any = Object.fromEntries(["hiit_genuino","sweet_spot","umbral","vo2_long","over_under","endurance_tempo","long_durability","ronnestad_30_15","z2_sprints","sprint_neuro"].map(k=>[k,{adjust:adjust,reason:"test"}]));
+  const plan = buildPlan({block:{name:"t",objective,startDate:start,endDate:end},ftp:300,pvo2maxWatts:380,thresholds:{deloadRatio:"3:1",weeksBetweenFtpTest:5,ftpTestProtocol:"20min",vo2Stimulus:"rotate",varietyLevel:"varied"},template:templates[tn],library,execution,guard:{...g,days:14,reason:"test"},guardUntilOffset:14});
+  const w = validatePlan(plan,{objective,ftp:300,pvo2maxWatts:380}).filter((x)=>!x.startsWith("INFO")); n++;
+  if (w.length){ bad++; console.log("AUTO",objective,tn,adjust,JSON.stringify(g),"\n  "+[...new Set(w)].slice(0,3).join("\n  ")); }
+  // el guard debe sacar lo que promete en los primeros 14 días
+  const early = plan.filter((d)=>d.dayOffset<=14);
+  if (g.dropSecondary && early.some((d)=>d.role==="secondary")) { bad++; console.log("guard dropSecondary no aplicado",objective,tn); }
+  if (g.avoidMid && early.some((d)=>d.role!=="primary" && ["endurance_tempo","sweet_spot","over_under"].includes(d.stimulusType))) { bad++; console.log("guard avoidMid no aplicado",objective,tn); }
+}
+console.log({scenariosTotal:n,withProblems:bad});
 if (bad) process.exitCode = 1;

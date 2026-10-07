@@ -3,6 +3,7 @@ import type { Prisma } from "@/app/generated/prisma";
 import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 import { dateKeyLocal } from "../tz";
+import { loadAutoregulation } from "@/lib/autoregulation-data";
 
 export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[] }) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
@@ -38,6 +39,10 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   }
   const excludeByDate: Record<string, string[]> = opts?.replaceDate && opts.excludeKeys?.length ? { [dateKeyLocal(opts.replaceDate)]: opts.excludeKeys } : {};
 
+  // Autorregulación: ejecución real de las últimas 8 semanas y distribución real de intensidad de 14 días
+  const now = new Date();
+  const { execution, guard } = await loadAutoregulation(block.athleteId, now);
+
   const plan = buildPlan({
     block: { name: block.name, objective: block.objective, startDate: block.startDate, endDate: block.endDate },
     ftp: user.ftp,
@@ -55,6 +60,9 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
     history,
     fixedKeys,
     excludeByDate,
+    execution,
+    guard,
+    guardUntilOffset: offsetOf(now) + (guard?.days ?? 0),
   });
 
   // Red de seguridad: si el plan viola una regla del protocolo se avisa en la respuesta.

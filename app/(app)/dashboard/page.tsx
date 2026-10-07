@@ -24,6 +24,8 @@ import { HrvRhrChart } from "@/components/HrvRhrChart";
 import { IntensityChart } from "@/components/IntensityChart";
 import { PlanVsActualChart } from "@/components/PlanVsActualChart";
 import { getHrvBandData, getWeeklyIntensity, getPlanVsActual } from "@/lib/analytics";
+import { loadAutoregulation } from "@/lib/autoregulation-data";
+import { VARIANTS } from "@/lib/training-engine/variants";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
 import { PhaseTimeline } from "@/components/PhaseTimeline";
 import { calculateAvailability } from "@/lib/training-engine/availability";
@@ -63,6 +65,7 @@ export default async function DashboardPage() {
     getWeeklyIntensity(session.user.id, 10),
     getPlanVsActual(session.user.id, 10),
   ]);
+  const autoreg = await loadAutoregulation(session.user.id).catch(() => null);
   const last4 = intensity.slice(-5, -1); // 4 semanas completas
   const last4Total = last4.reduce((t, w) => t + w.totalH, 0);
   const lowPct = last4Total > 0 ? Math.round((last4.reduce((t, w) => t + w.lowH, 0) / last4Total) * 100) : null;
@@ -410,6 +413,25 @@ export default async function DashboardPage() {
             <IntensityChart data={intensity} />
           </Card>
         </div>
+        {autoreg && (autoreg.guard || Object.values(autoreg.execution).some((e) => e.n >= 2)) && (
+          <div style={{ marginBottom: "16px" }}>
+            <Card
+              title="Ajuste automático del plan"
+              subtitle="El plan se corrige solo con lo que realmente hiciste (al regenerarlo). Son reglas de práctica, no resultados de ensayos."
+            >
+              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.7 }}>
+                {autoreg.guard && <li>{autoreg.guard.reason}</li>}
+                {Object.entries(autoreg.execution)
+                  .filter(([, e]) => e.n >= 2)
+                  .map(([k, e]) => (
+                    <li key={k}>
+                      <b style={{ color: "var(--text)" }}>{VARIANTS[k]?.label ?? k}</b>: {e.adjust === 1 ? "sube un escalón" : e.adjust === -1 ? "repite el escalón anterior" : "según calendario"} ({e.n} sesiones). {e.adjust !== 0 ? e.reason : ""}
+                    </li>
+                  ))}
+              </ul>
+            </Card>
+          </div>
+        )}
         <Card
           title="Plan vs. realizado"
           subtitle={

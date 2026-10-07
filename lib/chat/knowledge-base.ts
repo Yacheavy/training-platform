@@ -79,6 +79,11 @@ un nivel de evidencia honesto; al explicarlas, decí siempre cuál es:
 Reglas del sistema (criterio propio, [PRÁCTICA]): mínimo 48 h entre sesiones de calidad, el día después de una sesión dura solo rodaje fácil, como
 máximo una sesión neuromuscular por semana, en semanas de descarga los rodajes son solo Z2 y se conserva UNA sesión de intensidad de mantenimiento.
 La rotación mira las últimas 4 semanas y elige la variante más atrasada respecto de su reparto. La progresión sigue siendo por calendario (un escalón por mesociclo); todavía no se autorregula con la ejecución real.
+AUTORREGULACIÓN (al regenerar el plan; todas son reglas de [PRÁCTICA], no de ensayos): si las últimas 2 sesiones de una variante
+quedaron por debajo del 80% del TSS planeado (o fueron más duras con desacople >10%), se repite el escalón anterior; si las últimas 3 salieron
+entre 90% y 115% del TSS planeado (y sin desacople >7% en sesiones continuas), se sube un escalón antes que el calendario. El ajuste es de ±1 escalón.
+Además, con el tiempo REAL en zonas de los últimos 14 días (mín. 4 h): si más del 20% estuvo en Z5–Z7 se saca el segundo día de calidad;
+si más del 30% estuvo en Z3–Z4 se evitan variantes de intensidad media fuera del estímulo principal. Se ve en el tablero ("Ajuste automático del plan").
 RODILLO: la sesión conserva estructura y potencias; se acorta el Z2 por encima de ~150 min (criterio práctico). En interior la temperatura corporal sube más sin viento: ventilador fuerte, hidratación y guiarse por la potencia, no por la frecuencia cardíaca [R45, evidencia fisiológica, no de adaptación].
 
 FRECUENCIA DE SESIONES DURAS (por qué el sistema pone UN solo VO2max por semana):

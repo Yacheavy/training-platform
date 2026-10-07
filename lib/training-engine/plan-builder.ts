@@ -5,6 +5,7 @@ import { calculateFueling, FuelingResult } from "./fueling";
 import { assignWeeklyQualityStimuli, assignWeeklyQualityRoles, primaryStimulusFor, QualityRole } from "./quality-assignment";
 import { pickVariant, normalizeLevel, HistoryEntry, SlotRole } from "./variety";
 import { VARIANTS } from "./variants";
+import { MID_INTENSITY_KEYS, type IntensityGuard } from "./autoregulation";
 import { dayOfWeekLocal, dateKeyLocal } from "../tz";
 
 /**
@@ -124,6 +125,11 @@ export function buildPlan(input: {
   excludeByDate?: Record<string, string[]>;
   /** Sesiones ya existentes (dayOffset → clave) que reemplazan a la simulación en el historial interno. */
   fixedKeys?: Record<number, string>;
+  /** Ajuste de progresión por variante según la ejecución real (±1 escalón). */
+  execution?: Record<string, { adjust: number; reason: string }>;
+  /** Protección de distribución de intensidad (aplica hasta `guardUntilOffset`, inclusive). */
+  guard?: IntensityGuard | null;
+  guardUntilOffset?: number;
 }): PlannedDay[] {
   const { block, ftp, pvo2maxWatts, thresholds, template, library } = input;
   const level = normalizeLevel(thresholds.varietyLevel);
@@ -201,6 +207,8 @@ export function buildPlan(input: {
     const prevKey = keyByOffset.get(dayOffset - 1) ?? null;
     // Un test de FTP el día anterior cuenta como sesión dura para el rodaje siguiente
     const prevDayKey = prevKey && prevKey.startsWith("ftp_test") ? "umbral" : prevKey;
+    const guard = input.guard ?? null;
+    const guardOn = !!guard && dayOffset <= (input.guardUntilOffset ?? -1);
     const qualityPos = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
     const nextSlot = slotByDay.get((dayOfWeek + 1) % 7);
     const nextIsQuality = !!nextSlot && nextSlot.stimulusType === "cycling" && nextSlot.isQualityDay;
@@ -209,6 +217,7 @@ export function buildPlan(input: {
       const ex = new Set(excludeSet);
       // Esfuerzo final largo el día antes de una sesión de calidad: no
       if (nextIsQuality) ex.add("long_durability");
+      if (guardOn && guard?.avoidMid && r !== "primary") for (const k of MID_INTENSITY_KEYS) ex.add(k);
       return pickVariant({
         role: r,
         objective: block.objective,
@@ -246,7 +255,9 @@ export function buildPlan(input: {
     } else {
       const roles = rolesForWeek(primaryStimulus);
       const qRole = slot.isQualityDay ? roles[qualityPos] : undefined;
-      if (qRole === "primary" || qRole === "secondary") {
+      const dropSecondary = qRole === "secondary" && guardOn && !!guard?.dropSecondary;
+      if (dropSecondary) varietyReason = guard!.reason;
+      if ((qRole === "primary" || qRole === "secondary") && !dropSecondary) {
         role = qRole;
         if (mesocycleWeek.isDeload) {
           // Deload: se conserva UNA sesión de intensidad con volumen reducido (si la variante lo admite)
@@ -269,7 +280,7 @@ export function buildPlan(input: {
         role = (slot.targetDurationMin ?? 60) >= LONG_SLOT_MIN ? "long" : "volume";
         const p = pick(role, mesocycleWeek.isDeload);
         effectiveStimulusType = p.key;
-        varietyReason = p.reason;
+        varietyReason = dropSecondary ? `${varietyReason} · ${p.reason}` : p.reason;
       }
     }
 
@@ -286,9 +297,11 @@ export function buildPlan(input: {
     const targetDuration = Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier);
 
     // Un escalón de progresión por mesociclo (cada 4-6 semanas según la base de conocimiento).
-    const progressionStep = PROGRESSION_KEYS.has(effectiveStimulusType) ? Math.floor(weekIndex / cycleLength) : 0;
+    const exec = input.execution?.[effectiveStimulusType];
+    const adj = exec && !maintenance ? exec.adjust : 0;
+    const progressionStep = PROGRESSION_KEYS.has(effectiveStimulusType) ? Math.max(0, Math.floor(weekIndex / cycleLength) + adj) : 0;
     // Series: Rønnestad 30/15, rodaje con sprints y sprints cortos comparten la progresión 1→3 (criterio propio)
-    const series = SERIES_KEYS.has(effectiveStimulusType) ? (maintenance ? 1 : ronnestadSeriesFor(weekIndex, cycleLength)) : undefined;
+    const series = SERIES_KEYS.has(effectiveStimulusType) ? (maintenance ? 1 : Math.min(3, Math.max(1, ronnestadSeriesFor(weekIndex, cycleLength) + adj))) : undefined;
 
     const blocks = buildBlocks(
       effectiveStimulusType,
@@ -326,6 +339,7 @@ export function buildPlan(input: {
         : `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (segundo estímulo — ≥48h del principal)"}`;
       rationaleParts.push(`${head}${detail}${evidence}`);
       if (varietyReason) rationaleParts.push(varietyReason);
+      if (exec && adj !== 0 && (PROGRESSION_KEYS.has(effectiveStimulusType) || SERIES_KEYS.has(effectiveStimulusType))) rationaleParts.push(exec.reason);
     } else if (slot.stimulusType === "gym") {
       rationaleParts.push("Día de gimnasio");
     } else {
