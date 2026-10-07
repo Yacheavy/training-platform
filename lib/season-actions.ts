@@ -28,6 +28,7 @@ export async function applySeason() {
     sessions += r.created;
   }
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   return { blocks: state.proposal.blocks.length, sessions };
@@ -44,6 +45,7 @@ export async function deleteFutureBlock(formData: FormData) {
   await prisma.weeklyReview.deleteMany({ where: { trainingBlockId: id } });
   await prisma.trainingBlock.delete({ where: { id } });
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
 }

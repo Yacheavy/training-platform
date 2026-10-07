@@ -41,6 +41,7 @@ export async function saveTemplate(formData: FormData) {
   );
 
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 export async function saveTemplateSlot(formData: FormData) {
@@ -57,6 +58,7 @@ export async function saveTemplateSlot(formData: FormData) {
   });
 
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 export async function saveThresholds(formData: FormData) {
@@ -85,7 +87,7 @@ export async function saveThresholds(formData: FormData) {
     vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate", "rotate"]),
     varietyLevel: str("varietyLevel", ["conservative", "balanced", "varied"]),
     periodization: str("periodization", ["linear", "block"]),
-    bannedStimuli: formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
+    bannedStimuli: !formData.has("_planner") ? undefined : formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
     deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
       ? String(formData.get("deloadRatio")).trim()
       : undefined,
@@ -98,6 +100,7 @@ export async function saveThresholds(formData: FormData) {
   });
 
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 export async function addGoal(formData: FormData) {
@@ -123,6 +126,7 @@ export async function addGoal(formData: FormData) {
   });
 
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 export async function deleteGoal(formData: FormData) {
@@ -131,6 +135,7 @@ export async function deleteGoal(formData: FormData) {
   // Solo se puede borrar un objetivo propio
   await prisma.athleteGoal.deleteMany({ where: { id, athleteId } });
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 export async function saveProfile(formData: FormData) {
   const athleteId = await requireUserId();
@@ -146,6 +151,7 @@ export async function saveProfile(formData: FormData) {
   });
 
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 function intInRange(raw: FormDataEntryValue | null, min: number, max: number): number | null {
@@ -172,6 +178,7 @@ export async function saveMetrics(formData: FormData) {
     },
   });
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 /** Copia a la app un valor leído de Intervals (FTP, FC de umbral, FC máxima) o el mejor esfuerzo de 5 min como potencia en VO2max. */
@@ -190,10 +197,12 @@ export async function applyIntervalsValue(formData: FormData) {
     if (best5) await prisma.user.update({ where: { id: athleteId }, data: { pvo2maxWatts: best5, pvo2maxUpdatedAt: new Date(), pvo2maxSource: "intervals-5min" } });
   }
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }
 
 export async function refreshMetricsNow() {
   const athleteId = await requireUserId();
   await refreshAthleteMetrics(athleteId);
   revalidatePath("/settings");
+  revalidatePath("/planificacion");
 }

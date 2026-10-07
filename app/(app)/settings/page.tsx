@@ -1,45 +1,87 @@
-import { TemplateEditor } from "@/components/TemplateEditor";
-import { GoalsCard } from "@/components/GoalsCard";
-import { SeasonCard } from "@/components/SeasonCard";
-import { getSeasonState } from "@/lib/season-data";
-import { applySeason, deleteFutureBlock } from "@/lib/season-actions";
-import { ThresholdsCard } from "@/components/ThresholdsCard";
-import { dateKeyLocal, dayStartLocal } from "@/lib/tz";
-import { prisma } from "@/lib/prisma";
+import { StudentsList } from "@/components/StudentsList";
+import { RecoveryRulesCard } from "@/components/ThresholdsCard";
+import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
-import { regeneratePlan } from "@/lib/plan-actions";
 import { getAccessData } from "@/lib/access-data";
 import { getSettingsData } from "@/lib/settings-data";
 import { inviteAthlete, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
 import { redirect } from "next/navigation";
-import { saveTemplate, saveThresholds, addGoal, deleteGoal, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
+import { saveThresholds, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
 import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
-
 
 export const maxDuration = 60;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; resent?: string; failed?: string; warnings?: string; invite?: string; intervals?: string; history?: string; historyErrors?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; invite?: string; intervals?: string; history?: string; historyErrors?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const { template, goals, thresholds, user } = await getSettingsData(session.user.id);
+  const { thresholds, user } = await getSettingsData(session.user.id);
   const access = await getAccessData(session.user.id);
-  const season = await getSeasonState(session.user.id);
-  const todayLocal = dayStartLocal(new Date());
-  const activeBlock = await prisma.trainingBlock.findFirst({ where: { athleteId: session.user.id, startDate: { lte: todayLocal }, endDate: { gte: todayLocal } } });
-  
+  const tab = sp.tab === "alumnos" && access.isCoach ? "alumnos" : "cuenta";
+
   const cardStyle = { background: "#171E27", border: "1px solid #2A3441", borderRadius: "14px", padding: "20px", marginBottom: "20px" };
   const labelStyle = { fontSize: "11px", color: "#8A97A6", textTransform: "uppercase" as const, marginBottom: "6px", display: "block" };
   const inputStyle = { background: "#242F3B", border: "1px solid #2A3441", borderRadius: "7px", color: "#E7ECF2", padding: "7px 9px", fontSize: "13px", width: "100%" };
   const btnStyle = { background: "#4FD1C5", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
+  const tabStyle = (active: boolean) => ({
+    padding: "7px 16px",
+    borderRadius: "999px",
+    fontSize: "13px",
+    textDecoration: "none",
+    border: "1px solid #2A3441",
+    background: active ? "rgba(79,209,197,.12)" : "transparent",
+    color: active ? "#4FD1C5" : "#8A97A6",
+  });
 
   return (
     <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
-      <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "24px" }}>Configuración</h1>
+      <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "16px" }}>Ajustes</h1>
+      {access.isCoach && (
+        <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+          <Link href="/settings" style={tabStyle(tab === "cuenta")}>Cuenta</Link>
+          <Link href="/settings?tab=alumnos" style={tabStyle(tab === "alumnos")}>Alumnos</Link>
+        </div>
+      )}
 
+      {tab === "alumnos" && access.isCoach && (
+        <>
+        <div style={cardStyle}>
+          <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Alumnos</h2>
+          <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+            Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
+          </p>
+          <ActionForm action={inviteAthlete} success={null} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
+            <input name="email" type="email" placeholder="email@gmail.com" style={{ ...inputStyle, flex: "1 1 220px", width: "auto" }} required />
+            <SubmitButton style={btnStyle}>Invitar</SubmitButton>
+          </ActionForm>
+          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada. Avisale que entre con esa cuenta de Google.</div>}
+          {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginBottom: "10px" }}>Ese email no es válido.</div>}
+          {access.invites.map((i) => (
+            <div key={i.email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #2A3441", fontSize: "13px" }}>
+              <div>
+                {i.email}
+                <span style={{ color: "#5A6673", fontSize: "11px", marginLeft: "8px" }}>{i.joined ? `ingresó${i.name ? ` · ${i.name}` : ""}` : "pendiente de ingresar"}</span>
+              </div>
+              {i.isCoach ? (
+                <span style={{ color: "#5A6673", fontSize: "11px" }}>Entrenador</span>
+              ) : (
+                <ActionForm action={removeInvite} success="Invitación eliminada">
+                  <input type="hidden" name="email" value={i.email} />
+                  <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
+                </ActionForm>
+              )}
+            </div>
+          ))}
+        </div>
+          <StudentsList coachId={session.user.id} />
+        </>
+      )}
+
+      {tab === "cuenta" && (
+        <>
       {/* Conexión con Intervals (cada persona usa su propia cuenta) */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Conexión con Intervals.icu</h2>
@@ -84,54 +126,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
 
-      {/* Alumnos (solo entrenador) */}
-      {access.isCoach && (
-        <div style={cardStyle}>
-          <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Alumnos</h2>
-          <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
-            Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
-          </p>
-          <ActionForm action={inviteAthlete} success={null} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
-            <input name="email" type="email" placeholder="email@gmail.com" style={{ ...inputStyle, flex: "1 1 220px", width: "auto" }} required />
-            <SubmitButton style={btnStyle}>Invitar</SubmitButton>
-          </ActionForm>
-          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada. Avisale que entre con esa cuenta de Google.</div>}
-          {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginBottom: "10px" }}>Ese email no es válido.</div>}
-          {access.invites.map((i) => (
-            <div key={i.email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #2A3441", fontSize: "13px" }}>
-              <div>
-                {i.email}
-                <span style={{ color: "#5A6673", fontSize: "11px", marginLeft: "8px" }}>{i.joined ? `ingresó${i.name ? ` · ${i.name}` : ""}` : "pendiente de ingresar"}</span>
-              </div>
-              {i.isCoach ? (
-                <span style={{ color: "#5A6673", fontSize: "11px" }}>Entrenador</span>
-              ) : (
-                <ActionForm action={removeInvite} success="Invitación eliminada">
-                  <input type="hidden" name="email" value={i.email} />
-                  <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
-                </ActionForm>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Plan */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Plan de entrenamiento</h2>
-        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
-          Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Se reemplazan todas las sesiones
-          desde hoy, también las aprobadas o enviadas (las enviadas se actualizan solas en Intervals). No se tocan las del pasado, las completadas ni las editadas a mano. Si cambiás la potencia, guardá primero y recién después regenerá.
-        </p>
-        <ActionForm action={regeneratePlan} success={null}>
-          <SubmitButton style={btnStyle}>Regenerar plan desde hoy</SubmitButton>
-        </ActionForm>
-        {sp.regenerated != null && (
-          <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
-            Listo: {sp.regenerated} sesiones nuevas.{Number(sp.resent) > 0 ? ` ${sp.resent} sesión(es) ya enviadas se actualizaron en Intervals.` : ""}{Number(sp.failed) > 0 ? ` ${sp.failed} no se pudieron reenviar a Intervals: abrilas y tocá «Enviar a Intervals».` : ""}{Number(sp.kept) > 0 ? ` ${sp.kept} sesión(es) editadas a mano se conservaron (usá «Regenerar esta sesión» si querés rehacerlas).` : ""}{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
-          </div>
-        )}
-      </div>
 
       {/* Rendimiento: curva de potencia y configuración de deporte (Intervals) */}
       {(() => {
@@ -255,41 +249,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </ActionForm>
       </div>
 
-      {/* Plantilla semanal */}
-      <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Días de entrenamiento</h2>
-        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
-          Elegí qué hacés cada día, cuáles son de calidad (intensidad) y cuánto duran. Se guarda todo junto con un solo botón; después regenerá el plan para aplicarlo.
-        </p>
-        <TemplateEditor slots={template.map((t) => ({ dayOfWeek: t.dayOfWeek, stimulusType: t.stimulusType, isQualityDay: t.isQualityDay, targetDurationMin: t.targetDurationMin }))} action={saveTemplate} />
-      </div>
-
-      <GoalsCard
-        goals={goals.map((g) => ({
-          id: g.id,
-          goalType: g.goalType as "EVENT" | "PERFORMANCE",
-          name: g.name,
-          eventDate: g.eventDate ? g.eventDate.toISOString().slice(0, 10) : null,
-          priority: g.priority as "A" | "B" | "C",
-          metric: g.metric,
-          baselineValue: g.baselineValue,
-          targetValue: g.targetValue,
-        }))}
-        todayKey={dateKeyLocal(new Date())}
-        currentFtp={user?.ftp ?? null}
-        addAction={addGoal}
-        deleteAction={deleteGoal}
-        cardStyle={cardStyle}
-      />
-
-      <SeasonCard state={season} applyAction={applySeason} deleteAction={deleteFutureBlock} cardStyle={cardStyle} />
-
-      <ThresholdsCard
-        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct, weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio, vo2Stimulus: thresholds.vo2Stimulus, varietyLevel: thresholds.varietyLevel, bannedStimuli: thresholds.bannedStimuli, periodization: thresholds.periodization } : null}
+      <RecoveryRulesCard
+        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct } : null}
         action={saveThresholds}
-        activeObjective={activeBlock?.objective ?? null}
         cardStyle={cardStyle}
       />
+        </>
+      )}
     </div>
   );
 }

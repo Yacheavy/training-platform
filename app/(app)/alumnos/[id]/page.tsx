@@ -56,7 +56,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="page-container-narrow">
-      <Link href="/alumnos" style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none" }}>← Alumnos</Link>
+      <Link href="/settings?tab=alumnos" style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none" }}>← Alumnos</Link>
       <h1 style={{ fontSize: "22px", fontWeight: 600, margin: "12px 0 2px" }}>{student.name ?? student.email}</h1>
       <div style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "16px" }}>
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}

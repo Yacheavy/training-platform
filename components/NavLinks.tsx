@@ -12,12 +12,11 @@ const ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="16" width="7" height="5" rx="1.5" />
     </>
   ),
-  "/alumnos": (
+  "/planificacion": (
     <>
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-      <circle cx="17.5" cy="9" r="2.4" />
-      <path d="M17 14.2c2.4.2 4.2 2.2 4.2 4.8" />
+      <rect x="3" y="4.5" width="18" height="16" rx="2.2" />
+      <path d="M3 9.5h18M8 3v3M16 3v3" />
+      <path d="M7.5 14h3M13.5 14h3M7.5 17.2h3" />
     </>
   ),
   "/chat": <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
@@ -31,7 +30,7 @@ const ICONS: Record<string, React.ReactNode> = {
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Hoy" },
-  { href: "/alumnos", label: "Alumnos", coachOnly: true },
+  { href: "/planificacion", label: "Plan" },
   { href: "/chat", label: "Chat" },
   { href: "/settings", label: "Ajustes" },
 ];
@@ -45,12 +44,12 @@ function Icon({ href, size }: { href: string; size: number }) {
 }
 
 /** Navegación con ícono + estado activo. variant: barra lateral (desktop) o inferior (celular). */
-export function NavLinks({ variant, isCoach = false }: { variant: "side" | "bottom"; isCoach?: boolean }) {
+export function NavLinks({ variant }: { variant: "side" | "bottom"; isCoach?: boolean }) {
   const pathname = usePathname();
   return (
     <>
-      {NAV_ITEMS.filter((i) => !i.coachOnly || isCoach).map((item) => {
-        const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/dashboard" && (pathname.startsWith("/workouts") || pathname.startsWith("/activities")));
+      {NAV_ITEMS.map((item) => {
+        const active = pathname === item.href || pathname.startsWith(item.href + "/") || (item.href === "/dashboard" && (pathname.startsWith("/workouts") || pathname.startsWith("/activities"))) || (item.href === "/planificacion" && pathname.startsWith("/calendar")) || (item.href === "/settings" && pathname.startsWith("/alumnos"));
         if (variant === "side") {
           return (
             <Link

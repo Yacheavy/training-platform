@@ -44,5 +44,6 @@ export async function regeneratePlan() {
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   revalidatePath("/settings");
-  redirect(`/settings?regenerated=${created}&kept=${kept}&resent=${resent}&failed=${resendFailed}${warnings.length ? `&warnings=${warnings.length}` : ""}`);
+  revalidatePath("/planificacion");
+  redirect(`/planificacion?regenerated=${created}&kept=${kept}&resent=${resent}&failed=${resendFailed}${warnings.length ? `&warnings=${warnings.length}` : ""}`);
 }

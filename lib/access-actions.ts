@@ -21,10 +21,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function inviteAthlete(formData: FormData) {
   const coachId = await requireCoachId();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  if (!EMAIL_RE.test(email) || email.length > 200) redirect("/settings?invite=invalid");
+  if (!EMAIL_RE.test(email) || email.length > 200) redirect("/settings?tab=alumnos&invite=invalid");
   await prisma.allowedEmail.upsert({ where: { email }, update: {}, create: { email, invitedById: coachId } });
   revalidatePath("/settings");
-  redirect("/settings?invite=ok");
+  redirect("/settings?tab=alumnos&invite=ok");
 }
 
 export async function removeInvite(formData: FormData) {

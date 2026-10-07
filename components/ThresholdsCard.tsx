@@ -14,7 +14,7 @@ interface Thresholds {
   periodization?: string | null;
 }
 
-function Field({ label, hint, unit, children }: { label: string; hint: string; unit?: string; children: React.ReactNode }) {
+function Field({ label, hint, why, unit, children }: { label: string; hint: string; why?: string; unit?: string; children: React.ReactNode }) {
   return (
     <div className="field">
       <label>{label}</label>
@@ -23,31 +23,34 @@ function Field({ label, hint, unit, children }: { label: string; hint: string; u
         {unit && <span className="unit">{unit}</span>}
       </div>
       <div className="hint">{hint}</div>
+      {why && (
+        <details className="hint" style={{ marginTop: "4px" }}>
+          <summary style={{ cursor: "pointer", color: "var(--teal)" }}>¿Por qué?</summary>
+          <div style={{ marginTop: "4px" }}>{why}</div>
+        </details>
+      )}
     </div>
   );
 }
 
-/** Reglas con las que el generador decide cuándo bajar la carga y cada cuánto testear. */
-export function ThresholdsCard({
+export function RecoveryRulesCard({
   thresholds,
   action,
   cardStyle,
-  activeObjective,
 }: {
   thresholds: Partial<Thresholds> | null;
-  activeObjective?: string | null;
   action: (formData: FormData) => Promise<unknown>;
   cardStyle: React.CSSProperties;
 }) {
   const t = thresholds ?? {};
   return (
     <div style={cardStyle}>
-      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Reglas de recuperación y planificación</h2>
+      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Alertas de recuperación</h2>
       <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "0 0 20px" }}>
-        Con estos valores la app decide cuándo recomendar descanso y cómo arma las semanas del plan. Los valores sugeridos funcionan bien para empezar.
+        Con estos valores la app decide cuándo recomendar descanso. Los valores sugeridos funcionan bien para empezar.
       </p>
 
-      <ActionForm action={action} success="Reglas guardadas. Regenerá el plan para aplicar los cambios de planificación.">
+      <ActionForm action={action} success="Alertas guardadas">
         <div className="group">
           <h3 className="group-title">Cuándo avisar que estás cansado</h3>
           <p className="group-desc">Si se cumplen estas señales, la disponibilidad del día pasa a ámbar o rojo y se sugiere bajar la intensidad.</p>
@@ -69,6 +72,42 @@ export function ThresholdsCard({
           </div>
         </div>
 
+        <div style={{ marginTop: "22px" }}>
+          <SubmitButton
+            pendingText="Guardando…"
+            style={{ background: "var(--teal)", color: "#08201C", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "14px", fontWeight: 600 }}
+          >
+            Guardar alertas
+          </SubmitButton>
+        </div>
+      </ActionForm>
+    </div>
+  );
+}
+
+
+/** Estilo del plan: cómo se arman las semanas (test de FTP, descarga, VO2max, variedad, periodización). */
+export function PlanStyleCard({
+  thresholds,
+  action,
+  cardStyle,
+  activeObjective,
+}: {
+  thresholds: Partial<Thresholds> | null;
+  activeObjective?: string | null;
+  action: (formData: FormData) => Promise<unknown>;
+  cardStyle: React.CSSProperties;
+}) {
+  const t = thresholds ?? {};
+  return (
+    <div style={cardStyle}>
+      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Estilo del plan</h2>
+      <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "0 0 20px" }}>
+        Cómo se arman las semanas: cuándo se testea el FTP, cada cuánto se descarga, qué VO2max se hace y cuánta variedad hay. Después de guardar, regenerá el plan para aplicarlo.
+      </p>
+
+      <ActionForm action={action} success="Estilo guardado. Regenerá el plan para aplicar los cambios.">
+        <input type="hidden" name="_planner" value="1" />
         <div className="group">
           <h3 className="group-title">Test de FTP</h3>
           <p className="group-desc">El test se programa la primera semana después de una descarga, cuando llegás descansado.</p>
@@ -92,7 +131,8 @@ export function ThresholdsCard({
           <div className="field-grid">
             <Field
               label="Periodización"
-              hint="Lineal (sugerido): 1 sesión de VO2max por semana. Por bloques: en los bloques de VO2max, la primera semana de cada mesociclo concentra 2 sesiones y el resto 1. Es una adaptación propia inspirada en Rønnestad 2014 (que usó 5 sesiones en una semana, en ciclistas bien entrenados). Un metaanálisis de 6 estudios (107 personas) mostró efectos pequeños a favor de los bloques, con estudios chicos y de baja calidad metodológica; una revisión en ciclistas no halló preponderancia de un modelo."
+              hint="Lineal (sugerido): 1 sesión de VO2max por semana. Por bloques: en los bloques de VO2max, la primera semana de cada mesociclo lleva 2 sesiones y el resto 1."
+              why="Es una adaptación propia inspirada en Rønnestad 2014, que usó 5 sesiones en una semana en ciclistas bien entrenados. Un metaanálisis de 6 estudios (107 personas) mostró efectos pequeños a favor de los bloques, con estudios chicos y de baja calidad metodológica; una revisión en ciclistas no halló preponderancia de un modelo de periodización."
             >
               <select name="periodization" defaultValue={t.periodization ?? "linear"}>
                 <option value="linear">Lineal — sugerido</option>
@@ -117,7 +157,8 @@ export function ThresholdsCard({
               :`Se aplica cuando el bloque activo es de VO2max${activeObjective ? ` (el actual es «${activeObjective}», así que por ahora no cambia nada)` : ""}.`}
           </p>
           <div className="field-grid">
-            <Field label="Sesión de VO2max" hint="Sugerido para el objetivo VO2max: HIIT genuino (López Chicharro 2018). Rønnestad 30/15 tiene evidencia en ciclistas entrenados y progresa por series; alternar es criterio de práctica.">
+            <Field label="Sesión de VO2max" hint="Qué sesión de VO2max se hace cada semana. «Rotar» alterna tres variantes."
+              why="HIIT genuino: libro de López Chicharro 2018. Rønnestad 30/15 tiene ensayos en ciclistas entrenados y progresa por series. VO2max largo 5′ y alternar son criterio de práctica.">
               <select name="vo2Stimulus" defaultValue={t.vo2Stimulus ?? (t.varietyLevel === "conservative" ? "hiit_genuino" : "rotate")}>
                 <option value="rotate">Rotar: HIIT genuino / Rønnestad 30/15 / VO2max largo 5′</option>
                 <option value="hiit_genuino">Solo HIIT genuino 7×3′ al 100% PAM</option>
@@ -172,10 +213,11 @@ export function ThresholdsCard({
             pendingText="Guardando…"
             style={{ background: "var(--teal)", color: "#08201C", border: "none", borderRadius: "10px", padding: "10px 20px", fontSize: "14px", fontWeight: 600 }}
           >
-            Guardar reglas
+            Guardar estilo del plan
           </SubmitButton>
         </div>
       </ActionForm>
     </div>
   );
 }
+
