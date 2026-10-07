@@ -64,3 +64,10 @@ export async function applyPlannedNutrition(formData: FormData) {
   revalidatePath(`/activities/${activityId}`);
   revalidatePath("/dashboard");
 }
+
+/** "Omitir": no se acuerda o no quiere cargarla; deja de aparecer el aviso. Sigue siendo "sin dato". */
+export async function skipActivityNutrition(formData: FormData) {
+  const { activityId } = await ownRide(String(formData.get("activityId")));
+  await prisma.activity.update({ where: { id: activityId }, data: { nutritionLoggedAt: new Date() } });
+  revalidatePath("/dashboard");
+}

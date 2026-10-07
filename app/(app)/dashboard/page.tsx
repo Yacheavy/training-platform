@@ -33,6 +33,8 @@ import { proposeReadinessAdjustment } from "@/lib/training-engine/readiness-adju
 import { Card, Section } from "@/components/Card";
 import { PendingLink } from "@/components/PendingLink";
 import { prisma } from "@/lib/prisma";
+import { getPendingNutrition } from "@/lib/nutrition-data";
+import { applyPlannedNutrition, skipActivityNutrition } from "@/lib/nutrition-actions";
 
 const WARN_KEYWORDS = ["⚠", "bajando", "Ya alcanzaste", "RED", "AMBER"];
 
@@ -68,6 +70,7 @@ export default async function DashboardPage() {
   const avgCompliance = doneWeeks.length ? Math.round(doneWeeks.reduce((t, w) => t + (w.compliancePct ?? 0), 0) / doneWeeks.length) : null;
   const availabilityHistory = await getAvailabilityHistory(session.user.id);
   const upcomingBlocks = await getUpcomingBlocks(session.user.id);
+  const pendingNutrition = await getPendingNutrition(session.user.id).catch(() => []);
 
   const hrvDeltaPct =
     data.hrvToday != null && data.hrvAvg7d != null && data.hrvAvg7d > 0
@@ -181,6 +184,39 @@ export default async function DashboardPage() {
       </div>
 
       <Section title="Hoy">
+        {pendingNutrition.length > 0 && (
+          <div className="dash-card" style={{ marginBottom: "14px", borderColor: "var(--teal)" }}>
+            <h3 className="dash-card-title">Completá la nutrición de tu última salida</h3>
+            <div style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "6px 0 12px", lineHeight: 1.5 }}>
+              Registrar CHO y líquido le permite a la IA detectar si la alimentación está afectando tu rendimiento.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {pendingNutrition.map((p) => (
+                <div key={p.id} style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: "13px", minWidth: 0 }}>
+                    <b>{p.name ?? "Salida"}</b>
+                    <span style={{ color: "var(--text-dim)" }}>
+                      {" "}· {new Date(p.dateKey + "T12:00:00Z").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {Math.round(p.durationSec / 60)} min
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {p.plannedG > 0 && (
+                      <ActionForm action={applyPlannedNutrition} success="Registrado: consumiste lo planificado">
+                        <input type="hidden" name="activityId" value={p.id} />
+                        <ActionButton primary>Consumí lo planificado ({p.plannedG} g)</ActionButton>
+                      </ActionForm>
+                    )}
+                    <Link href={`/activities/${p.id}`} className="btn" style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Cargar detalle</Link>
+                    <ActionForm action={skipActivityNutrition} success="Omitida">
+                      <input type="hidden" name="activityId" value={p.id} />
+                      <ActionButton>Omitir</ActionButton>
+                    </ActionForm>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {adjustment && todayWorkout && (
           <div className="dash-card" style={{ marginBottom: "14px", borderColor: availability.status === "RED" ? "var(--red, #E5636A)" : "var(--amber)" }}>
             <h3 className="dash-card-title">Ajuste sugerido por tu estado de hoy ({availability.status === "RED" ? "semáforo rojo" : "semáforo ámbar"})</h3>

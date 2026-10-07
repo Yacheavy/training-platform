@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { analyzeNutrition, type NutritionActivityInput, type NutritionSummary } from "@/lib/training-engine/nutrition-analysis";
+import { analyzeNutrition, toSessionNutrition, MIN_ELIGIBLE_SEC, type NutritionActivityInput, type NutritionSummary } from "@/lib/training-engine/nutrition-analysis";
 
 export const RIDE_TYPES = ["Ride", "VirtualRide", "GravelRide", "MountainBikeRide", "EBikeRide"];
 
@@ -57,4 +57,30 @@ export async function getNutritionSummary(athleteId: string, days = 42): Promise
     orderBy: { date: "asc" },
   });
   return analyzeNutrition(rows.map(toNutritionInput), days);
+}
+
+export interface PendingNutrition {
+  id: string;
+  dateKey: string;
+  name: string | null;
+  durationSec: number;
+  plannedG: number; // 0 = no se sugirieron carbohidratos
+}
+
+/** Salidas de bici recientes (≥ 1 h, últimos 7 días) cuya nutrición todavía no se registró ni se omitió. */
+export async function getPendingNutrition(athleteId: string): Promise<PendingNutrition[]> {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const rows = await prisma.activity.findMany({
+    where: {
+      athleteId, date: { gte: since }, type: { in: RIDE_TYPES }, durationSec: { gte: MIN_ELIGIBLE_SEC },
+      nutritionLoggedAt: null, nutritionCarbsG: null, intervalsCarbsG: null,
+    },
+    select: NUTRITION_SELECT,
+    orderBy: { date: "desc" },
+    take: 3,
+  });
+  return rows.map((r) => {
+    const s = toSessionNutrition(toNutritionInput(r));
+    return { id: r.id, dateKey: r.date.toISOString().slice(0, 10), name: r.name, durationSec: r.durationSec, plannedG: Math.round(s.targetGPerHour * s.hours) };
+  });
 }
