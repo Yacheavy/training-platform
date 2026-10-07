@@ -54,6 +54,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
       vo2Stimulus: thresholds?.vo2Stimulus,
       varietyLevel: thresholds?.varietyLevel,
       bannedStimuli: thresholds?.bannedStimuli ?? [],
+      periodization: thresholds?.periodization,
     },
     template,
     library,

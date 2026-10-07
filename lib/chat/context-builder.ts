@@ -140,6 +140,23 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       : `BLOQUE ACTIVO: ninguno configurado`
   );
 
+  const nextBlocks = await prisma.trainingBlock.findMany({
+    where: { athleteId, startDate: { gt: new Date() } },
+    orderBy: { startDate: "asc" },
+    take: 4,
+  });
+  if (nextBlocks.length > 0) {
+    parts.push(
+      `PRÓXIMOS BLOQUES DE LA TEMPORADA:\n${nextBlocks.map((b) => `- ${b.name}: ${b.objective}, ${b.startDate.toISOString().split("T")[0]} → ${b.endDate.toISOString().split("T")[0]}`).join("\n")}`
+    );
+  }
+  const periodRow = await prisma.athleteThresholds.findUnique({ where: { athleteId }, select: { periodization: true, varietyLevel: true, bannedStimuli: true } });
+  if (periodRow) {
+    parts.push(
+      `PLANIFICACIÓN: periodización ${periodRow.periodization === "block" ? "por bloques (semana intensificada de VO2max)" : "lineal"}, variedad ${periodRow.varietyLevel}${periodRow.bannedStimuli.length ? `, variantes vetadas: ${periodRow.bannedStimuli.join(", ")}` : ""}`
+    );
+  }
+
   const performanceGoals = await prisma.athleteGoal.findMany({
     where: { athleteId, goalType: "PERFORMANCE" },
   });

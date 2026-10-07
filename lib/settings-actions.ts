@@ -84,6 +84,7 @@ export async function saveThresholds(formData: FormData) {
     ftpTestProtocol: str("ftpTestProtocol", ["20min", "8min", "5min"]),
     vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate", "rotate"]),
     varietyLevel: str("varietyLevel", ["conservative", "balanced", "varied"]),
+    periodization: str("periodization", ["linear", "block"]),
     bannedStimuli: formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
     deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
       ? String(formData.get("deloadRatio")).trim()

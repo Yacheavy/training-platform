@@ -79,6 +79,12 @@ un nivel de evidencia honesto; al explicarlas, decí siempre cuál es:
 Reglas del sistema (criterio propio, [PRÁCTICA]): mínimo 48 h entre sesiones de calidad, el día después de una sesión dura solo rodaje fácil, como
 máximo una sesión neuromuscular por semana, en semanas de descarga los rodajes son solo Z2 y se conserva UNA sesión de intensidad de mantenimiento.
 La rotación mira las últimas 4 semanas y elige la variante más atrasada respecto de su reparto. La progresión sigue siendo por calendario (un escalón por mesociclo); todavía no se autorregula con la ejecución real.
+TEMPORADA Y PERIODIZACIÓN: la tarjeta "Temporada" (Ajustes) propone los bloques que faltan hasta el objetivo principal (prioridad A, el más cercano). Para un
+evento: base → umbral → VO2max → puesta a punto de ~2 semanas (taper con intensidad conservada, Bosquet 2007 [R12]); para una meta de rendimiento como subir el FTP: base → VO2max → umbral,
+terminando cerca del test. El ORDEN y el reparto de semanas son [PRÁCTICA]: no hay evidencia de un orden óptimo y una revisión sistemática en ciclistas
+entrenados no halló preponderancia de un modelo de periodización [R39]. La periodización por bloques (opcional): metaanálisis de 6 estudios con efectos
+pequeños a favor [R46] (estudios chicos y de baja calidad); el estudio clásico concentró 5 sesiones en una semana [R47]. El sistema usa una adaptación propia más
+suave (2 sesiones de VO2max en la primera semana de cada mesociclo y 1 en las demás), que NO fue evaluada en ensayos.
 AUTORREGULACIÓN (al regenerar el plan; todas son reglas de [PRÁCTICA], no de ensayos): si las últimas 2 sesiones de una variante
 quedaron por debajo del 80% del TSS planeado (o fueron más duras con desacople >10%), se repite el escalón anterior; si las últimas 3 salieron
 entre 90% y 115% del TSS planeado (y sin desacople >7% en sesiones continuas), se sube un escalón antes que el calendario. El ajuste es de ±1 escalón.

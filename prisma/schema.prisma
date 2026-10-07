@@ -231,6 +231,8 @@ model AthleteThresholds {
   varietyLevel       String  @default("balanced")
   /// Variantes de sesión que el atleta vetó
   bannedStimuli      String[] @default([])
+  /// Periodización: linear | block (semana intensificada de VO2max al inicio de cada mesociclo)
+  periodization      String  @default("linear")
 }
 
 model AthleteBaseline {

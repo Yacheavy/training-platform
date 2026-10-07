@@ -23,15 +23,17 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
   for (const d of plan) weeks.set(d.weekIndex, [...(weeks.get(d.weekIndex) ?? []), d]);
 
   for (const [wk, days] of weeks) {
+    const inten = days.some((d) => d.intensified);
+    const maxVo2 = inten ? 2 : 1;
     const hiit = days.filter((d) => d.stimulusType === "hiit_genuino");
-    if (hiit.length > 1) w.push(`Semana ${wk + 1}: ${hiit.length} sesiones HIIT (máx. 1)`);
+    if (hiit.length > maxVo2) w.push(`Semana ${wk + 1}: ${hiit.length} sesiones HIIT (máx. ${maxVo2})`);
     const ron = days.filter((d) => d.stimulusType === "ronnestad_30_15");
-    if (ron.length > 1) w.push(`Semana ${wk + 1}: ${ron.length} sesiones Rønnestad (máx. 1)`);
+    if (ron.length > maxVo2) w.push(`Semana ${wk + 1}: ${ron.length} sesiones Rønnestad (máx. ${maxVo2})`);
     const spr = days.filter((d) => d.stimulusType === "z2_sprints");
     if (spr.length > 1) w.push(`Semana ${wk + 1}: ${spr.length} rodajes con sprints (máx. 1)`);
     // Un solo VO2max por semana (el segundo estímulo es de baja fatiga)
     const vo2 = days.filter((d) => VO2_STIMULI.has(d.stimulusType) && !d.isDeload);
-    if (ctx.objective === "vo2max" && vo2.length > 1) w.push(`Semana ${wk + 1}: ${vo2.length} sesiones de VO2max (máx. 1 por semana)`);
+    if (ctx.objective === "vo2max" && vo2.length > maxVo2) w.push(`Semana ${wk + 1}: ${vo2.length} sesiones de VO2max (máx. ${maxVo2} por semana)`);
 
     // Tiempo de Z2 mayoritario sobre el tiempo de ciclismo (modelo 80/20)
     const cyc = days.filter((d) => d.stimulusType !== "gym");
@@ -56,7 +58,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     for (const d of days) counts.set(d.stimulusType, (counts.get(d.stimulusType) ?? 0) + 1);
     for (const [k, n] of counts) {
       const v = VARIANTS[k];
-      if (v && n > v.maxPerWeek) w.push(`Semana ${wk + 1}: ${n} sesiones de ${v.label} (máx. ${v.maxPerWeek})`);
+      if (v && n > (days.some((d) => d.intensified) && v.vo2 ? 2 : v.maxPerWeek)) w.push(`Semana ${wk + 1}: ${n} sesiones de ${v.label} (máx. ${v.maxPerWeek})`);
     }
     const neuro = days.filter((d) => isNeuroKey(d.stimulusType));
     if (neuro.length > 1) w.push(`Semana ${wk + 1}: ${neuro.length} sesiones neuromusculares (máx. 1)`);

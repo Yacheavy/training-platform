@@ -37,8 +37,9 @@ export type QualityRole = "primary" | "secondary" | "z2";
  * Las reglas son las de assignWeeklyQualityStimuli, pero sin elegir todavía la variante concreta
  * (eso lo hace variety.ts). Se aplica la separación de 48 h a TODOS los objetivos.
  */
-export function assignWeeklyQualityRoles(qualityDays: number[], objective: string, primaryMaxPerWeek: number | null): QualityRole[] {
-  const cap = objective === "vo2max" ? 1 : (primaryMaxPerWeek ?? qualityDays.length);
+export function assignWeeklyQualityRoles(qualityDays: number[], objective: string, primaryMaxPerWeek: number | null, intensified = false): QualityRole[] {
+  // Semana intensificada (periodización por bloques): VO2max admite 2 sesiones principales separadas ≥48 h
+  const cap = objective === "vo2max" ? (intensified ? 2 : 1) : (primaryMaxPerWeek ?? qualityDays.length);
   const hardDays: number[] = [];
   let primaries = 0;
   let secondaries = 0;

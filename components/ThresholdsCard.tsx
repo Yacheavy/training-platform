@@ -11,6 +11,7 @@ interface Thresholds {
   vo2Stimulus?: string | null;
   varietyLevel?: string | null;
   bannedStimuli?: string[] | null;
+  periodization?: string | null;
 }
 
 function Field({ label, hint, unit, children }: { label: string; hint: string; unit?: string; children: React.ReactNode }) {
@@ -89,6 +90,15 @@ export function ThresholdsCard({
           <h3 className="group-title">Semanas de carga y de descarga</h3>
           <p className="group-desc">Cada cuánto el plan baja el volumen para que absorbas el entrenamiento. En la descarga se mantiene una sesión intensa corta.</p>
           <div className="field-grid">
+            <Field
+              label="Periodización"
+              hint="Lineal (sugerido): 1 sesión de VO2max por semana. Por bloques: en los bloques de VO2max, la primera semana de cada mesociclo concentra 2 sesiones y el resto 1. Es una adaptación propia inspirada en Rønnestad 2014 (que usó 5 sesiones en una semana, en ciclistas bien entrenados). Un metaanálisis de 6 estudios (107 personas) mostró efectos pequeños a favor de los bloques, con estudios chicos y de baja calidad metodológica; una revisión en ciclistas no halló preponderancia de un modelo."
+            >
+              <select name="periodization" defaultValue={t.periodization ?? "linear"}>
+                <option value="linear">Lineal — sugerido</option>
+                <option value="block">Por bloques (semana intensificada de VO2max)</option>
+              </select>
+            </Field>
             <Field label="Ciclo" hint="Más semanas de carga suben el volumen acumulado; si venís muy cargado o tenés más de 45 años, elegí ciclos más cortos.">
               <select name="deloadRatio" defaultValue={t.deloadRatio ?? "4:1"}>
                 <option value="2:1">2 de carga, 1 de descarga</option>

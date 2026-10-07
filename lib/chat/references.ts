@@ -382,6 +382,22 @@ export const REFERENCES: Reference[] = [
     level: "Estudio fisiológico: no se confirmó el contenido más allá de la cita; no evalúa adaptaciones de entrenamiento.",
     checked: "cita",
   },
+  {
+    id: "R46",
+    surnames: ["Mølmen", "Molmen", "Øfsteng", "Ofsteng"],
+    cite: "Mølmen KS, Øfsteng SJ, Rønnestad BR. Block periodization of endurance training – a systematic review and meta-analysis. Open Access J Sports Med. 2019;10.",
+    supports: "20 estudios revisados; metaanálisis de 6 estudios (107 personas): efectos pequeños a favor de la periodización por bloques frente a la tradicional en VO2max (DME 0,40; IC95% 0,02–0,79) y en Wmax (DME 0,28; IC95% 0,01–0,54); para otras medidas de rendimiento, tamaños de efecto moderados a grandes.",
+    level: "Revisión sistemática y metaanálisis con estudios chicos y de baja calidad metodológica (PEDro medio 3,7/10): los autores la consideran una alternativa adecuada, no superior demostrada.",
+    checked: "abstract",
+  },
+  {
+    id: "R47",
+    surnames: ["Rønnestad", "Ronnestad", "Ellefsen"],
+    cite: "Rønnestad BR, Ellefsen S, et al. Block periodization of high-intensity aerobic intervals provides superior training effects in trained cyclists. Scand J Med Sci Sports. 2014 (título verificado en el índice; detalles del diseño tomados de un resumen secundario).",
+    supports: "12 semanas en ciclistas bien entrenados con las mismas 24 sesiones de alta intensidad: un grupo las concentró (5 sesiones en las semanas 1, 5 y 9, y 1 por semana el resto) y otro las distribuyó (2 por semana). No se confirmaron las cifras de resultados: no atribuyas números a este estudio.",
+    level: "Ensayo pequeño (menos de 20 ciclistas) y corto. El sistema NO replica el protocolo (usa 2 sesiones en la semana intensificada, no 5) y lo presenta como adaptación propia.",
+    checked: "cita",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

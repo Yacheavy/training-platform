@@ -86,6 +86,8 @@ export interface PickArgs {
   exclude?: ReadonlySet<string>;
   /** Clave de la sesión del día anterior (si hubo). */
   prevDayKey?: string | null;
+  /** Semana intensificada: se permite repetir la misma variante principal dentro de la semana. */
+  allowRepeat?: boolean;
 }
 
 export interface PickResult {
@@ -119,9 +121,9 @@ export function pickVariant(a: PickArgs): PickResult {
     // Día después de una sesión dura (umbral/VO2max) o de sprints: solo rodaje fácil
     if ((a.role === "volume" || a.role === "long") && a.prevDayKey && (intensityOf(a.prevDayKey) >= 1 || isNeuroKey(a.prevDayKey)) && v.intensity > 0) return false;
     // Máximo semanal de la variante y de la familia neuromuscular
-    if (thisWeek.filter((h) => h.key === e.key).length >= v.maxPerWeek) return false;
+    if (!a.allowRepeat && thisWeek.filter((h) => h.key === e.key).length >= v.maxPerWeek) return false;
     if (v.neuro && thisWeek.some((h) => isNeuroKey(h.key))) return false;
-    if (!relaxGap && v.minGapDays > 0) {
+    if (!relaxGap && !a.allowRepeat && v.minGapDays > 0) {
       const last = lastOf(e.key);
       if (last != null && a.dayOffset - last < v.minGapDays) return false;
     }

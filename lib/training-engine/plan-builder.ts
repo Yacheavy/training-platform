@@ -29,6 +29,8 @@ export interface PlanThresholds {
   varietyLevel?: string | null;
   /** Variantes que el atleta vetó. */
   bannedStimuli?: string[] | null;
+  /** linear (por defecto) | block: semana intensificada al inicio de cada mesociclo (solo VO2max). */
+  periodization?: string | null;
 }
 export interface PlanTemplateSlot {
   dayOfWeek: number;
@@ -57,6 +59,8 @@ export interface PlannedDay {
   slotTargetMin?: number;
   /** Rol de la sesión en la semana (solo ciclismo con selector de variantes). */
   role?: SlotRole;
+  /** Semana intensificada de la periodización por bloques. */
+  intensified?: boolean;
 }
 
 /** Variantes con escalón de progresión por mesociclo (calendario; Fase 2 lo ajustará con la ejecución real). */
@@ -137,11 +141,12 @@ export function buildPlan(input: {
   const ledger: HistoryEntry[] = [...(input.history ?? [])];
   const keyByOffset = new Map<number, string>(ledger.map((h) => [h.dayOffset, h.key]));
   const rolesCache = new Map<string, QualityRole[]>();
-  const rolesForWeek = (primary: string): QualityRole[] => {
-    let r = rolesCache.get(primary);
+  const rolesForWeek = (primary: string, intensified: boolean): QualityRole[] => {
+    const ck = `${primary}|${intensified}`;
+    let r = rolesCache.get(ck);
     if (!r) {
-      r = assignWeeklyQualityRoles(qualityDaySlots.map((s) => s.dayOfWeek), block.objective, library[primary]?.maxSessionsPerWeek ?? null);
-      rolesCache.set(primary, r);
+      r = assignWeeklyQualityRoles(qualityDaySlots.map((s) => s.dayOfWeek), block.objective, library[primary]?.maxSessionsPerWeek ?? null, intensified);
+      rolesCache.set(ck, r);
     }
     return r;
   };
@@ -196,6 +201,10 @@ export function buildPlan(input: {
     const weekIndex = Math.floor(dayOffset / 7);
     const mesocycleWeek = mesocycleWeeks[weekIndex] ?? mesocycleWeeks[mesocycleWeeks.length - 1];
     const isFtpTestWeek = ftpTestWeekIndices.has(weekIndex);
+    // Periodización por bloques (adaptación propia inspirada en Rønnestad 2014): la primera semana de carga de cada
+    // mesociclo concentra 2 sesiones principales de VO2max (el estudio usó 5); el resto de las semanas, 1.
+    const intensifiedWeek =
+      thresholds.periodization === "block" && block.objective === "vo2max" && !isTapering && !mesocycleWeek.isDeload && weekIndex % cycleLength === 0 && qualityDaySlots.length >= 2 && !isFtpTestWeek;
     const isFirstQualityDayOfWeek = qualityDaySlots.length > 0 && qualityDaySlots[0].dayOfWeek === dayOfWeek;
     const primaryStimulus = primaryStimulusFor(block.objective, thresholds.vo2Stimulus, weekIndex);
     const baseStimuliForWeek = stimuliForWeek(primaryStimulus);
@@ -225,6 +234,7 @@ export function buildPlan(input: {
         vo2Stimulus: thresholds.vo2Stimulus,
         weekIndex,
         dayOffset,
+        allowRepeat: intensifiedWeek && r === "primary",
         slotMin: fullSlot ? (slot.targetDurationMin ?? 60) : Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier),
         isDeload: deload,
         history: ledger,
@@ -253,7 +263,7 @@ export function buildPlan(input: {
         effectiveStimulusType = "z2";
       }
     } else {
-      const roles = rolesForWeek(primaryStimulus);
+      const roles = rolesForWeek(primaryStimulus, intensifiedWeek);
       const qRole = slot.isQualityDay ? roles[qualityPos] : undefined;
       const dropSecondary = qRole === "secondary" && guardOn && !!guard?.dropSecondary;
       if (dropSecondary) varietyReason = guard!.reason;
@@ -334,6 +344,7 @@ export function buildPlan(input: {
               : "";
       const v = VARIANTS[effectiveStimulusType];
       const evidence = v ? ` · evidencia: ${v.evidence === "ensayo" ? "ensayos" : v.evidence === "preliminar" ? "preliminar" : v.evidence === "practica" ? "práctica de entrenadores" : v.evidence === "hipotesis" ? "hipótesis" : "no concluyente"}` : "";
+      if (intensifiedWeek && role === "primary") rationaleParts.push("Semana intensificada (periodización por bloques, adaptación propia inspirada en Rønnestad 2014): 2 sesiones de VO2max esta semana y 1 por semana en las siguientes");
       const head = role === "volume" || role === "long"
         ? `${role === "long" ? "Salida larga" : "Rodaje"} → ${effectiveStimulusType}`
         : `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (segundo estímulo — ≥48h del principal)"}`;
@@ -360,6 +371,7 @@ export function buildPlan(input: {
       rationale: rationaleParts.join(" · "),
       slotTargetMin: targetDuration,
       role,
+      intensified: intensifiedWeek || undefined,
     });
   }
 

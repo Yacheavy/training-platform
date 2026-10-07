@@ -1,5 +1,6 @@
 import { buildPlan } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
+import { proposeSeason, pickPrimaryGoal } from "./season-planner";
 import { progressionAdjustments, intensityGuard, type ExecutionRecord } from "./autoregulation";
 const L = (lo:number|null,hi:number|null,mx:number|null=null)=>({intensityPctFtpLow:lo,intensityPctFtpHigh:hi,maxSessionsPerWeek:mx});
 const library:any = { z2:L(56,75), sweet_spot:L(88,94), umbral:L(95,105,2), hiit_genuino:L(108,115,1), ronnestad_30_15:L(125,135), z2_sprints:L(null,null), billat_30_30:L(110,116), rst:L(150,180), gym:L(null,null), z2_progressive:L(56,75), endurance_tempo:L(78,86,2), over_under:L(92,106,1), vo2_long:L(108,115,1), sprint_neuro:L(null,null,1), long_durability:L(84,90,1), torque_low_cadence:L(70,76,1) };
@@ -63,6 +64,51 @@ for (const objective of ["vo2max","umbral","base"]) for (const adjust of [-1,1])
   const early = plan.filter((d)=>d.dayOffset<=14);
   if (g.dropSecondary && early.some((d)=>d.role==="secondary")) { bad++; console.log("guard dropSecondary no aplicado",objective,tn); }
   if (g.avoidMid && early.some((d)=>d.role!=="primary" && ["endurance_tempo","sweet_spot","over_under"].includes(d.stimulusType))) { bad++; console.log("guard avoidMid no aplicado",objective,tn); }
+}
+
+// Periodización por bloques (semana intensificada): sin advertencias y con 2 sesiones de VO2max en esas semanas
+for (const tn of Object.keys(templates)) for (const ratio of ["3:1","4:1"]) for (const vo2Stimulus of [null,"hiit_genuino","rotate","ronnestad_30_15"]) for (const weeks of [8,12]) for (const ftpP of ["20min","8min"]) {
+  const start = new Date(Date.UTC(2026,9,3,12,0,0)); const end = new Date(start.getTime()+weeks*7*86400000);
+  const plan = buildPlan({block:{name:"t",objective:"vo2max",startDate:start,endDate:end},ftp:300,pvo2maxWatts:380,thresholds:{deloadRatio:ratio,weeksBetweenFtpTest:5,ftpTestProtocol:ftpP,vo2Stimulus,varietyLevel:"balanced",periodization:"block"},template:templates[tn],library});
+  const w = validatePlan(plan,{objective:"vo2max",ftp:300,pvo2maxWatts:380}).filter((x)=>!x.startsWith("INFO")); n++;
+  if (w.length){ bad++; console.log("BLOQUE",tn,ratio,weeks,vo2Stimulus,"\n  "+[...new Set(w)].slice(0,3).join("\n  ")); }
+  const twoQ = templates[tn].filter((t:any)=>t.stimulusType==="cycling"&&t.isQualityDay).length>=2;
+  const intens = new Set(plan.filter((d)=>d.intensified).map((d)=>d.weekIndex));
+  if (twoQ && intens.size===0) { bad++; console.log("BLOQUE sin semana intensificada",tn,ratio,weeks); }
+}
+const bs = new Date(Date.UTC(2026,9,5,12,0,0));
+const bp = buildPlan({block:{name:"t",objective:"vo2max",startDate:bs,endDate:new Date(bs.getTime()+12*7*86400000)},ftp:300,pvo2maxWatts:380,thresholds:{deloadRatio:"3:1",weeksBetweenFtpTest:0,ftpTestProtocol:"20min",vo2Stimulus:"rotate",varietyLevel:"balanced",periodization:"block"},template:templates.user,library});
+const vo2PerWeek = new Map<number,number>(); for (const d of bp) if (["hiit_genuino","ronnestad_30_15","vo2_long"].includes(d.stimulusType) && !d.isDeload) vo2PerWeek.set(d.weekIndex,(vo2PerWeek.get(d.weekIndex)??0)+1);
+console.log("VO2max por semana (bloques, plantilla del usuario):",[...vo2PerWeek.entries()].map(([k,v])=>`s${k+1}:${v}`).join(" "));
+for (const [wk,c] of vo2PerWeek) { const exp = bp.some((d)=>d.weekIndex===wk&&d.intensified)?2:1; if (c!==exp) { bad++; console.log("BLOQUE: semana",wk+1,"tiene",c,"VO2max, esperado",exp); } }
+
+// Planificador de temporada
+{
+  const check = (name:string, ok:boolean) => { if(!ok){ console.log("FALLA temporada:",name); bad++; } };
+  const ftpGoal = { name:"FTP 320", type:"PERFORMANCE" as const, dateKey:"2027-01-01", metric:"FTP" };
+  const user = proposeSeason({ todayKey:"2026-10-07", goal:ftpGoal, existing:[{objective:"vo2max",startKey:"2026-10-03",endKey:"2026-11-28"}] });
+  console.log("Temporada (usuario):", user.blocks.map(b=>`${b.objective} ${b.startKey}→${b.endKey} (${b.weeks}s)`).join(" | "));
+  check("usuario: 1 bloque de umbral hasta 1/1", user.blocks.length===1 && user.blocks[0].objective==="umbral" && user.blocks[0].startKey==="2026-11-28" && user.blocks[0].endKey==="2027-01-01");
+  const none = proposeSeason({ todayKey:"2026-10-07", goal:ftpGoal, existing:[{objective:"umbral",startKey:"2026-10-03",endKey:"2027-01-01"}] });
+  check("cubierto", none.covered && none.blocks.length===0);
+  check("sin objetivo", proposeSeason({todayKey:"2026-10-07",goal:null,existing:[]}).covered);
+  const race = proposeSeason({ todayKey:"2026-10-07", goal:{name:"Carrera",type:"EVENT",dateKey:"2027-02-28"}, existing:[] });
+  console.log("Temporada (carrera, sin bloques):", race.blocks.map(b=>`${b.objective} ${b.startKey}→${b.endKey} (${b.weeks}s)`).join(" | "));
+  check("carrera: termina en taper en la fecha", race.blocks.length>=3 && race.blocks[race.blocks.length-1].objective==="tapering" && race.blocks[race.blocks.length-1].endKey==="2027-02-28");
+  // Continuidad, sin huecos ni superposiciones, y todos los bloques con ≥3 semanas salvo el taper
+  for (const [today,date,type,existing] of [["2026-10-07","2027-02-28","EVENT",[]],["2026-10-07","2027-06-01","EVENT",[]],["2026-10-07","2026-12-20","EVENT",[]],["2026-10-07","2027-01-01","PERFORMANCE",[]],["2026-10-07","2027-04-01","PERFORMANCE",[{objective:"base",startKey:"2026-10-03",endKey:"2026-11-14"}]],["2026-10-07","2027-03-01","EVENT",[{objective:"vo2max",startKey:"2026-10-03",endKey:"2026-12-01"}]]] as any[]) {
+    const p = proposeSeason({ todayKey:today, goal:{name:"x",type,dateKey:date}, existing });
+    let prev = existing.length ? existing[existing.length-1].endKey : today;
+    for (const b of p.blocks) {
+      if (b.startKey!==prev) { check(`hueco/superposición ${type} ${date} ${b.startKey}≠${prev}`,false); }
+      if (b.objective!=="tapering" && b.weeks<3) check(`bloque corto ${type} ${date} ${b.objective} ${b.weeks}s`,false);
+      if (b.endKey<=b.startKey) check("bloque vacío",false);
+      prev = b.endKey;
+    }
+    if (p.blocks.length && prev!==date) check(`no llega a la fecha ${type} ${date} (termina ${prev})`,false);
+  }
+  const g = pickPrimaryGoal([{priority:"B",dateKey:"2026-12-01"},{priority:"A",dateKey:"2027-03-01"},{priority:"A",dateKey:"2026-11-01"},{priority:"A",dateKey:"2026-01-01"}],"2026-10-07");
+  check("objetivo principal: A más cercano futuro", g?.dateKey==="2026-11-01");
 }
 console.log({scenariosTotal:n,withProblems:bad});
 if (bad) process.exitCode = 1;

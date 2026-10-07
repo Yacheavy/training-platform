@@ -1,5 +1,8 @@
 import { TemplateEditor } from "@/components/TemplateEditor";
 import { GoalsCard } from "@/components/GoalsCard";
+import { SeasonCard } from "@/components/SeasonCard";
+import { getSeasonState } from "@/lib/season-data";
+import { applySeason, deleteFutureBlock } from "@/lib/season-actions";
 import { ThresholdsCard } from "@/components/ThresholdsCard";
 import { dateKeyLocal, dayStartLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +27,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   const { template, goals, thresholds, user } = await getSettingsData(session.user.id);
   const access = await getAccessData(session.user.id);
+  const season = await getSeasonState(session.user.id);
   const todayLocal = dayStartLocal(new Date());
   const activeBlock = await prisma.trainingBlock.findFirst({ where: { athleteId: session.user.id, startDate: { lte: todayLocal }, endDate: { gte: todayLocal } } });
   
@@ -278,8 +282,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         cardStyle={cardStyle}
       />
 
+      <SeasonCard state={season} applyAction={applySeason} deleteAction={deleteFutureBlock} cardStyle={cardStyle} />
+
       <ThresholdsCard
-        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct, weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio, vo2Stimulus: thresholds.vo2Stimulus, varietyLevel: thresholds.varietyLevel, bannedStimuli: thresholds.bannedStimuli } : null}
+        thresholds={thresholds ? { minTsb: thresholds.minTsb, hrvDropAlertPct: thresholds.hrvDropAlertPct, weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio, vo2Stimulus: thresholds.vo2Stimulus, varietyLevel: thresholds.varietyLevel, bannedStimuli: thresholds.bannedStimuli, periodization: thresholds.periodization } : null}
         action={saveThresholds}
         activeObjective={activeBlock?.objective ?? null}
         cardStyle={cardStyle}
