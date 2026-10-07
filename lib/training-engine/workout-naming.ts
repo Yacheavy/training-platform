@@ -7,6 +7,13 @@ const PREFIX: Record<string, string> = {
   hiit_genuino: "HIIT",
   ronnestad_30_15: "30/15",
   z2_sprints: "Z2+SPR",
+  z2_progressive: "Z2+PROG",
+  endurance_tempo: "TEMPO",
+  long_durability: "LARGO+",
+  torque_low_cadence: "TORQUE",
+  over_under: "O/U",
+  vo2_long: "VO2L",
+  sprint_neuro: "SPR6",
   billat_30_30: "30/30",
   rst: "RST",
   gym: "GYM",
@@ -54,6 +61,24 @@ export function buildWorkoutName(
 
   const intervals = blocks.filter((b) => b.type === "interval");
   const recoveries = blocks.filter((b) => b.type === "recovery");
+
+  if (stimulusType === "z2_progressive") {
+    const totalMin = Math.round(blocks.reduce((s, b) => s + b.durationSec, 0) / 60);
+    return `${prefix} ${totalMin}'`;
+  }
+  if (stimulusType === "over_under" && intervals.length >= 2) {
+    // ciclos de under/over; las series se separan por recuperación
+    const sets = recoveries.length + 1;
+    const cyclesPerSet = Math.round(intervals.length / 2 / sets);
+    return `${prefix} ${sets}x${cyclesPerSet}(${formatTime(intervals[0].durationSec)}/${formatTime(intervals[1].durationSec)})`;
+  }
+  if (stimulusType === "sprint_neuro" && intervals.length > 0) {
+    return `${prefix} ${Math.round(intervals.length / 4)}x4x${intervals[0].durationSec}"`;
+  }
+  if (stimulusType === "long_durability" && intervals.length > 0) {
+    const totalMin = Math.round(blocks.reduce((s, b) => s + b.durationSec, 0) / 60);
+    return `${prefix} ${totalMin}' + ${intervals.length}x${formatTime(intervals[0].durationSec)}`;
+  }
 
   if (intervals.length === 0) return `${prefix} (generado)`;
 

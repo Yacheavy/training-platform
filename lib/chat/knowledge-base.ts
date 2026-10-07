@@ -65,6 +65,22 @@ La progresión del sistema de 5 → 7 → 9 sprints (3 sprints en descarga) es [
 dosis completa de 9 sprints. La recuperación de 100 W del estudio está escalada a ~33% FTP en el sistema [PRÁCTICA]. La
 potencia que muestra el plan para el sprint es un piso de referencia; el esfuerzo es máximo.
 
+VARIANTES DE SESIÓN Y VARIEDAD (el plan rota entre ellas según el nivel de variedad: conservador / equilibrado / variado;
+el atleta puede vetar variantes en Configuración, pedir "Otra variante" o "Pasar a rodillo" en cada sesión). Cada variante tiene
+un nivel de evidencia honesto; al explicarlas, decí siempre cuál es:
+- Z2 progresivo (base): Z2 en tercios crecientes (62/68/74% FTP). [PRÁCTICA] sin ensayos específicos.
+- Tempo en bloques (base): bloques de 15-25 min a ~82% FTP bajo el umbral. [PRÁCTICA].
+- Salida larga con esfuerzo final (base): Z2 largo + 2-3 bloques al 88% FTP al final, para trabajar durabilidad [R44]; que el entrenamiento
+  mejore la durabilidad es una [HIPÓTESIS]; solo en salidas de 150 min o más y nunca el día antes de una sesión de calidad.
+- Over-unders (umbral): ciclos de 2' al ~94% + 1' al ~105% FTP. [PRÁCTICA].
+- VO2max largo 5': 4-5 × 5 min con 2:30 de recuperación. Los intervalos largos tienen ensayos en ciclistas, pero esta dosis exacta es [PRÁCTICA].
+- Sprints cortos de 6 s (neuromuscular): series de 4 sprints dentro de un rodaje Z2 [R42]; evidencia PRELIMINAR sobre potencia pico, no sobre resistencia.
+- Torque a cadencia baja (fuerza en bici): 4-5 × 6' a ~72% FTP y 55 rpm [R43]; evidencia NO CONCLUYENTE: es solo variedad; cuidado con las rodillas.
+Reglas del sistema (criterio propio, [PRÁCTICA]): mínimo 48 h entre sesiones de calidad, el día después de una sesión dura solo rodaje fácil, como
+máximo una sesión neuromuscular por semana, en semanas de descarga los rodajes son solo Z2 y se conserva UNA sesión de intensidad de mantenimiento.
+La rotación mira las últimas 4 semanas y elige la variante más atrasada respecto de su reparto. La progresión sigue siendo por calendario (un escalón por mesociclo); todavía no se autorregula con la ejecución real.
+RODILLO: la sesión conserva estructura y potencias; se acorta el Z2 por encima de ~150 min (criterio práctico). En interior la temperatura corporal sube más sin viento: ventilador fuerte, hidratación y guiarse por la potencia, no por la frecuencia cardíaca [R45, evidencia fisiológica, no de adaptación].
+
 FRECUENCIA DE SESIONES DURAS (por qué el sistema pone UN solo VO2max por semana):
 - El libro recomienda 1 sesión de HIIT genuino por microciclo y 48-72 h entre sesiones; dice que habitualmente
   no se supera 2 HIT por semana [R1].

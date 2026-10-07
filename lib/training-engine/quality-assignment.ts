@@ -27,6 +27,36 @@ export const ALTERNATIVE_TO_STIMULUS: Record<string, string> = {
 };
 
 export const MIN_GAP_DAYS_BETWEEN_VO2MAX = 2;
+/** Separación mínima (48 h) entre cualquier par de días de calidad, sea cual sea el objetivo. */
+export const MIN_GAP_DAYS_BETWEEN_HARD = 2;
+
+export type QualityRole = "primary" | "secondary" | "z2";
+
+/**
+ * Esqueleto semanal: qué rol cumple cada día de calidad (principal / secundario / pasa a Z2).
+ * Las reglas son las de assignWeeklyQualityStimuli, pero sin elegir todavía la variante concreta
+ * (eso lo hace variety.ts). Se aplica la separación de 48 h a TODOS los objetivos.
+ */
+export function assignWeeklyQualityRoles(qualityDays: number[], objective: string, primaryMaxPerWeek: number | null): QualityRole[] {
+  const cap = objective === "vo2max" ? 1 : (primaryMaxPerWeek ?? qualityDays.length);
+  const hardDays: number[] = [];
+  let primaries = 0;
+  let secondaries = 0;
+  return qualityDays.map((day) => {
+    const spaced = hardDays.every((d) => circularGapDays(d, day) >= MIN_GAP_DAYS_BETWEEN_HARD);
+    if (!spaced) return "z2";
+    if (primaries < cap) {
+      primaries++;
+      hardDays.push(day);
+      return "primary";
+    }
+    // VO2max: un único estímulo secundario (baja fatiga); otros objetivos: la alternativa del objetivo
+    if (objective === "vo2max" && secondaries >= 1) return "z2";
+    secondaries++;
+    hardDays.push(day);
+    return "secondary";
+  });
+}
 
 /** Opciones del estímulo de VO2max que puede elegir el atleta (objetivo VO2max). */
 export const VO2_STIMULUS_OPTIONS = ["hiit_genuino", "ronnestad_30_15", "alternate"] as const;

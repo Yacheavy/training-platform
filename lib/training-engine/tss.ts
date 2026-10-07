@@ -2,6 +2,8 @@ export interface WorkoutBlock {
   type: string; // "warmup" | "interval" | "recovery" | "cooldown" | "z2"
   durationSec: number;
   targetWatts: number;
+  /** Cadencia objetivo (rpm), opcional: solo la usan variantes con consigna de cadencia (p. ej. torque a baja cadencia). */
+  cadenceRpm?: number;
 }
 
 /**

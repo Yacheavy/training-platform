@@ -4,7 +4,7 @@ import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 import { dateKeyLocal } from "../tz";
 
-export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean }) {
+export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[] }) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
   if (!block || (opts?.athleteId && block.athleteId !== opts.athleteId)) throw new Error("Bloque no encontrado");
 
@@ -16,6 +16,28 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   const libraryRows = await prisma.workoutLibraryEntry.findMany();
   const library: Record<string, PlanLibraryEntry> = Object.fromEntries(libraryRows.map((l) => [l.key, l]));
 
+  // Historial para la rotación: sesiones de las 4 semanas previas al bloque y, al regenerar parcialmente,
+  // las ya existentes dentro del bloque anteriores al día objetivo (así la simulación coincide con lo real).
+  const DAY = 86400000;
+  const startMs = block.startDate.getTime();
+  const offsetOf = (d: Date) => Math.round((d.getTime() - startMs) / DAY);
+  const isVariantRow = (k: string) => k !== "gym" && !k.startsWith("ftp_test");
+  const prior = await prisma.generatedWorkout.findMany({
+    where: { athleteId: block.athleteId, date: { gte: new Date(startMs - 28 * DAY), lt: block.startDate } },
+    select: { date: true, workoutLibraryKey: true },
+  });
+  const history = prior.filter((r) => isVariantRow(r.workoutLibraryKey)).map((r) => ({ dayOffset: offsetOf(r.date), key: r.workoutLibraryKey }));
+  const targetDate = opts?.replaceDate ?? opts?.fromDate;
+  const fixedKeys: Record<number, string> = {};
+  if (targetDate) {
+    const inBlock = await prisma.generatedWorkout.findMany({
+      where: { athleteId: block.athleteId, date: { gte: block.startDate, lt: targetDate } },
+      select: { date: true, workoutLibraryKey: true },
+    });
+    for (const r of inBlock) if (isVariantRow(r.workoutLibraryKey)) fixedKeys[offsetOf(r.date)] = r.workoutLibraryKey;
+  }
+  const excludeByDate: Record<string, string[]> = opts?.replaceDate && opts.excludeKeys?.length ? { [dateKeyLocal(opts.replaceDate)]: opts.excludeKeys } : {};
+
   const plan = buildPlan({
     block: { name: block.name, objective: block.objective, startDate: block.startDate, endDate: block.endDate },
     ftp: user.ftp,
@@ -25,13 +47,18 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
       weeksBetweenFtpTest: thresholds?.weeksBetweenFtpTest ?? 5,
       ftpTestProtocol: thresholds?.ftpTestProtocol,
       vo2Stimulus: thresholds?.vo2Stimulus,
+      varietyLevel: thresholds?.varietyLevel,
+      bannedStimuli: thresholds?.bannedStimuli ?? [],
     },
     template,
     library,
+    history,
+    fixedKeys,
+    excludeByDate,
   });
 
   // Red de seguridad: si el plan viola una regla del protocolo se avisa en la respuesta.
-  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts });
+  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts, banned: thresholds?.bannedStimuli ?? [] });
 
   const created: string[] = [];
   const skipped: string[] = [];
@@ -68,6 +95,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
             suggestedCarbsGPerHour: day.fueling.suggestedCarbsGPerHour,
             requiresMultipleCarbSources: day.fueling.requiresMultipleCarbSources,
             rationale: day.rationale,
+            environment: "road",
           },
         });
         created.push(key);

@@ -1,6 +1,6 @@
 import { WorkoutBlock } from "./tss";
 
-function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
+export function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
   const z1Watts = Math.round(ftp * 0.5);
   const z2Watts = Math.round(ftp * 0.65);
   const z1Sec = Math.min(600, Math.round(totalSec * 0.4));
@@ -34,7 +34,7 @@ export function sprintSetsLayout(n: number): number[] {
 
 export const VT1_PCT_FTP = 0.72; // VT1 (umbral aeróbico) ≈ 72% FTP — aproximación práctica, no medida
 
-function buildWarmupVo2(ftp: number): WorkoutBlock[] {
+export function buildWarmupVo2(ftp: number): WorkoutBlock[] {
   const z1Watts = Math.round(ftp * 0.5);
   const thresholdWatts = Math.round(ftp * VT1_PCT_FTP);
   const primerWatts = ftp;
@@ -48,7 +48,7 @@ function buildWarmupVo2(ftp: number): WorkoutBlock[] {
   ];
 }
 
-function buildCooldown(totalSec: number, ftp: number): WorkoutBlock[] {
+export function buildCooldown(totalSec: number, ftp: number): WorkoutBlock[] {
   const z1Watts = Math.round(ftp * 0.5);
   const z2Watts = Math.round(ftp * 0.6);
   const z2Sec = Math.round(totalSec * 0.6);
@@ -63,7 +63,7 @@ function buildCooldown(totalSec: number, ftp: number): WorkoutBlock[] {
  * Vuelta a la calma tras HIIT (Chicharro & Vicente-Campos 2018): ~15 min continuos suaves al
  * 70–80% del umbral láctico/VT1. Primera parte al 80% del VT1, segunda al 72%.
  */
-function buildCooldownVo2(ftp: number): WorkoutBlock[] {
+export function buildCooldownVo2(ftp: number): WorkoutBlock[] {
   const vt1 = ftp * VT1_PCT_FTP;
   return [
     { type: "cooldown_z2", durationSec: 540, targetWatts: Math.round(vt1 * 0.8) },
@@ -142,6 +142,25 @@ export function buildBlocks(
     ];
   }
 
+  /**
+   * Z2 progresivo: el rodaje sube de ~62% a ~74% del FTP en tres tramos iguales (todo dentro de Z2).
+   * Práctica de entrenadores: no hay ensayos que lo comparen con el Z2 plano; aporta variedad de estímulo
+   * y de sensaciones sin salir de baja intensidad.
+   */
+  if (stimulusType === "z2_progressive") {
+    const warmupSec = Math.min(900, Math.round(totalSec * 0.15));
+    const cooldownSec = Math.min(600, Math.round(totalSec * 0.1));
+    const mainSec = Math.max(900, totalSec - warmupSec - cooldownSec);
+    const third = Math.max(300, Math.round(mainSec / 3 / 60) * 60);
+    const parts = [third, third, Math.max(300, mainSec - 2 * third)];
+    const pcts = [0.62, 0.68, 0.74];
+    return [
+      ...buildWarmupZ2(warmupSec, ftp),
+      ...parts.map((d, i) => ({ type: "z2", durationSec: d, targetWatts: Math.round(ftp * pcts[i]) })),
+      ...buildCooldown(cooldownSec, ftp),
+    ];
+  }
+
   const midPct = intensityPctLow && intensityPctHigh ? (intensityPctLow + intensityPctHigh) / 2 : 90;
   const targetWatts = Math.round(ftp * (midPct / 100));
 
@@ -181,6 +200,147 @@ export function buildBlocks(
 
   const warmupSec = Math.min(1200, Math.round(totalSec * 0.2));
   const cooldownSec = Math.min(600, Math.round(totalSec * 0.12));
+  const pstep = Math.min(2, Math.max(0, progressionStep));
+
+  /**
+   * Tempo en bloques (Z3 alto, ~82% FTP): 2-3 bloques de 15→20→25 min con 5 min de Z2 entre bloques,
+   * dentro de un rodaje. Práctica de entrenadores, SIN ensayos propios; da una distribución más
+   * piramidal (parte del volumen entre Z2 y umbral) frente al polarizado puro.
+   */
+  if (stimulusType === "endurance_tempo") {
+    const blockSec = [900, 1200, 1500][pstep];
+    const recSec = 300;
+    const tempoWatts = Math.round(ftp * (intensityPctLow && intensityPctHigh ? midPct / 100 : 0.82));
+    const avail = totalSec - warmupSec - cooldownSec;
+    let reps = Math.max(1, Math.min(3, Math.floor((avail + recSec) / (blockSec + recSec))));
+    if (maintenance) reps = Math.max(1, Math.ceil(reps / 2));
+    const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
+    for (let i = 0; i < reps; i++) {
+      blocks.push({ type: "interval", durationSec: blockSec, targetWatts: tempoWatts });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: z2Watts });
+    }
+    const cool = buildCooldown(cooldownSec, ftp);
+    const fill = totalSec - blocks.reduce((s, b) => s + b.durationSec, 0) - cool.reduce((s, b) => s + b.durationSec, 0);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cool];
+  }
+
+  /**
+   * Over-unders: series de ciclos de 2' "under" (~94% FTP) + 1' "over" (~105% FTP), con 5' de Z2 entre series.
+   * Práctica de entrenadores (sin ensayos): trabajo alrededor del umbral con cambios de ritmo.
+   * Progresión por mesociclo: (4 ciclos × 2 series) → (4 × 3) → (5 × 3).
+   */
+  if (stimulusType === "over_under") {
+    const [cycles, setsTarget] = [[4, 2], [4, 3], [5, 3]][pstep];
+    const underSec = 120;
+    const overSec = 60;
+    const recSec = 300;
+    const setSec = cycles * (underSec + overSec);
+    const avail = totalSec - warmupSec - cooldownSec;
+    let sets = Math.max(1, Math.min(setsTarget, Math.floor((avail + recSec) / (setSec + recSec))));
+    if (maintenance) sets = Math.max(1, Math.ceil(sets / 2));
+    const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
+    for (let s = 0; s < sets; s++) {
+      for (let c = 0; c < cycles; c++) {
+        blocks.push({ type: "interval", durationSec: underSec, targetWatts: Math.round(ftp * 0.94) });
+        blocks.push({ type: "interval", durationSec: overSec, targetWatts: Math.round(ftp * 1.05) });
+      }
+      if (s < sets - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: z2Watts });
+    }
+    const cool = buildCooldown(cooldownSec, ftp);
+    const fill = totalSec - blocks.reduce((s, b) => s + b.durationSec, 0) - cool.reduce((s, b) => s + b.durationSec, 0);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cool];
+  }
+
+  /**
+   * VO2max con intervalos largos: 4-5 × 5' con recuperación activa de 2'30" al 50% de la potencia del intervalo
+   * (formato "largo" de Rønnestad 2015, que lo comparó con 30/15). Los ensayos igualaron por esfuerzo percibido:
+   * la intensidad (~92% de la PAM, o ~111% FTP sin PAM) es criterio propio. Calentamiento y vuelta a la calma de HIIT.
+   */
+  if (stimulusType === "vo2_long") {
+    const reps0 = [4, 4, 5, 5][Math.min(3, Math.max(0, progressionStep))];
+    const reps = maintenance ? Math.max(2, Math.ceil(reps0 / 2)) : reps0;
+    const base = pvo2maxWatts ? pvo2maxWatts * 0.92 : targetWatts;
+    const intervalWatts = Math.round(Math.max(base, ftp * 1.02));
+    const recWatts = Math.round(intervalWatts * 0.5);
+    const blocks: WorkoutBlock[] = [...buildWarmupVo2(ftp)];
+    for (let i = 0; i < reps; i++) {
+      blocks.push({ type: "interval", durationSec: 300, targetWatts: intervalWatts });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: 150, targetWatts: recWatts });
+    }
+    const cool = buildCooldownVo2(ftp);
+    const fill = totalSec - blocks.reduce((s, b) => s + b.durationSec, 0) - cool.reduce((s, b) => s + b.durationSec, 0);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cool];
+  }
+
+  /**
+   * Sprints cortos neuromusculares (Kristoffersen 2019): series de 4 sprints de ~6 s sentado, salida desde parado,
+   * resistencia alta (110-120 rpm al final), 2 min de recuperación entre sprints y 5 min entre series.
+   * El estudio hizo 3 series, 2 veces por semana, 6 semanas, en ciclistas competitivos: mejoró la potencia pico
+   * (+5,6% a 6 s) sin cambios en VO2max. Aquí va dentro de un rodaje Z2, 1 vez por semana y con 1→3 series.
+   */
+  if (stimulusType === "sprint_neuro") {
+    const sets = maintenance ? 1 : Math.min(3, Math.max(1, seriesOverride ?? 3));
+    const blocks: WorkoutBlock[] = [...buildWarmupZ2(Math.min(900, Math.round(totalSec * 0.2)), ftp)];
+    for (let s = 0; s < sets; s++) {
+      for (let i = 0; i < 4; i++) {
+        blocks.push({ type: "interval", durationSec: 6, targetWatts: Math.round(ftp * 2.0) });
+        if (i < 3) blocks.push({ type: "recovery", durationSec: 120, targetWatts: Math.round(ftp * 0.4) });
+      }
+      if (s < sets - 1) blocks.push({ type: "z2", durationSec: 300, targetWatts: z2Watts });
+    }
+    const cool = buildCooldown(Math.min(600, Math.round(totalSec * 0.1)), ftp);
+    const fill = totalSec - blocks.reduce((s, b) => s + b.durationSec, 0) - cool.reduce((s, b) => s + b.durationSec, 0);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cool];
+  }
+
+  /**
+   * Salida larga con esfuerzo tardío ("durabilidad"): Z2 durante la mayor parte y 2-3 bloques de ~88% FTP al final,
+   * con la fatiga acumulada. La durabilidad existe y se asocia al rendimiento (Maunder 2021), pero que ESTA sesión la
+   * mejore es una hipótesis: el único ensayo (Matomäki 2023, no entrenados) no mostró ventaja de la intensidad.
+   */
+  if (stimulusType === "long_durability") {
+    const [n0, blockSec] = [[2, 600], [2, 900], [3, 720]][pstep];
+    const recSec = 300;
+    const wu = Math.min(900, Math.round(totalSec * 0.1));
+    const cd = Math.min(600, Math.round(totalSec * 0.06));
+    let n = n0;
+    const finalSecFor = (k: number) => k * blockSec + (k - 1) * recSec;
+    while (n > 1 && totalSec - wu - cd - finalSecFor(n) < 3600) n--;
+    const mainSec = totalSec - wu - cd - finalSecFor(n);
+    if (mainSec < 1800) return buildBlocks("z2", targetDurationMin, ftp, null, null);
+    const blocks: WorkoutBlock[] = [...buildWarmupZ2(wu, ftp), { type: "z2", durationSec: mainSec, targetWatts: z2Watts }];
+    for (let i = 0; i < n; i++) {
+      blocks.push({ type: "interval", durationSec: blockSec, targetWatts: Math.round(ftp * 0.88) });
+      if (i < n - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: z2Watts });
+    }
+    return [...blocks, ...buildCooldown(cd, ftp)];
+  }
+
+  /**
+   * Torque a cadencia baja: 4-5 × 6' a ~72% FTP a 55 rpm (sentado, resistencia alta). La revisión sistemática de
+   * Hansen & Rønnestad (2017) no encontró beneficio sólido y Kristoffersen 2014 (40 rpm) tampoco: es opcional,
+   * infrecuente y con aviso de rodilla. Para fuerza, lo respaldado en ciclistas es el gimnasio.
+   */
+  if (stimulusType === "torque_low_cadence") {
+    const target = [4, 5, 5][pstep];
+    const blockSec = 360;
+    const recSec = 240;
+    const avail = totalSec - warmupSec - cooldownSec;
+    const reps = Math.max(2, Math.min(target, Math.floor((avail + recSec) / (blockSec + recSec))));
+    const blocks: WorkoutBlock[] = [...buildWarmupZ2(warmupSec, ftp)];
+    for (let i = 0; i < reps; i++) {
+      blocks.push({ type: "interval", durationSec: blockSec, targetWatts: Math.round(ftp * 0.72), cadenceRpm: 55 });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: z2Watts });
+    }
+    const cool = buildCooldown(cooldownSec, ftp);
+    const fill = totalSec - blocks.reduce((s, b) => s + b.durationSec, 0) - cool.reduce((s, b) => s + b.durationSec, 0);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cool];
+  }
 
   if (stimulusType === "sweet_spot" || stimulusType === "umbral") {
     // Progresión por mesociclo: sweet spot 20→25→30 min, umbral 8→10→12 min (práctica de

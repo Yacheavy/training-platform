@@ -9,47 +9,59 @@ function formatDuration(sec: number): string {
 }
 
 function stepLine(b: WorkoutBlock, pct: (w: number) => string): string {
-  return `- ${formatDuration(b.durationSec)} ${pct(b.targetWatts)}`;
+  return `- ${formatDuration(b.durationSec)} ${pct(b.targetWatts)}${b.cadenceRpm ? ` ${b.cadenceRpm}rpm` : ""}`;
 }
 
-const same = (a: WorkoutBlock, b: WorkoutBlock) => a.durationSec === b.durationSec && a.targetWatts === b.targetWatts;
+const same = (a: WorkoutBlock, b: WorkoutBlock) => a.durationSec === b.durationSec && a.targetWatts === b.targetWatts && a.cadenceRpm === b.cadenceRpm;
 
 /**
- * Serie principal conservando el ORDEN de los bloques. Las tandas consecutivas e idénticas de
- * intervalo+recuperación se escriben con la notación de repetición de Intervals ("13x"), de modo
- * que se vea claramente cuántas repeticiones tiene cada serie; el resto (Z2, relleno, descansos
- * entre series) va como pasos sueltos.
+ * Serie principal conservando el ORDEN de los bloques. Las tandas consecutivas e idénticas se escriben con
+ * la notación de repetición de Intervals ("13x"), de modo que se vea cuántas repeticiones tiene cada serie:
+ *  - intervalo + recuperación (HIIT, 30/15, sprints, tempo, torque…)
+ *  - intervalo + intervalo (over-unders: 2' under + 1' over)
+ * Si tras una tanda de pares queda UNA repetición final sin recuperación (la última antes de la vuelta a la
+ * calma), se escribe aparte como "Última repetición": así el total de repeticiones es exacto.
+ * El resto (Z2, relleno, descansos entre series) va como pasos sueltos. Devuelve también las repeticiones de cada serie.
  */
-function buildMainSetSection(mainBlocks: WorkoutBlock[], pct: (w: number) => string): string {
+function buildMainSetSection(mainBlocks: WorkoutBlock[], pct: (w: number) => string): { text: string; reps: number[] } {
   const sections: string[] = [];
+  const reps: number[] = [];
   let loose: string[] = [];
   let setNo = 0;
   const flushLoose = () => {
     if (loose.length) sections.push(`${sections.length === 0 ? "Main Set" : "Pasos"}\n${loose.join("\n")}`);
     loose = [];
   };
+  const isPair = (a: WorkoutBlock | undefined, b: WorkoutBlock | undefined) =>
+    !!a && !!b && a.type === "interval" && (b.type === "recovery" || (b.type === "interval" && !same(a, b)));
 
   let i = 0;
   while (i < mainBlocks.length) {
     const iv = mainBlocks[i];
     const rc = mainBlocks[i + 1];
-    if (iv.type === "interval" && rc && rc.type === "recovery") {
+    if (isPair(iv, rc)) {
       let n = 1;
-      while (
-        mainBlocks[i + n * 2]?.type === "interval" && mainBlocks[i + n * 2 + 1]?.type === "recovery" &&
-        same(mainBlocks[i + n * 2], iv) && same(mainBlocks[i + n * 2 + 1], rc)
-      ) n++;
+      while (isPair(mainBlocks[i + n * 2], mainBlocks[i + n * 2 + 1]) && same(mainBlocks[i + n * 2], iv) && same(mainBlocks[i + n * 2 + 1], rc)) n++;
       flushLoose();
       setNo++;
       sections.push(`${setNo === 1 ? "Main Set" : `Serie ${setNo}`} ${n}x\n${stepLine(iv, pct)}\n${stepLine(rc, pct)}`);
       i += n * 2;
+      let total = n;
+      // Repetición final sin recuperación posterior (solo cuando el par era intervalo + recuperación)
+      const tail = mainBlocks[i];
+      if (rc.type === "recovery" && tail && tail.type === "interval" && same(tail, iv) && mainBlocks[i + 1]?.type !== "recovery") {
+        sections.push(`Última repetición\n${stepLine(tail, pct)}`);
+        total++;
+        i++;
+      }
+      reps.push(total);
     } else {
       loose.push(stepLine(iv, pct));
       i++;
     }
   }
   flushLoose();
-  return sections.join("\n\n");
+  return { text: sections.join("\n\n"), reps };
 }
 
 export interface FuelingInfo {
@@ -80,12 +92,15 @@ export function buildStructuredWorkout(
   const cooldownBlocks = blocks.filter((b) => b.type.startsWith("cooldown"));
 
   const sections: string[] = [];
+  let mainReps: number[] = [];
 
   if (warmupBlocks.length > 0) {
     sections.push(`Warmup\n${warmupBlocks.map((b) => stepLine(b, pct)).join("\n")}`);
   }
   if (mainBlocks.length > 0) {
-    sections.push(buildMainSetSection(mainBlocks, pct));
+    const main = buildMainSetSection(mainBlocks, pct);
+    mainReps = main.reps;
+    sections.push(main.text);
   }
   if (cooldownBlocks.length > 0) {
     sections.push(`Cooldown\n${cooldownBlocks.map((b) => stepLine(b, pct)).join("\n")}`);
@@ -94,9 +109,9 @@ export function buildStructuredWorkout(
   const structuredPart = sections.join("\n\n");
 
   const notesLines: string[] = [];
-  const reps = [...structuredPart.matchAll(/^(?:Main Set|Serie \d+) (\d+)x$/gm)].map((m) => Number(m[1]));
+  const reps = mainReps;
   if (reps.length > 0) {
-    notesLines.push(`Estructura: ${reps.length === 1 ? "UNA sola serie" : `${reps.length} series`} — total ${reps.reduce((x, y) => x + y, 0)} repeticiones${reps.length > 1 ? ` (${reps.join(" + ")})` : ""}. No agregues series.`);
+    notesLines.push(`Estructura: ${reps.length === 1 ? "UNA sola serie" : `${reps.length} series`} — total ${reps.reduce((x, y) => x + y, 0)} repeticiones${reps.length > 1 ? ` (${reps.join(" + ")})` : ""}. No agregues ni quites series.`);
   }
   if (fueling) {
     notesLines.push(

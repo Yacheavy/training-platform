@@ -1,5 +1,6 @@
 import { ActionForm } from "./ActionForm";
 import { SubmitButton } from "./SubmitButton";
+import { VARIANTS, EVIDENCE_LABELS, FAMILY_LABELS, FAMILY_ORDER, BANNABLE_KEYS } from "@/lib/training-engine/variants";
 
 interface Thresholds {
   minTsb: number;
@@ -8,6 +9,8 @@ interface Thresholds {
   ftpTestProtocol: string;
   deloadRatio: string;
   vo2Stimulus?: string | null;
+  varietyLevel?: string | null;
+  bannedStimuli?: string[] | null;
 }
 
 function Field({ label, hint, unit, children }: { label: string; hint: string; unit?: string; children: React.ReactNode }) {
@@ -105,13 +108,53 @@ export function ThresholdsCard({
           </p>
           <div className="field-grid">
             <Field label="Sesión de VO2max" hint="Sugerido para el objetivo VO2max: HIIT genuino (López Chicharro 2018). Rønnestad 30/15 tiene evidencia en ciclistas entrenados y progresa por series; alternar es criterio de práctica.">
-              <select name="vo2Stimulus" defaultValue={t.vo2Stimulus ?? "hiit_genuino"}>
-                <option value="hiit_genuino">HIIT genuino 7×3′ al 100% PAM — sugerido para VO2max</option>
-                <option value="ronnestad_30_15">Rønnestad 30/15 (3×13 de 30″/15″)</option>
+              <select name="vo2Stimulus" defaultValue={t.vo2Stimulus ?? (t.varietyLevel === "conservative" ? "hiit_genuino" : "rotate")}>
+                <option value="rotate">Rotar: HIIT genuino / Rønnestad 30/15 / VO2max largo 5′</option>
+                <option value="hiit_genuino">Solo HIIT genuino 7×3′ al 100% PAM</option>
+                <option value="ronnestad_30_15">Solo Rønnestad 30/15 (3×13 de 30″/15″)</option>
                 <option value="alternate">Alternar semanas: HIIT genuino / Rønnestad</option>
               </select>
             </Field>
           </div>
+        </div>
+
+        <div className="group">
+          <h3 className="group-title">Variedad de sesiones</h3>
+          <p className="group-desc">
+            El plan rota entre variantes de cada familia (base, umbral, VO2max, neuromuscular, fuerza en bici) respetando tu objetivo, la separación entre sesiones duras y las semanas de descarga. Cada variante muestra cuánta evidencia tiene: varias son práctica de entrenadores, no ensayos.
+          </p>
+          <div className="field-grid">
+            <Field label="Nivel de variedad" hint="Conservador: casi solo las sesiones clásicas del objetivo. Equilibrado (sugerido): rotación moderada. Variado: más variantes y más seguido.">
+              <select name="varietyLevel" defaultValue={t.varietyLevel ?? "balanced"}>
+                <option value="conservative">Conservador</option>
+                <option value="balanced">Equilibrado — sugerido</option>
+                <option value="varied">Variado</option>
+              </select>
+            </Field>
+          </div>
+          <details style={{ marginTop: "12px" }}>
+            <summary style={{ cursor: "pointer", fontSize: "13px", color: "var(--teal)" }}>Vetar variantes que no querés que aparezcan</summary>
+            <div style={{ marginTop: "10px" }}>
+              {FAMILY_ORDER.map((fam) => {
+                const items = BANNABLE_KEYS.map((k) => VARIANTS[k]).filter((v) => v.family === fam);
+                if (!items.length) return null;
+                return (
+                  <div key={fam} style={{ marginBottom: "12px" }}>
+                    <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "6px" }}>{FAMILY_LABELS[fam]}</div>
+                    {items.map((v) => (
+                      <label key={v.key} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "12.5px", marginBottom: "6px", cursor: "pointer" }}>
+                        <input type="checkbox" name="banned" value={v.key} defaultChecked={(t.bannedStimuli ?? []).includes(v.key)} style={{ marginTop: "3px" }} />
+                        <span>
+                          <b>{v.label}</b> <span style={{ color: "var(--text-dim)" }}>· {EVIDENCE_LABELS[v.evidence]}</span>
+                          <span style={{ display: "block", color: "var(--text-muted)" }}>{v.purpose}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </details>
         </div>
 
         <div style={{ marginTop: "22px" }}>

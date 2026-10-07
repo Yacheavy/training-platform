@@ -34,6 +34,40 @@ export function getExecutionTips(stimulusType: string): string[] {
       "Los 4 min entre sprints son suaves (~100 W): recuperá casi por completo antes del siguiente.",
       "Si el gimnasio del día anterior te dejó las piernas cargadas o te sentís mal, hacelo como Z2 puro y salteá los sprints.",
     ],
+    z2_progressive: [
+      "Arrancá bien suave y subí un escalón cada tercio de la salida; el último tercio sigue siendo Z2 alto (conversación entrecortada, no jadeo).",
+      "Si el último tercio te deja fatigado para el día siguiente, quedate en el escalón del medio: es una sesión de base, no de calidad.",
+    ],
+    endurance_tempo: [
+      "Los bloques van por debajo del umbral: tienen que sentirse sostenibles, 'firmes pero controlados'. Si te cuesta hablar una frase corta, bajá unos watts.",
+      "Los 5 min de Z2 entre bloques son parte de la sesión: recuperá de verdad antes del siguiente.",
+    ],
+    over_under: [
+      "El 'over' (1 min, ~105% FTP) no es un sprint: apenas por encima del umbral; el 'under' (2 min) NO es recuperación, sostené el esfuerzo.",
+      "Pasá de under a over con suavidad (subí de a poco los 10-15 s previos) y mantené cadencia estable.",
+      "Entre series (5 min Z2) soltá de verdad. Si no sostenés la última serie, cortala antes de perder la forma.",
+    ],
+    vo2_long: [
+      "Cinco minutos es largo: no salgas por encima del watt objetivo en el primer minuto o no llegás al último intervalo.",
+      "Guiate por la potencia; la frecuencia cardíaca tarda 1-2 min en subir y en los intervalos largos sube con deriva.",
+      "Recuperación de 2:30 al ~50%: pedaleá suave, no pares. Si no completás la última repetición, anotalo.",
+    ],
+    sprint_neuro: [
+      "Cada sprint dura apenas 6 s: salí desde casi parado, sentado, con resistencia alta, y acelerá al máximo sostenido hasta el final.",
+      "Recuperá bien (2 min) entre sprints y 5 min entre series: la calidad de cada sprint importa más que la cantidad.",
+      "Hacelo en llano o en falsa bajada controlada y con buen agarre. Si hay dolor o molestia (cadera, rodilla, espalda), cortá la serie.",
+      "No hacerlo con piernas muy cargadas ni el día después de una sesión dura.",
+    ],
+    long_durability: [
+      "La primera parte es Z2 de verdad: la idea es llegar a los bloques finales ya con fatiga acumulada, sin haberte pasado antes.",
+      "En los bloques finales sostené la potencia (~88% FTP) con cadencia estable; si la potencia cae mucho, cortá el último bloque.",
+      "Comé y tomá según el plan de nutrición (este es el tipo de salida donde más importa).",
+    ],
+    torque_low_cadence: [
+      "Cadencia baja (~55 rpm) pero potencia moderada: es fuerza específica, no esfuerzo máximo. Hacelo sentado y en llano o falsa subida.",
+      "Si sentís molestia en las rodillas, subí la cadencia o cortá: es lo primero que se resiente con este trabajo.",
+      "La evidencia de este tipo de sesión no es concluyente: es una variante de variedad, no una prioridad.",
+    ],
     z2: [
       "Mantené la conversación posible — si no podés hablar en frases completas, estás por encima de Z2.",
       "Cadencia constante, sin necesidad de forzar watts si el terreno cambia (viento, subida leve).",

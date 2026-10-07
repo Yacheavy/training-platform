@@ -227,6 +227,10 @@ model AthleteThresholds {
   deloadRatio        String  @default("4:1")
   /// Estímulo de VO2max preferido: null/"hiit_genuino" | "ronnestad_30_15" | "alternate" (alterna semanas)
   vo2Stimulus        String?
+  /// Nivel de variedad de sesiones: conservative | balanced | varied
+  varietyLevel       String  @default("balanced")
+  /// Variantes de sesión que el atleta vetó
+  bannedStimuli      String[] @default([])
 }
 
 model AthleteBaseline {
@@ -328,6 +332,8 @@ model GeneratedWorkout {
   requiresMultipleCarbSources Boolean @default(false)
 
   rationale      String?
+  /// "road" | "indoor" (rodillo)
+  environment    String   @default("road")
   approvedAt     DateTime?
   sentToIntervalsAt DateTime?
 

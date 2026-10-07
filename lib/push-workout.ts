@@ -28,7 +28,7 @@ export async function pushWorkoutToIntervals(athleteId: string, workoutId: strin
   );
   await createEvent(creds.athleteId, creds.apiKey, {
     external_id: workout.id,
-    name: buildWorkoutName(workout.workoutLibraryKey, blocks, user.ftp),
+    name: buildWorkoutName(workout.workoutLibraryKey, blocks, user.ftp) + (workout.environment === "indoor" ? " (rodillo)" : ""),
     startDateLocal: dateKeyLocal(new Date(workout.date)) + "T07:00:00",
     description,
     movingTimeSec: blocks.reduce((s, b) => s + b.durationSec, 0),

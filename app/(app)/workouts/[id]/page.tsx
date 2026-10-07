@@ -6,15 +6,15 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ATHLETE_TZ } from "@/lib/tz";
-import { approveWorkout, sendWorkoutToIntervals, regenerateWorkout } from "@/lib/workout-actions";
+import { approveWorkout, sendWorkoutToIntervals, regenerateWorkout, alternativeWorkout, moveWorkoutIndoor } from "@/lib/workout-actions";
+import { VARIANTS, EVIDENCE_LABELS, FAMILY_LABELS } from "@/lib/training-engine/variants";
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
 import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
 
-type Block = { type: string; durationSec: number; targetWatts: number };
+type Block = { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number };
 
 const TYPE_LABELS: Record<string, string> = {
   gym: "Gimnasio",
-  z2: "Z2 / Base aeróbica",
   hiit_genuino: "HIIT genuino",
   ronnestad_30_15: "Rønnestad 30/15",
   z2_sprints: "Z2 con sprints",
@@ -22,6 +22,8 @@ const TYPE_LABELS: Record<string, string> = {
   rst: "RST",
   sweet_spot: "Sweet spot",
   umbral: "Umbral",
+  ...Object.fromEntries(Object.values(VARIANTS).map((v) => [v.key, v.label])),
+  z2: "Z2 / Base aeróbica",
   ftp_test: "Test de FTP (20 min)",
   ftp_test_8min: "Test de FTP (8 min)",
   ftp_test_5min: "Test de FTP (5 min)",
@@ -59,7 +61,7 @@ function fmt(sec: number): string {
   return s ? `${m} min ${s} s` : `${m} min`;
 }
 
-interface Row { label: string; count: number; parts: { type: string; durationSec: number; targetWatts: number }[] }
+interface Row { label: string; count: number; parts: { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number }[] }
 
 /** Agrupa pares repetidos (intervalo + recuperación) en una sola fila "N × (…)". */
 function groupBlocks(blocks: Block[]): Row[] {
@@ -103,6 +105,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   const rows = groupBlocks(blocks);
   const rationaleItems = (workout.rationale ?? "").split(" · ").filter(Boolean);
   const tips = getExecutionTips(workout.workoutLibraryKey);
+  const variant = VARIANTS[workout.workoutLibraryKey];
   const pct = (w: number) => (ftp ? `${Math.round((w / ftp) * 100)}%` : "—");
   const dateLabel = new Date(workout.date).toLocaleDateString("es-AR", {
     weekday: "long", day: "numeric", month: "long", timeZone: ATHLETE_TZ,
@@ -127,6 +130,14 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         <span style={{ fontSize: "11px", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px" }}>
           {STATUS_LABELS[workout.status] ?? workout.status}
         </span>
+        {workout.environment === "indoor" && (
+          <span style={{ fontSize: "11px", color: "var(--amber)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px", marginLeft: "8px" }}>Rodillo</span>
+        )}
+        {variant && (
+          <span style={{ fontSize: "11px", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px", marginLeft: "8px" }}>
+            {FAMILY_LABELS[variant.family]} · evidencia: {EVIDENCE_LABELS[variant.evidence]}
+          </span>
+        )}
       </div>
 
       <div style={card}>
@@ -159,7 +170,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
                     key={`${i}-${k}`}
                     label={k === 0 ? `${r.count} × ${BLOCK_LABELS[r.parts[0].type] ?? r.parts[0].type}` : `   ${BLOCK_LABELS[r.parts[1].type] ?? r.parts[1].type}`}
                     dur={fmt(r.parts[k].durationSec)}
-                    power={`${r.parts[k].targetWatts} W · ${pct(r.parts[k].targetWatts)}`}
+                    power={`${r.parts[k].targetWatts} W · ${pct(r.parts[k].targetWatts)}${r.parts[k].cadenceRpm ? ` · ${r.parts[k].cadenceRpm} rpm` : ""}`}
                     strong={k === 0}
                   />
                 ))
@@ -168,7 +179,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
                   key={i}
                   label={r.count > 1 ? `${r.count} × ${r.label}` : r.label}
                   dur={fmt(r.parts[0].durationSec)}
-                  power={`${r.parts[0].targetWatts} W · ${pct(r.parts[0].targetWatts)}`}
+                  power={`${r.parts[0].targetWatts} W · ${pct(r.parts[0].targetWatts)}${r.parts[0].cadenceRpm ? ` · ${r.parts[0].cadenceRpm} rpm` : ""}`}
                 />
               )
             )}
@@ -186,6 +197,17 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6 }}>
             {rationaleItems.map((t, i) => <li key={i}>{t}</li>)}
           </ul>
+        </div>
+      )}
+
+      {variant && (
+        <div style={card}>
+          <div style={h}>Para qué sirve</div>
+          <div style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6 }}>
+            <div>{variant.purpose}</div>
+            <div style={{ marginTop: "8px" }}><b style={{ color: "var(--text)" }}>Evidencia ({EVIDENCE_LABELS[variant.evidence]}):</b> {variant.evidenceNote}</div>
+            {variant.caveat && <div style={{ marginTop: "8px", color: "var(--amber)" }}>{variant.caveat}</div>}
+          </div>
         </div>
       )}
 
@@ -216,7 +238,19 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         {workout.status !== "COMPLETED" && (
           <ActionForm action={regenerateWorkout} success="Sesión regenerada con tus valores actuales">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Regenerar esta sesión</SubmitButton>
+            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Volver a ruta (regenerar)" : "Regenerar esta sesión"}</SubmitButton>
+          </ActionForm>
+        )}
+        {workout.status !== "COMPLETED" && workout.workoutLibraryKey !== "gym" && !workout.workoutLibraryKey.startsWith("ftp_test") && (
+          <ActionForm action={alternativeWorkout} success="Variante cambiada">
+            <input type="hidden" name="workoutId" value={workout.id} />
+            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Otra variante</SubmitButton>
+          </ActionForm>
+        )}
+        {workout.status !== "COMPLETED" && workout.workoutLibraryKey !== "gym" && workout.environment !== "indoor" && (
+          <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo">
+            <input type="hidden" name="workoutId" value={workout.id} />
+            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Pasar a rodillo</SubmitButton>
           </ActionForm>
         )}
       </div>

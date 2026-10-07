@@ -2,8 +2,10 @@ import { buildMesocycleWeeks } from "./mesocycle-builder";
 import { buildBlocks, sprintCountFor } from "./block-builder";
 import { calculateTss, WorkoutBlock } from "./tss";
 import { calculateFueling, FuelingResult } from "./fueling";
-import { assignWeeklyQualityStimuli, primaryStimulusFor } from "./quality-assignment";
-import { dayOfWeekLocal } from "../tz";
+import { assignWeeklyQualityStimuli, assignWeeklyQualityRoles, primaryStimulusFor, QualityRole } from "./quality-assignment";
+import { pickVariant, normalizeLevel, HistoryEntry, SlotRole } from "./variety";
+import { VARIANTS } from "./variants";
+import { dayOfWeekLocal, dateKeyLocal } from "../tz";
 
 /**
  * Planificador PURO (sin base de datos): dado el bloque, el FTP, los umbrales,
@@ -20,8 +22,12 @@ export interface PlanThresholds {
   deloadRatio: string;
   weeksBetweenFtpTest: number;
   ftpTestProtocol?: string | null;
-  /** Preferencia de VO2max: hiit_genuino | ronnestad_30_15 | alternate (solo objetivo vo2max). */
+  /** Preferencia de VO2max: hiit_genuino | ronnestad_30_15 | alternate | rotate (solo objetivo vo2max). */
   vo2Stimulus?: string | null;
+  /** Nivel de variedad: conservative | balanced | varied (por defecto balanced). */
+  varietyLevel?: string | null;
+  /** Variantes que el atleta vetó. */
+  bannedStimuli?: string[] | null;
 }
 export interface PlanTemplateSlot {
   dayOfWeek: number;
@@ -48,9 +54,16 @@ export interface PlannedDay {
   rationale: string;
   /** Duración objetivo del slot (min, ya con el multiplicador de carga), para avisar si el protocolo la excede. */
   slotTargetMin?: number;
+  /** Rol de la sesión en la semana (solo ciclismo con selector de variantes). */
+  role?: SlotRole;
 }
 
-const MAINTAINABLE = new Set(["hiit_genuino", "ronnestad_30_15", "sweet_spot", "umbral"]);
+/** Variantes con escalón de progresión por mesociclo (calendario; Fase 2 lo ajustará con la ejecución real). */
+const PROGRESSION_KEYS = new Set(["hiit_genuino", "sweet_spot", "umbral", "vo2_long", "over_under", "endurance_tempo", "long_durability"]);
+/** Variantes con series 1→3 (criterio propio, igual que Rønnestad). */
+const SERIES_KEYS = new Set(["ronnestad_30_15", "z2_sprints", "sprint_neuro"]);
+/** Un slot de ciclismo de al menos esta duración (min) se trata como salida larga. */
+export const LONG_SLOT_MIN = 150;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function getFtpTestStimulusType(protocol: string | null | undefined): string {
@@ -105,8 +118,27 @@ export function buildPlan(input: {
   thresholds: PlanThresholds;
   template: PlanTemplateSlot[];
   library: Record<string, PlanLibraryEntry | undefined>;
+  /** Sesiones previas al plan (dayOffset negativo) para que la rotación continúe entre planes. */
+  history?: HistoryEntry[];
+  /** Variantes a excluir por fecha local (YYYY-MM-DD): botón "Otra variante". */
+  excludeByDate?: Record<string, string[]>;
+  /** Sesiones ya existentes (dayOffset → clave) que reemplazan a la simulación en el historial interno. */
+  fixedKeys?: Record<number, string>;
 }): PlannedDay[] {
   const { block, ftp, pvo2maxWatts, thresholds, template, library } = input;
+  const level = normalizeLevel(thresholds.varietyLevel);
+  const banned = new Set(thresholds.bannedStimuli ?? []);
+  const ledger: HistoryEntry[] = [...(input.history ?? [])];
+  const keyByOffset = new Map<number, string>(ledger.map((h) => [h.dayOffset, h.key]));
+  const rolesCache = new Map<string, QualityRole[]>();
+  const rolesForWeek = (primary: string): QualityRole[] => {
+    let r = rolesCache.get(primary);
+    if (!r) {
+      r = assignWeeklyQualityRoles(qualityDaySlots.map((s) => s.dayOfWeek), block.objective, library[primary]?.maxSessionsPerWeek ?? null);
+      rolesCache.set(primary, r);
+    }
+    return r;
+  };
 
   const slotByDay = new Map(template.map((t) => [t.dayOfWeek, t]));
   const qualityDaySlots = template
@@ -164,42 +196,99 @@ export function buildPlan(input: {
 
     let effectiveStimulusType: string;
     let maintenance = false;
+    let role: SlotRole | undefined;
+    let varietyReason = "";
+    const prevKey = keyByOffset.get(dayOffset - 1) ?? null;
+    // Un test de FTP el día anterior cuenta como sesión dura para el rodaje siguiente
+    const prevDayKey = prevKey && prevKey.startsWith("ftp_test") ? "umbral" : prevKey;
+    const qualityPos = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
+    const nextSlot = slotByDay.get((dayOfWeek + 1) % 7);
+    const nextIsQuality = !!nextSlot && nextSlot.stimulusType === "cycling" && nextSlot.isQualityDay;
+    const excludeSet = new Set<string>(input.excludeByDate?.[dateKeyLocal(date)] ?? []);
+    const pick = (r: SlotRole, deload: boolean, fullSlot = false) => {
+      const ex = new Set(excludeSet);
+      // Esfuerzo final largo el día antes de una sesión de calidad: no
+      if (nextIsQuality) ex.add("long_durability");
+      return pickVariant({
+        role: r,
+        objective: block.objective,
+        level,
+        vo2Stimulus: thresholds.vo2Stimulus,
+        weekIndex,
+        dayOffset,
+        slotMin: fullSlot ? (slot.targetDurationMin ?? 60) : Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier),
+        isDeload: deload,
+        history: ledger,
+        banned,
+        exclude: ex,
+        prevDayKey,
+      });
+    };
+
     if (slot.stimulusType === "gym") {
       effectiveStimulusType = "gym";
-    } else if (slot.isQualityDay) {
-      if (isFtpTestWeek && isFirstQualityDayOfWeek) {
-        effectiveStimulusType = ftpTestStimulusType;
-      } else if (mesocycleWeek.isDeload || taperWeek(weekIndex)) {
-        // Deload/taper: se conserva UNA sesión de intensidad con volumen reducido
-        // (la intensidad es lo que se mantiene; el volumen es lo que baja).
-        const keep = isFirstQualityDayOfWeek && MAINTAINABLE.has(isTapering ? "hiit_genuino" : primaryStimulus);
-        const positionInWeek = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
-        // El rodaje con sprints (baja fatiga) se conserva en descarga con una sola serie
-        const keepSprints = !keep && !isTapering && baseStimuliForWeek[positionInWeek] === "z2_sprints";
-        effectiveStimulusType = keep ? (isTapering ? "hiit_genuino" : primaryStimulus) : keepSprints ? "z2_sprints" : "z2";
-        maintenance = keep || keepSprints;
+    } else if (isFtpTestWeek && slot.isQualityDay && isFirstQualityDayOfWeek) {
+      effectiveStimulusType = ftpTestStimulusType;
+    } else if (isTapering) {
+      // Taper: lógica original (sin selector de variantes)
+      if (slot.isQualityDay) {
+        if (taperWeek(weekIndex)) {
+          const keep = isFirstQualityDayOfWeek;
+          const keepSprints = !keep && baseStimuliForWeek[qualityPos] === "z2_sprints";
+          effectiveStimulusType = keep ? "hiit_genuino" : keepSprints ? "z2_sprints" : "z2";
+          maintenance = keep || keepSprints;
+        } else {
+          effectiveStimulusType = baseStimuliForWeek[qualityPos] ?? primaryStimulus;
+        }
       } else {
-        const positionInWeek = qualityDaySlots.findIndex((s) => s.dayOfWeek === dayOfWeek);
-        effectiveStimulusType = baseStimuliForWeek[positionInWeek] ?? primaryStimulus;
+        effectiveStimulusType = "z2";
       }
     } else {
-      effectiveStimulusType = "z2";
+      const roles = rolesForWeek(primaryStimulus);
+      const qRole = slot.isQualityDay ? roles[qualityPos] : undefined;
+      if (qRole === "primary" || qRole === "secondary") {
+        role = qRole;
+        if (mesocycleWeek.isDeload) {
+          // Deload: se conserva UNA sesión de intensidad con volumen reducido (si la variante lo admite)
+          const p = pick(qRole, false, true);
+          const keepIt = isFirstQualityDayOfWeek ? !!VARIANTS[p.key]?.maintainable && qRole === "primary" : !!VARIANTS[p.key]?.maintainable && VARIANTS[p.key]?.neuro;
+          if (keepIt) {
+            effectiveStimulusType = p.key;
+            maintenance = true;
+            varietyReason = p.reason;
+          } else {
+            effectiveStimulusType = "z2";
+            role = "volume";
+          }
+        } else {
+          const p = pick(qRole, false);
+          effectiveStimulusType = p.key;
+          varietyReason = p.reason;
+        }
+      } else {
+        role = (slot.targetDurationMin ?? 60) >= LONG_SLOT_MIN ? "long" : "volume";
+        const p = pick(role, mesocycleWeek.isDeload);
+        effectiveStimulusType = p.key;
+        varietyReason = p.reason;
+      }
     }
+
+    const fixed = input.fixedKeys?.[dayOffset];
+    if (fixed && !isTapering && effectiveStimulusType !== "gym" && !effectiveStimulusType.startsWith("ftp_test") && VARIANTS[fixed]) {
+      effectiveStimulusType = fixed;
+    }
+    if (!isTapering && effectiveStimulusType !== "gym" && !effectiveStimulusType.startsWith("ftp_test")) {
+      ledger.push({ dayOffset, key: effectiveStimulusType });
+    }
+    keyByOffset.set(dayOffset, effectiveStimulusType);
 
     const lib = library[effectiveStimulusType];
     const targetDuration = Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier);
 
-    // Un escalón de progresión del HIIT genuino por mesociclo (cada 4-6 semanas según la base de conocimiento).
-    const progressionStep = ["hiit_genuino", "sweet_spot", "umbral"].includes(effectiveStimulusType)
-      ? Math.floor(weekIndex / cycleLength)
-      : 0;
-    // Series: Rønnestad 30/15 y rodaje con sprints comparten la progresión 1→2→3 (criterio propio)
-    const series =
-      effectiveStimulusType === "ronnestad_30_15" || effectiveStimulusType === "z2_sprints"
-        ? maintenance
-          ? 1
-          : ronnestadSeriesFor(weekIndex, cycleLength)
-        : undefined;
+    // Un escalón de progresión por mesociclo (cada 4-6 semanas según la base de conocimiento).
+    const progressionStep = PROGRESSION_KEYS.has(effectiveStimulusType) ? Math.floor(weekIndex / cycleLength) : 0;
+    // Series: Rønnestad 30/15, rodaje con sprints y sprints cortos comparten la progresión 1→3 (criterio propio)
+    const series = SERIES_KEYS.has(effectiveStimulusType) ? (maintenance ? 1 : ronnestadSeriesFor(weekIndex, cycleLength)) : undefined;
 
     const blocks = buildBlocks(
       effectiveStimulusType,
@@ -220,8 +309,8 @@ export function buildPlan(input: {
       rationaleParts.push(
         `Test de FTP programado (protocolo ${thresholds.ftpTestProtocol ?? "20min"}) — protocolo práctico de la industria, no ensayo controlado`
       );
-    } else if (slot.isQualityDay) {
-      const isPrimary = effectiveStimulusType === primaryStimulus;
+    } else if (slot.isQualityDay || (role && effectiveStimulusType !== "gym")) {
+      const isPrimary = role ? role === "primary" : effectiveStimulusType === primaryStimulus;
       const detail =
         effectiveStimulusType === "hiit_genuino"
           ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Configuración)"}`
@@ -230,9 +319,13 @@ export function buildPlan(input: {
             : effectiveStimulusType === "z2_sprints"
               ? ` · ${sprintCountFor(series ?? 3, maintenance)} sprints de 30" a máxima potencia dentro de un rodaje Z2 (Rønnestad 2020 usó 9; evidencia preliminar en ciclistas de élite; progresión 5→7→9 = criterio propio)`
               : "";
-      rationaleParts.push(
-        `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : effectiveStimulusType === "z2_sprints" ? " (segundo estímulo de baja fatiga — máx. 1 por semana, ≥48h del principal)" : " (alternativa — máx. 1 por semana, ≥48h del estímulo principal)"}${detail}`
-      );
+      const v = VARIANTS[effectiveStimulusType];
+      const evidence = v ? ` · evidencia: ${v.evidence === "ensayo" ? "ensayos" : v.evidence === "preliminar" ? "preliminar" : v.evidence === "practica" ? "práctica de entrenadores" : v.evidence === "hipotesis" ? "hipótesis" : "no concluyente"}` : "";
+      const head = role === "volume" || role === "long"
+        ? `${role === "long" ? "Salida larga" : "Rodaje"} → ${effectiveStimulusType}`
+        : `Día de calidad → ${effectiveStimulusType}${isPrimary ? " (estímulo principal del objetivo)" : " (segundo estímulo — ≥48h del principal)"}`;
+      rationaleParts.push(`${head}${detail}${evidence}`);
+      if (varietyReason) rationaleParts.push(varietyReason);
     } else if (slot.stimulusType === "gym") {
       rationaleParts.push("Día de gimnasio");
     } else {
@@ -252,6 +345,7 @@ export function buildPlan(input: {
       fueling: calculateFueling(blocks, ftp),
       rationale: rationaleParts.join(" · "),
       slotTargetMin: targetDuration,
+      role,
     });
   }
 

@@ -1,5 +1,7 @@
 "use server";
 
+import { BANNABLE_KEYS } from "@/lib/training-engine/variants";
+
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -80,7 +82,9 @@ export async function saveThresholds(formData: FormData) {
     maxConsecutiveBadSleepDays: num("maxConsecutiveBadSleepDays", 1, 14),
     weeksBetweenFtpTest: num("weeksBetweenFtpTest", 0, 26),
     ftpTestProtocol: str("ftpTestProtocol", ["20min", "8min", "5min"]),
-    vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate"]),
+    vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate", "rotate"]),
+    varietyLevel: str("varietyLevel", ["conservative", "balanced", "varied"]),
+    bannedStimuli: formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
     deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
       ? String(formData.get("deloadRatio")).trim()
       : undefined,

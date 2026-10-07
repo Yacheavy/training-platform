@@ -2,7 +2,7 @@
  * Valida (sin confiar en el modelo) los bloques que el chat quiere guardar en un workout.
  * Devuelve los bloques normalizados o el motivo del rechazo.
  */
-export type ValidBlock = { type: string; durationSec: number; targetWatts: number };
+export type ValidBlock = { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number };
 
 const ALLOWED_TYPES = new Set([
   "warmup_z1", "warmup_z2", "warmup_activation", "warmup_recovery", "warmup_blowout",
@@ -20,14 +20,19 @@ export function validateBlocks(
   const blocks: ValidBlock[] = [];
   for (const [i, b] of raw.entries()) {
     if (!b || typeof b !== "object") return { ok: false, reason: `bloque ${i + 1} inválido` };
-    const { type, durationSec, targetWatts } = b as Record<string, unknown>;
+    const { type, durationSec, targetWatts, cadenceRpm } = b as Record<string, unknown>;
     if (typeof type !== "string" || !ALLOWED_TYPES.has(type)) return { ok: false, reason: `bloque ${i + 1}: tipo "${String(type)}" no permitido` };
     if (typeof durationSec !== "number" || !Number.isFinite(durationSec) || durationSec < 1 || durationSec > 6 * 3600)
       return { ok: false, reason: `bloque ${i + 1}: duración inválida` };
     const maxW = Math.round(ctx.ftp * 2.5);
     if (typeof targetWatts !== "number" || !Number.isFinite(targetWatts) || targetWatts < 0 || targetWatts > maxW)
       return { ok: false, reason: `bloque ${i + 1}: potencia fuera de rango (máx. ${maxW} W)` };
-    blocks.push({ type, durationSec: Math.round(durationSec), targetWatts: Math.round(targetWatts) });
+    blocks.push({
+      type,
+      durationSec: Math.round(durationSec),
+      targetWatts: Math.round(targetWatts),
+      ...(typeof cadenceRpm === "number" && Number.isFinite(cadenceRpm) && cadenceRpm >= 30 && cadenceRpm <= 130 ? { cadenceRpm: Math.round(cadenceRpm) } : {}),
+    });
   }
 
   // Bloques de baja intensidad: no pueden superar ~90% del FTP (evita Z2 a 700 W)

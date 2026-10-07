@@ -1,19 +1,20 @@
 import type { PlannedDay } from "./plan-builder";
-import { MIN_GAP_DAYS_BETWEEN_VO2MAX } from "./quality-assignment";
+import { MIN_GAP_DAYS_BETWEEN_VO2MAX, MIN_GAP_DAYS_BETWEEN_HARD } from "./quality-assignment";
+import { VARIANTS, intensityOf, isNeuroKey } from "./variants";
 
 /**
  * Invariantes que TODO plan generado debe cumplir. Devuelve la lista de
  * advertencias (vacía = plan consistente). No lanza: el generador las
  * devuelve al usuario y los chequeos automáticos fallan si hay alguna.
  */
-const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst"]);
+const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst", "vo2_long"]);
 const HARD_STIMULI = new Set([...VO2_STIMULI, "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const isCoolType = (t: string) => t.startsWith("cooldown");
 const isWarmType = (t: string) => t.startsWith("warmup");
 
-export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: number; pvo2maxWatts?: number | null }): string[] {
+export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: number; pvo2maxWatts?: number | null; banned?: string[] }): string[] {
   const w: string[] = [];
   const label = (d: PlannedDay) => `${d.date.toISOString().slice(0, 10)} (${d.stimulusType})`;
 
@@ -46,6 +47,41 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
   for (let i = 1; i < hardDays.length; i++) {
     const gap = Math.round((hardDays[i].date.getTime() - hardDays[i - 1].date.getTime()) / DAY_MS);
     if (gap < MIN_GAP_DAYS_BETWEEN_VO2MAX) w.push(`${label(hardDays[i - 1])} → ${label(hardDays[i])}: solo ${gap} día(s) entre sesiones VO2max (mín. ${MIN_GAP_DAYS_BETWEEN_VO2MAX})`);
+  }
+
+  // Reglas del selector de variantes (todas las familias)
+  const isHardVariant = (k: string) => intensityOf(k) >= 2 || isNeuroKey(k) || k.startsWith("ftp_test");
+  for (const [wk, days] of weeks) {
+    const counts = new Map<string, number>();
+    for (const d of days) counts.set(d.stimulusType, (counts.get(d.stimulusType) ?? 0) + 1);
+    for (const [k, n] of counts) {
+      const v = VARIANTS[k];
+      if (v && n > v.maxPerWeek) w.push(`Semana ${wk + 1}: ${n} sesiones de ${v.label} (máx. ${v.maxPerWeek})`);
+    }
+    const neuro = days.filter((d) => isNeuroKey(d.stimulusType));
+    if (neuro.length > 1) w.push(`Semana ${wk + 1}: ${neuro.length} sesiones neuromusculares (máx. 1)`);
+  }
+  const ordered = [...plan].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const hardSeq = ordered.filter((d) => isHardVariant(d.stimulusType));
+  for (let i = 1; i < hardSeq.length; i++) {
+    const gap = Math.round((hardSeq[i].date.getTime() - hardSeq[i - 1].date.getTime()) / DAY_MS);
+    if (gap < MIN_GAP_DAYS_BETWEEN_HARD) w.push(`${label(hardSeq[i - 1])} → ${label(hardSeq[i])}: solo ${gap} día(s) entre sesiones de calidad (mín. ${MIN_GAP_DAYS_BETWEEN_HARD})`);
+  }
+  for (let i = 1; i < ordered.length; i++) {
+    const a = ordered[i - 1];
+    const b = ordered[i];
+    const gap = Math.round((b.date.getTime() - a.date.getTime()) / DAY_MS);
+    if (gap === 1 && isHardVariant(a.stimulusType) && b.stimulusType !== "gym" && intensityOf(b.stimulusType) > 0) {
+      w.push(`${label(a)} → ${label(b)}: sesión con intensidad el día siguiente a una sesión dura`);
+    }
+  }
+  for (const d of plan) {
+    if (ctx.banned?.includes(d.stimulusType)) w.push(`${label(d)}: variante vetada por el atleta`);
+    if (d.isDeload && (d.role === "volume" || d.role === "long") && intensityOf(d.stimulusType) > 0) w.push(`${label(d)}: rodaje con intensidad en semana de descarga`);
+    const v = VARIANTS[d.stimulusType];
+    const durMin = d.blocks.reduce((s, b) => s + b.durationSec, 0) / 60;
+    if (v && d.slotTargetMin && !d.isDeload && !d.rationale.includes("TAPER") && d.slotTargetMin < v.minSlotMin) w.push(`${label(d)}: slot de ${d.slotTargetMin} min < mínimo de la variante (${v.minSlotMin})`);
+    if (v && durMin < 20) w.push(`${label(d)}: duración ${Math.round(durMin)} min muy corta`);
   }
 
   // Por sesión
@@ -82,7 +118,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       if (wu.filter((b) => b.type === "warmup_activation").length !== 2) w.push(`${label(d)}: el calentamiento debe llevar 2 activaciones de 1 min`);
       const ivs = d.blocks.filter((b) => b.type === "interval");
       const recs = d.blocks.filter((b) => b.type === "recovery" && b.targetWatts < ivs[0]?.targetWatts);
-      if (ctx.pvo2maxWatts && d.stimulusType !== "rst") {
+      if (ctx.pvo2maxWatts && d.stimulusType !== "rst" && d.stimulusType !== "vo2_long") {
         const ratio = recs.length && ivs.length ? recs[0].targetWatts / ivs[0].targetWatts : 0.5;
         if (Math.abs(ratio - 0.5) > 0.02 && d.stimulusType !== "billat_30_30") w.push(`${label(d)}: recuperación al ${Math.round(ratio * 100)}% del intervalo (esperado ~50%)`);
       }
@@ -115,6 +151,35 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     // Informativo: el protocolo manda sobre el tiempo del slot, pero conviene avisarlo
     if (d.slotTargetMin && VO2_STIMULI.has(d.stimulusType) && dur / 60 > d.slotTargetMin * 1.25) {
       w.push(`INFO: ${label(d)}: el protocolo dura ${Math.round(dur / 60)} min vs ${d.slotTargetMin} min del slot (+${Math.round((dur / 60 / d.slotTargetMin - 1) * 100)}%)`);
+    }
+    // Chequeos estructurales de las variantes nuevas
+    const ivBlocks = d.blocks.filter((b) => b.type === "interval");
+    if (d.stimulusType === "over_under") {
+      if (ivBlocks.some((b) => b.durationSec !== 120 && b.durationSec !== 60)) w.push(`${label(d)}: over-under con intervalos distintos de 2'/1'`);
+      if (ivBlocks.length % 2 !== 0 || ivBlocks.length === 0) w.push(`${label(d)}: over-under con ${ivBlocks.length} tramos (debe ser par)`);
+      if (ivBlocks.some((b) => b.targetWatts < ctx.ftp * 0.9 || b.targetWatts > ctx.ftp * 1.08)) w.push(`${label(d)}: over-under fuera de 90–108% FTP`);
+    }
+    if (d.stimulusType === "sprint_neuro") {
+      if (ivBlocks.length === 0 || ivBlocks.length % 4 !== 0 || ivBlocks.length > 12) w.push(`${label(d)}: ${ivBlocks.length} sprints (debe ser 4×series, máx. 12)`);
+      if (ivBlocks.some((b) => b.durationSec !== 6)) w.push(`${label(d)}: los sprints cortos deben durar 6 s`);
+    }
+    if (d.stimulusType === "vo2_long") {
+      const minR = d.isDeload ? 2 : 4;
+      if (ivBlocks.length < minR || ivBlocks.length > 5) w.push(`${label(d)}: ${ivBlocks.length} repeticiones (esperado ${minR}–5)`);
+      if (ivBlocks.some((b) => b.durationSec !== 300)) w.push(`${label(d)}: VO2max largo con intervalos distintos de 5 min`);
+    }
+    if (d.stimulusType === "endurance_tempo") {
+      if (ivBlocks.length === 0 || ivBlocks.length > 3) w.push(`${label(d)}: tempo con ${ivBlocks.length} bloques (1–3)`);
+      if (ivBlocks.some((b) => b.targetWatts > ctx.ftp * 0.9)) w.push(`${label(d)}: tempo por encima del 90% FTP`);
+    }
+    if (d.stimulusType === "long_durability" && dur / 60 < 150) w.push(`${label(d)}: salida larga con esfuerzo final de solo ${Math.round(dur / 60)} min`);
+    if (d.stimulusType === "torque_low_cadence") {
+      if (ivBlocks.some((b) => b.cadenceRpm !== 55)) w.push(`${label(d)}: torque sin cadencia objetivo de 55 rpm`);
+      if (ivBlocks.some((b) => b.targetWatts > ctx.ftp * 0.8)) w.push(`${label(d)}: torque por encima del 80% FTP`);
+    }
+    if (d.stimulusType === "z2_progressive") {
+      const main = d.blocks.filter((b) => b.type === "z2");
+      if (main.length && Math.max(...main.map((b) => b.targetWatts)) > ctx.ftp * 0.76) w.push(`${label(d)}: Z2 progresivo supera el 76% FTP`);
     }
     if (!Number.isFinite(d.tss) || d.tss < 0 || d.tss > 400) w.push(`${label(d)}: TSS fuera de rango (${d.tss})`);
   }
