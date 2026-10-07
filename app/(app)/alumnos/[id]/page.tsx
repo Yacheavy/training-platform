@@ -9,6 +9,8 @@ import { getDashboardData } from "@/lib/dashboard-data";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
 import { getChatUsage } from "@/lib/chat/usage";
+import { getNutritionSummary } from "@/lib/nutrition-data";
+import { NutritionPatterns } from "@/components/NutritionPatterns";
 
 const STATUS = {
   RED: { label: "Baja", color: "var(--red)" },
@@ -32,7 +34,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   if (!student) notFound();
 
   const todayKey = dateKeyLocal(new Date());
-  const [availability, data, weeks, upcoming, activities, checkin, chatUsage] = await Promise.all([
+  const [availability, data, weeks, upcoming, activities, checkin, chatUsage, nutrition] = await Promise.all([
     calculateAvailability(id),
     getDashboardData(id),
     getPlanVsActual(id, 6),
@@ -43,6 +45,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     prisma.activity.findMany({ where: { athleteId: id }, orderBy: { date: "desc" }, take: 8, select: { id: true, date: true, name: true, type: true, tss: true, durationSec: true, deviationFlag: true } }),
     prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: id, date: dayKeyDate(new Date()) } } }),
     getChatUsage(id),
+    getNutritionSummary(id, 42),
   ]);
   const st = STATUS[availability.status];
   const days = upcoming.filter((w) => dateKeyLocal(w.date) >= todayKey);
@@ -121,6 +124,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </div>
           ))}
         </div>
+      </div>
+      <div style={card}>
+        <h2 style={h}>Nutrición durante las sesiones (6 semanas)</h2>
+        <NutritionPatterns summary={nutrition} />
       </div>
       <div style={card}>
         <h2 style={h}>Uso del asistente (chat)</h2>

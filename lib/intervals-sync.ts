@@ -32,6 +32,8 @@ export function mapActivity(a: any, userId: string) {
     variabilityIndex: a.icu_variability_index,
     polarizationIndex: a.polarization_index,
     hrrValue: a.icu_hrr?.hrr ?? null,
+    // Carbohidratos que el atleta cargó en Intervals (si existe el campo); undefined = no pisar lo guardado
+    intervalsCarbsG: typeof a.carbs_ingested === "number" && a.carbs_ingested > 0 ? a.carbs_ingested : undefined,
     // Cajón flexible: zonas, resumen de intervalos en texto ("7x 3m 335w") y CTL/ATL al momento de la sesión
     rawStreamsJson:
       a.icu_zone_times || a.interval_summary || a.icu_ctl != null

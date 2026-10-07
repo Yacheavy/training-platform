@@ -7,6 +7,18 @@ export interface FuelingResult {
   requiresMultipleCarbSources: boolean;
 }
 
+/** g/h objetivo según duración e intensidad (misma tabla que calculateFueling). */
+export function carbTargetGPerHour(hours: number, intense: boolean): number {
+  let gPerHour: number;
+  if (hours < 0.75) gPerHour = 0;
+  else if (hours < 1) gPerHour = intense ? 15 : 0;
+  else if (hours < 2) gPerHour = intense ? 50 : 30;
+  else if (hours < 2.5) gPerHour = 60;
+  else if (hours <= 3) gPerHour = intense ? 75 : 60;
+  else gPerHour = intense ? 90 : 75;
+  return Math.min(90, gPerHour);
+}
+
 /**
  * Carbohidratos intra-entrenamiento según duración e intensidad
  * (Jeukendrup 2014; ACSM/AND/DC 2016):
@@ -37,14 +49,7 @@ export function calculateFueling(blocks: WorkoutBlock[], ftp?: number): FuelingR
     intense = avg >= ftp * 0.8 || hardSec >= 600;
   }
 
-  let gPerHour: number;
-  if (hours < 0.75) gPerHour = 0;
-  else if (hours < 1) gPerHour = intense ? 15 : 0;
-  else if (hours < 2) gPerHour = intense ? 50 : 30;
-  else if (hours < 2.5) gPerHour = 60;
-  else if (hours <= 3) gPerHour = intense ? 75 : 60;
-  else gPerHour = intense ? 90 : 75;
-  gPerHour = Math.min(90, gPerHour);
+  const gPerHour = carbTargetGPerHour(hours, intense);
 
   return {
     totalKj,

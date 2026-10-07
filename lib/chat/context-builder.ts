@@ -1,3 +1,5 @@
+import { getNutritionSummary, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
+import { describeSessionNutrition, toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 import { prisma } from "@/lib/prisma";
 import { dayKeyDate, dateKeyLocal, ATHLETE_TZ } from "@/lib/tz";
 import { STIMULUS_LABELS } from "@/lib/labels";
@@ -37,6 +39,8 @@ function relativeDay(dayKey: string): string {
   if (diff === -1) return "AYER";
   return diff > 0 ? `en ${diff} días` : `hace ${-diff} días`;
 }
+
+const RIDE_TYPES_SET = new Set(["Ride", "VirtualRide", "GravelRide", "MountainBikeRide", "EBikeRide"]);
 
 export async function buildChatContext(athleteId: string, focusedWorkoutId?: string, focusedActivityId?: string): Promise<string> {
   const parts: string[] = [];
@@ -162,6 +166,21 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
     parts.push(`ÚLTIMOS 10 DÍAS: sin actividades registradas`);
   }
 
+  // Nutrición intra-entrenamiento (CHO/líquido registrados) vs. rendimiento, últimas 6 semanas
+  try {
+    const nut = await getNutritionSummary(athleteId, 42);
+    if (nut.eligible > 0) {
+      const nl2 = [
+        `NUTRICIÓN DURANTE LAS SESIONES (últimas 6 semanas; solo sesiones de 1 h o más): registró ${nut.logged} de ${nut.eligible}${nut.coveragePct != null ? ` (${nut.coveragePct}%)` : ""}.`,
+        ...nut.insights.map((i) => `- ${i}`),
+        `Usá SOLO estos datos para hablar de alimentación. Lo no registrado es "sin dato", nunca cero. Las diferencias son asociaciones, no causas: no afirmes que la mala alimentación "causó" un mal rendimiento, decí que puede haber influido. Los objetivos de CHO salen de Jeukendrup 2014 y ACSM 2016; no inventes otras cifras.`,
+      ];
+      parts.push(nl2.join("\n"));
+    }
+  } catch {
+    // el análisis de nutrición es complementario: si falla, el chat sigue sin él
+  }
+
   // Próximas sesiones planificadas (para responder "qué hago mañana", "cómo viene la semana")
   const todayStart = dayKeyDate(new Date());
   const upcoming = await prisma.generatedWorkout.findMany({
@@ -225,6 +244,13 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
         `FC media ${f(a.avgHr, 0, "lpm")}, FC máx ${f(a.maxHr, 0, "lpm")}, cadencia ${f(a.avgCadence, 0, "rpm")}, trabajo ${f(a.kilojoules, 0, "kJ")}, desacople Pw:HR ${f(a.decouplingPct, 1, "%")}`,
         zt ? `Tiempo por zona: ${zt}` : `Tiempo por zona: sin datos`,
       ];
+      if (RIDE_TYPES_SET.has(a.type)) {
+        const nrow = await prisma.activity.findUnique({ where: { id: a.id }, select: NUTRITION_SELECT });
+        if (nrow) {
+          const input = toNutritionInput(nrow);
+          lines.push(`Nutrición durante la sesión (registrada por el atleta): ${describeSessionNutrition(toSessionNutrition(input), input)}`);
+        }
+      }
       if (a.deviationFlag !== "NONE") lines.push(`Desvío vs plan: ${a.deviationFlag}${a.deviationNotes ? ` — ${a.deviationNotes}` : ""}`);
       const summary = (a.rawStreamsJson as { intervalSummary?: unknown } | null)?.intervalSummary;
       if (summary) lines.push(`Intervalos detectados por Intervals.icu en la actividad (lo realmente hecho): ${JSON.stringify(summary)}`);

@@ -109,6 +109,15 @@ model Activity {
 
   rawStreamsJson     Json?
 
+  // Nutrición durante la sesión (registro manual, todo opcional)
+  nutritionCarbsG       Int?
+  nutritionFluidMl      Int?
+  nutritionSodiumMg     Int?
+  nutritionGiComfort    Int?      // 1 = molestias, 2 = aceptable, 3 = sin problemas
+  nutritionFollowedPlan Boolean?  // true si se cargó con el botón 'consumí lo planificado'
+  nutritionLoggedAt     DateTime?
+  intervalsCarbsG       Float?    // carbs_ingested de Intervals (si lo trae); el manual tiene prioridad
+
   createdAt         DateTime @default(now())
 }
 

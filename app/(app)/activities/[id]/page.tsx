@@ -6,6 +6,10 @@ import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier"
 import { STIMULUS_LABELS, ZONE_LABELS } from "@/lib/labels";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { PendingLink } from "@/components/PendingLink";
+import { NutritionForm } from "@/components/NutritionForm";
+import { NutritionPatterns } from "@/components/NutritionPatterns";
+import { getNutritionSummary, RIDE_TYPES, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
+import { toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 
 const ZONE_COLORS: Record<string, string> = {
   Z1: "#3A4A5C", Z2: "#2A8C82", Z3: "#6BAF5C", SS: "#C9B23A", Z4: "#E8A33D", Z5: "#E5636A", Z6: "#B04A8F", Z7: "#7A4AB0",
@@ -54,6 +58,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const shown = metrics.filter(([, v]) => v != null) as [string, string][];
 
   const planned = a.generatedWorkout;
+  const isRide = RIDE_TYPES.includes(a.type);
+  const nutRow = isRide ? await prisma.activity.findUnique({ where: { id: a.id }, select: NUTRITION_SELECT }) : null;
+  const nutInput = nutRow ? toNutritionInput(nutRow) : null;
+  const nutSession = nutInput ? toSessionNutrition(nutInput) : null;
+  const nutSummary = isRide ? await getNutritionSummary(a.athleteId, 42) : null;
   const diffPct = a.plannedTss && a.tss ? Math.round(((a.tss - a.plannedTss) / a.plannedTss) * 100) : null;
 
   return (
@@ -121,6 +130,32 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               Ver la sesión planificada →
             </Link>
           )}
+        </div>
+      )}
+
+      {isRide && nutSession && nutInput && (
+        <div style={card}>
+          <div style={h}>Nutrición durante la sesión</div>
+          <NutritionForm
+            activityId={a.id}
+            hours={nutSession.hours}
+            targetGPerHour={nutSession.targetGPerHour}
+            values={{
+              carbsG: a.nutritionCarbsG,
+              fluidMl: a.nutritionFluidMl,
+              sodiumMg: a.nutritionSodiumMg,
+              giComfort: a.nutritionGiComfort,
+              followedPlan: a.nutritionFollowedPlan === true,
+              intervalsCarbsG: a.intervalsCarbsG,
+            }}
+          />
+        </div>
+      )}
+
+      {nutSummary && nutSummary.eligible > 0 && (
+        <div style={card}>
+          <div style={h}>Patrones de alimentación (6 semanas)</div>
+          <NutritionPatterns summary={nutSummary} />
         </div>
       )}
 
