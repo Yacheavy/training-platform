@@ -205,12 +205,18 @@ const GI_LABEL: Record<number, string> = { 1: "con molestias", 2: "aceptable", 3
 /** Una línea por sesión para el contexto del chat (sin inventar: lo no registrado se marca "sin dato"). */
 export function describeSessionNutrition(s: SessionNutrition, a: Pick<NutritionActivityInput, "carbsG" | "fluidMl" | "sodiumMg">): string {
   const parts: string[] = [];
+  // El veredicto sale de la cuenta hecha acá: el modelo no debe comparar estos números por su cuenta
+  const carbVerdict = (r: number | null) => (r == null ? "" : r >= 1.15 ? ", por ENCIMA de lo sugerido" : r >= 0.9 ? ", en línea con lo sugerido" : r >= 0.7 ? ", algo POR DEBAJO de lo sugerido" : ", claramente POR DEBAJO de lo sugerido");
   parts.push(
     a.carbsG != null && s.carbsPerHour != null
-      ? `CHO ${Math.round(a.carbsG)} g (${Math.round(s.carbsPerHour)} g/h${s.targetGPerHour > 0 ? ` vs ${Math.round(s.targetGPerHour)} g/h sugeridos` : ""})`
+      ? `CHO ${Math.round(a.carbsG)} g (${Math.round(s.carbsPerHour)} g/h${s.targetGPerHour > 0 ? ` vs ${Math.round(s.targetGPerHour)} g/h sugeridos${s.ratio != null ? ` = ${Math.round(s.ratio * 100)}% de lo sugerido${carbVerdict(s.ratio)}` : ""}` : ""})`
       : `CHO sin dato${s.targetGPerHour > 0 ? ` (sugeridos ~${Math.round(s.targetGPerHour)} g/h)` : ""}`
   );
-  parts.push(a.fluidMl != null && s.fluidPerHour != null ? `líquido ${a.fluidMl} ml (${Math.round(s.fluidPerHour)} ml/h)` : "líquido sin dato");
+  if (a.fluidMl != null && s.fluidPerHour != null) {
+    const f = Math.round(s.fluidPerHour);
+    const fv = s.hours < 1 ? "" : f < 400 ? ", POR DEBAJO del rango orientativo de 400–800 ml/h (varía según sudoración y clima)" : f <= 800 ? ", dentro del rango orientativo de 400–800 ml/h" : ", por encima del rango orientativo de 400–800 ml/h";
+    parts.push(`líquido ${a.fluidMl} ml (${f} ml/h${fv})`);
+  } else parts.push("líquido sin dato");
   if (a.sodiumMg != null) parts.push(`sodio ${a.sodiumMg} mg`);
   if (s.giComfort != null) parts.push(`tolerancia digestiva ${GI_LABEL[s.giComfort] ?? s.giComfort}`);
   return parts.join(", ");

@@ -141,6 +141,10 @@ Escribí un análisis breve y cercano de la sesión en foco, en vos, como un ent
 - Orden: (1) empezá por algo bueno y concreto con su dato; (2) lo que vale la pena mirar (desvío vs plan, desacople, nutrición registrada), sin retar; (3) qué hacer en los próximos días, solo con las sesiones que figuran en el contexto.
 - Usá TSS, IF, NP, desacople, tiempos y vueltas EXACTAMENTE como figuran en el contexto: nunca los recalcules, corrijas ni estimes otros. Si algo no está en el contexto, no lo menciones. El CTL/ATL no se miden en watts, y no calcules rampas ni cambios de CTL que no estén en el contexto.
 - Clima: si el contexto trae el clima de la salida, mencionalo en una frase cuando ayude a leer la sesión (calor, viento, lluvia); es una estimación (no una medición en el lugar), y si hay temperatura del sensor del dispositivo no la presentes como clima oficial; no inventes umbrales ni efectos con cifras.
+- Los veredictos que ya vienen calculados en el contexto (nutrición «por debajo/en línea/por encima», «Real vs plan» con sus porcentajes) usalos TAL CUAL: no vuelvas a comparar ni a calcular esos números, y si la duración real difiere del plan, mencionalo entre lo que vale la pena mirar.
+- Elogiá solo lo que el dato sostiene: si la potencia cayó entre repeticiones (ej. de 695 a 406 W), decilo en vez de hablar de "consistencia".
+- No uses los códigos internos [R..] en el texto: citá autor y año. Aclará en pocas palabras de dónde sale el clima (Open-Meteo, Intervals o el sensor).
+- El viento y la nubosidad no explican un desacople alto (el viento cambia la potencia que hace falta, no la relación FC–potencia): nombrá el clima como contexto y atribuí el desacople al calor solo si los datos muestran calor claro.
 - Causas (calor, hidratación, nutrición, fatiga previa): solo como hipótesis y solo si un dato del contexto la apoya. Nada de cuadros clínicos.
 - No incluyas json_blocks ni propongas el workout de otra sesión: si hace falta ajustar algo, decile que lo pida desde «Pedir ajustes» en esa sesión.
 - Si usaste evidencia, cerrá con "Fuentes: ..." (solo de la bibliografía). Si el atleta quiere el detalle completo, que lo pida.`;

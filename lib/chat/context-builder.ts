@@ -286,6 +286,12 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
         const pb = a.generatedWorkout.blocksJson as unknown as Blk[];
         lines.push(
           `Sesión planificada asociada: ${STIMULUS_LABELS[a.generatedWorkout.workoutLibraryKey] ?? a.generatedWorkout.workoutLibraryKey}, TSS planeado ${a.generatedWorkout.estimatedTss}, duración planeada ${Math.round(pb.reduce((x, b) => x + (b.durationSec ?? 0), 0) / 60)}min.`,
+          (() => {
+            const pm = Math.round(pb.reduce((x, b) => x + (b.durationSec ?? 0), 0) / 60);
+            const rm = Math.round(a.durationSec / 60);
+            const pct = (real: number, plan: number) => (plan > 0 ? `${real >= plan ? "+" : "−"}${Math.abs(Math.round(((real - plan) / plan) * 1000) / 10).toString().replace(".", ",")}%` : "?");
+            return `Real vs plan (calculado, usalo tal cual): duración ${rm} min vs ${pm} planeados (${pct(rm, pm)})${a.tss != null && a.generatedWorkout!.estimatedTss ? `; TSS ${Math.round(a.tss)} vs ${a.generatedWorkout!.estimatedTss} planeado (${pct(a.tss, a.generatedWorkout!.estimatedTss)})` : ""}.`;
+          })(),
           `Estructura PLANIFICADA exacta: ${summarizeBlocks(pb)}`,
           `Para comparar plan vs real usá SOLO esta estructura planificada y los datos reales de arriba; si un dato real (por ejemplo la cantidad de series o repeticiones) no figura, decí que no lo sabés en vez de suponerlo. Nunca inventes la estructura planificada.`
         );
