@@ -4,12 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Toaster } from "@/components/Toaster";
 import { LogoMark } from "@/components/Logo";
+import { ConsentModal } from "@/components/ConsentModal";
+import { acceptConsent } from "@/lib/consent-actions";
+import { CONSENT_VERSION, CREATOR } from "@/lib/brand";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, consentVersion: true, coach: { select: { name: true } } } });
   const isCoach = me?.role === "COACH";
+  const needsConsent = me?.consentVersion !== CONSENT_VERSION;
+  const coachName = isCoach ? CREATOR.name : (me?.coach?.name ?? CREATOR.name);
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -64,6 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </div>
 
+      {needsConsent && <ConsentModal action={acceptConsent} coachName={coachName} />}
       <Toaster />
 
       <style>{`

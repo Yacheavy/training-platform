@@ -1,3 +1,4 @@
+import { CREATOR, APP_NAME, CONSENT_VERSION } from "@/lib/brand";
 import { StudentsList } from "@/components/StudentsList";
 import { RecoveryRulesCard } from "@/components/ThresholdsCard";
 import Link from "next/link";
@@ -256,6 +257,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       />
         </>
       )}
+
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Acerca de {APP_NAME}</h2>
+        <p style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6, margin: "0 0 10px" }}>
+          Creada por <b style={{ color: "var(--text)" }}>{CREATOR.name}</b>, {CREATOR.role.toLowerCase()}. Si algo falla o tenés una duda, escribime.
+        </p>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "13px" }}>
+          <a href={CREATOR.whatsappLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>WhatsApp {CREATOR.whatsapp}</a>
+          <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>{CREATOR.email}</a>
+          <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>Política de privacidad</a>
+        </div>
+        <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "10px" }}>Política versión {CONSENT_VERSION}</div>
+      </div>
     </div>
   );
 }

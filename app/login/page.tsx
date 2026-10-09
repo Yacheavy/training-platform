@@ -1,5 +1,6 @@
 import { signIn } from "@/auth"
 import { LogoMark, Wordmark } from "@/components/Logo"
+import { CREATOR } from "@/lib/brand"
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const sp = await searchParams
@@ -32,6 +33,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </p>
           )}
         </form>
+        <p style={{ marginTop: "22px", fontSize: "11.5px", lineHeight: 1.6, color: "var(--text-dim)" }}>
+          Creada por {CREATOR.name}.<br />
+          <a href={CREATOR.whatsappLink} style={{ color: "var(--text-muted)" }}>WhatsApp</a> · <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--text-muted)" }}>Email</a> · <a href="/privacidad" style={{ color: "var(--text-muted)" }}>Privacidad</a>
+        </p>
       </div>
     </div>
   )
