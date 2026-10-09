@@ -3,7 +3,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { mailConfigured, sendMail } from "@/lib/email/mailer";
+import { mailConfigured, sendMail, smtpDiagnostics } from "@/lib/email/mailer";
 import { bodyToHtml, layoutEmail } from "@/lib/email/template";
 
 async function me() {
@@ -39,7 +39,7 @@ export async function sendTestEmail(): Promise<{ error: string } | void> {
     });
   } catch (e) {
     const err = e as { code?: string; responseCode?: number; message?: string };
-    console.error("sendTestEmail falló", e);
+    console.error("sendTestEmail falló", e, smtpDiagnostics());
     if (err.code === "EAUTH" || err.responseCode === 535) {
       return { error: "Gmail rechazó el usuario o la contraseña de aplicación (error 535). Revisá que la contraseña sea de la cuenta overkillcycling@gmail.com, sin espacios, y que hayas redesplegado." };
     }

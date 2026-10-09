@@ -3,7 +3,26 @@ import { APP_NAME } from "@/lib/brand";
 
 /** Gmail por SMTP con contraseña de aplicación (SMTP_USER / SMTP_PASS en Vercel). Sin esas variables no se envía nada. */
 export function mailConfigured(): boolean {
-  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+  return !!(smtpUser() && smtpPass());
+}
+
+/** Limpia comillas, espacios y saltos de línea que suelen colarse al pegar la variable. */
+function clean(v: string | undefined): string {
+  return (v ?? "").replace(/^["']|["']$/g, "").replace(/\s+/g, "");
+}
+function smtpUser(): string {
+  return clean(process.env.SMTP_USER);
+}
+function smtpPass(): string {
+  return clean(process.env.SMTP_PASS);
+}
+
+/** Datos no secretos para diagnosticar un 535 en los logs (nunca el valor). */
+export function smtpDiagnostics(): string {
+  const u = smtpUser();
+  const p = smtpPass();
+  const rawLen = (process.env.SMTP_PASS ?? "").length;
+  return `SMTP_USER=${u ? u : "(vacío)"} · SMTP_PASS largo=${p.length} (original ${rawLen}, esperado 16) · solo letras minúsculas=${/^[a-z]+$/.test(p)}`;
 }
 
 export function appUrl(): string {
@@ -17,10 +36,10 @@ export async function sendMail(opts: { to: string; subject: string; html: string
     host: "smtp.gmail.com",
     port: 465,
     secure: true,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user: smtpUser(), pass: smtpPass() },
   });
   await transport.sendMail({
-    from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
+    from: `"${APP_NAME}" <${smtpUser()}>`,
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
