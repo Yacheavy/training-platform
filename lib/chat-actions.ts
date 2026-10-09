@@ -104,7 +104,7 @@ async function sendChatMessageInner(formData: FormData) {
   const addUsage = (u: ChatUsage) => { totalUsage.inputTokens += u.inputTokens; totalUsage.outputTokens += u.outputTokens; totalUsage.costUsd += u.costUsd; };
   try {
     reply = isAnalysisRequest
-      ? await askClaude(context, `${messageText}\n\n${ANALYSIS_STYLE}`, [], 1500, ANALYSIS_MODEL)
+      ? await askClaude(context, `${messageText}\n\n${ANALYSIS_STYLE}`, [], 4000, ANALYSIS_MODEL)
       : await askClaude(context, messageText, history);
     addUsage(reply.usage);
   } catch (err) {

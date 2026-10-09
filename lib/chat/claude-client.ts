@@ -212,10 +212,14 @@ export async function askClaude(context: string, userMessage: string, history: {
   }
 
   const data = await res.json();
+  // Algunos modelos devuelven antes un bloque de razonamiento: el texto está en los bloques de tipo "text"
+  const blocks = (data.content ?? []) as { type: string; text?: string }[];
+  const text = blocks.filter((b) => b.type === "text" && b.text).map((b) => b.text).join("\n\n").trim();
+  if (!text) console.error("Respuesta sin texto", { model, stop: data.stop_reason, blocks: blocks.map((b) => b.type), usage: data.usage });
   const u = data.usage ?? {};
   const parts = { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0 };
   return {
-    text: data.content?.[0]?.text ?? "No pude generar una respuesta.",
+    text: text || "No pude generar una respuesta.",
     truncated: data.stop_reason === "max_tokens",
     usage: { inputTokens: parts.input + parts.cacheWrite + parts.cacheRead, outputTokens: parts.output, costUsd: costFor(model, parts) },
   };
