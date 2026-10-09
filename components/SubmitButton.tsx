@@ -15,6 +15,7 @@ export function SubmitButton({
   className,
   name,
   value,
+  variant,
 }: {
   children: ReactNode;
   pendingText?: string;
@@ -23,6 +24,8 @@ export function SubmitButton({
   className?: string;
   name?: string;
   value?: string;
+  /** secondary: botón con borde (acción alternativa). Sin variante ni fondo propio, el botón es el principal (verde). */
+  variant?: "secondary";
 }) {
   const { pending } = useFormStatus();
   return (
@@ -32,8 +35,8 @@ export function SubmitButton({
       value={value}
       disabled={pending || disabled}
       aria-busy={pending}
-      className={`btn ${className ?? ""}`}
-      style={{ ...style, opacity: pending || disabled ? 0.7 : 1, cursor: pending ? "progress" : disabled ? "not-allowed" : "pointer" }}
+      className={`btn ${variant === "secondary" ? "btn-outline" : style?.background || style?.backgroundColor || className ? "" : "btn-solid"} ${className ?? ""}`}
+      style={{ ...style, opacity: pending ? 0.7 : disabled ? 0.45 : 1, cursor: pending ? "progress" : disabled ? "not-allowed" : "pointer" }}
     >
       {pending && <span className="spinner" aria-hidden />}
       {pending && pendingText ? pendingText : children}

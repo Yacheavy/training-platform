@@ -14,7 +14,7 @@ export function RatingCard({ activityId, rpe, feel, action }: { activityId: stri
       <input type="hidden" name="intent" value="rating" />
       <RatingFields rpe={rpe} feel={feel} onTouch={() => setTouched(true)} />
       <div>
-        <SubmitButton pendingText="Guardando…" disabled={!touched} style={{ fontSize: "12.5px" }}>
+        <SubmitButton pendingText="Guardando…" disabled={!touched}>
           {rpe != null || feel != null ? "Actualizar" : "Guardar"}
         </SubmitButton>
       </div>

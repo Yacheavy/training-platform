@@ -222,6 +222,27 @@ button:focus-visible, a.btn:focus-visible, a.pending-link:focus-visible {
 }
 button:disabled { cursor: not-allowed; }
 
+/* Botones por defecto: principal (verde) y secundario (con borde) */
+.btn-solid {
+  background: linear-gradient(135deg, #5BDDD1, #3DB8AD); color: #08201C; border: none; border-radius: 10px;
+  padding: 10px 18px; font-size: 13px; font-weight: 600; box-shadow: 0 6px 16px -10px rgba(79, 209, 197, 0.7);
+}
+.btn-outline {
+  background: transparent; color: var(--text); border: 1px solid var(--border-strong); border-radius: 10px;
+  padding: 9px 16px; font-size: 13px; font-weight: 600;
+}
+.btn-solid:disabled { box-shadow: none; filter: grayscale(0.35); }
+input[type="checkbox"], input[type="range"] { accent-color: var(--teal); }
+input[type="radio"] {
+  appearance: none; -webkit-appearance: none; flex-shrink: 0; margin: 0; width: 18px; height: 18px;
+  border: 2px solid var(--border-strong); border-radius: 50%; background: transparent;
+  display: inline-grid; place-content: center; cursor: pointer; transition: border-color .15s ease, background-color .15s ease;
+}
+input[type="radio"]::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); transform: scale(0); transition: transform .12s ease; }
+input[type="radio"]:checked { border-color: var(--teal); }
+input[type="radio"]:checked::before { transform: scale(1); }
+input[type="radio"]:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
 /* Botón principal destacado (un solo foco por pantalla) */
 .btn-primary {
   background: linear-gradient(135deg, #5BDDD1, #3DB8AD);

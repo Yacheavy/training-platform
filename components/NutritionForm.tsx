@@ -45,7 +45,7 @@ export function NutritionForm({
       {targetGPerHour > 0 && (
         <ActionForm action={applyPlannedNutrition} success="Registrado: consumiste lo planificado" style={{ marginBottom: "14px" }}>
           <input type="hidden" name="activityId" value={activityId} />
-          <SubmitButton pendingText="Guardando…" style={{ fontSize: "12.5px" }}>
+          <SubmitButton variant="secondary" pendingText="Guardando…">
             Consumí lo planificado ({plannedG} g)
           </SubmitButton>
         </ActionForm>
@@ -91,7 +91,7 @@ export function NutritionForm({
         </fieldset>
 
         <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-          <SubmitButton pendingText="Guardando…" style={{ fontSize: "12.5px" }}>
+          <SubmitButton pendingText="Guardando…">
             {hasAny ? "Actualizar registro" : "Guardar registro"}
           </SubmitButton>
           {values.followedPlan && <span style={{ fontSize: "11.5px", color: "var(--text-dim)" }}>Cargado con “consumí lo planificado”</span>}

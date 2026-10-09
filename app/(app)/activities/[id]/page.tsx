@@ -151,7 +151,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
       {isRide && (
         <div style={card}>
-          <div style={h}>Cómo te sentiste</div>
+          <div style={h}>Tu percepción de la sesión</div>
           {session.user.id === a.athleteId ? (
             <RatingCard activityId={a.id} rpe={a.rpe} feel={a.feel} action={savePostRide} />
           ) : (

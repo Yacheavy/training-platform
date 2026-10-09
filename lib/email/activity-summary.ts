@@ -117,7 +117,7 @@ export function renderActivitySummary(a: SummaryRow, laps: StoredLaps | null, we
   const cta = appUrl() ? `<p style="margin:8px 0 0;font-size:13px;line-height:1.6;color:#8A97A6">¿Querés una lectura con IA de esta salida? Abrila en la app y tocá «Analizá la sesión».</p>` : "";
   const when = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
   return {
-    title: `Resumen de tu salida: ${a.name ?? "salida de bici"}`,
+    title: `Resumen de tu salida del ${a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", timeZone: "UTC" })}: ${a.name ?? "salida de bici"}`,
     subtitle: `${when} · ${min} min${a.tss != null ? ` · TSS ${Math.round(a.tss)}` : ""}`,
     bodyHtml: `${grid}${sections.join("")}${cta}`,
     text: text.join("\n\n"),

@@ -45,7 +45,8 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
     const clean = text.replace(/```json_blocks[\s\S]*?```/g, "").trim();
     if (!clean) throw new Error("El análisis salió vacío");
     const when = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-    const title = `Análisis de tu salida: ${a.name ?? "salida de bici"}`;
+    const day = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", timeZone: "UTC" });
+    const title = `Análisis de tu salida del ${day}: ${a.name ?? "salida de bici"}`;
     await sendMail({
       to: a.athlete.email,
       subject: title,
