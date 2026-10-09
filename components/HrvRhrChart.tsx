@@ -19,7 +19,7 @@ export function HrvRhrChart({ points, band }: Props) {
   if (band) {
     datasets.push(
       { label: "Banda alta", data: bandData(band.high), borderWidth: 0, pointRadius: 0, fill: false, yAxisID: "y", order: 5 },
-      { label: "Tu rango habitual", data: bandData(band.low), borderWidth: 0, pointRadius: 0, fill: "-1", backgroundColor: "rgba(79,209,197,.14)", yAxisID: "y", order: 5 }
+      { label: "Tu rango habitual", data: bandData(band.low), borderWidth: 0, pointRadius: 0, fill: "-1", backgroundColor: "rgba(79,209,197,.12)", yAxisID: "y", order: 5 }
     );
   }
   datasets.push(
@@ -28,8 +28,8 @@ export function HrvRhrChart({ points, band }: Props) {
       data: points.map((p) => p.hrv),
       borderColor: "rgba(79,209,197,.55)",
       pointBackgroundColor: "#4FD1C5",
-      pointRadius: 2.5,
-      borderWidth: 1.5,
+      pointRadius: 2,
+      borderWidth: 1.25,
       tension: 0.25,
       spanGaps: true,
       yAxisID: "y",
@@ -70,7 +70,9 @@ export function HrvRhrChart({ points, band }: Props) {
         position: "top",
         align: "end",
         labels: {
-          boxWidth: 10,
+          usePointStyle: true,
+          pointStyle: "line",
+          boxWidth: 14,
           boxHeight: 3,
           color: "#8A97A6",
           padding: 12,
@@ -78,12 +80,12 @@ export function HrvRhrChart({ points, band }: Props) {
           filter: (item: { text: string }) => item.text !== "Banda alta",
         },
       },
-      tooltip: { filter: (item: { dataset: { label?: string } }) => item.dataset.label !== "Banda alta" && item.dataset.label !== "Tu rango habitual" },
+      tooltip: { backgroundColor: "#0B0E13", borderColor: "rgba(255,255,255,.1)", borderWidth: 1, padding: 10, filter: (item: { dataset: { label?: string } }) => item.dataset.label !== "Banda alta" && item.dataset.label !== "Tu rango habitual" },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#5A6673", font: { size: 9 }, maxTicksLimit: 8 }, border: { color: "#2A3441" } },
-      y: { position: "left", grid: { color: "#1E2731" }, ticks: { color: "#5A6673", font: { size: 9 } }, border: { display: false }, title: { display: true, text: "HRV (ms)", color: "#5A6673", font: { size: 9 } } },
-      y1: { position: "right", grid: { display: false }, ticks: { color: "#5A6673", font: { size: 9 } }, border: { display: false }, title: { display: true, text: "FC reposo (lpm)", color: "#5A6673", font: { size: 9 } } },
+      x: { grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 }, maxTicksLimit: 8 }, border: { display: false } },
+      y: { position: "left", grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false }, title: { display: true, text: "HRV (ms)", color: "#5A6673", font: { size: 10 } } },
+      y1: { position: "right", grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false }, title: { display: true, text: "FC reposo (lpm)", color: "#5A6673", font: { size: 10 } } },
     },
   };
 
