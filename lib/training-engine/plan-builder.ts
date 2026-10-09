@@ -326,7 +326,7 @@ export function buildPlan(input: {
     );
 
     const rationaleParts = [
-      `Plan del bloque "${block.name}" — semana ${weekIndex + 1} del mesociclo${mesocycleWeek.isDeload ? " (DELOAD, -45% volumen, se mantiene 1 sesión de intensidad reducida)" : taperWeek(weekIndex) ? " (TAPER: volumen reducido, intensidad y frecuencia conservadas — Bosquet 2007)" : ""}`,
+      `Plan del bloque "${block.name}" — semana ${weekIndex + 1} del bloque${mesocycleWeek.isDeload ? " (DELOAD, -45% volumen, se mantiene 1 sesión de intensidad reducida)" : taperWeek(weekIndex) ? " (TAPER: volumen reducido, intensidad y frecuencia conservadas — Bosquet 2007)" : ""}`,
     ];
     if (effectiveStimulusType.startsWith("ftp_test")) {
       rationaleParts.push(

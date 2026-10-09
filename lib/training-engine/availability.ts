@@ -41,8 +41,9 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const hrvDropAlertPct = thresholds?.hrvDropAlertPct ?? 7.5;
   const minTsb = thresholds?.minTsb ?? -30;
 
+  // Última fila con CTL y ATL (una fila de hoy que solo trae HRV no debe borrar la forma)
   const latest = await prisma.wellness.findFirst({
-    where: { athleteId, date: { lte: dayKeyDate(new Date()) } },
+    where: { athleteId, date: { lte: dayKeyDate(new Date()) }, ctl: { not: null }, atl: { not: null } },
     orderBy: { date: "desc" },
   });
 

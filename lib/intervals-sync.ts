@@ -113,7 +113,7 @@ export async function linkActivitiesToPlan(userId: string, sinceDays = 30): Prom
     if (!w) continue;
     used.add(w.id);
     const planned = w.estimatedTss ?? null;
-    const dev = detectPlanDeviation({ tss: a.tss, plannedTss: planned, decouplingPct: a.decouplingPct });
+    const dev = detectPlanDeviation({ tss: a.tss, plannedTss: planned, decouplingPct: a.decouplingPct, workoutKey: w.workoutLibraryKey });
     await prisma.activity.update({
       where: { id: a.id },
       data: { generatedWorkoutId: w.id, plannedTss: planned, deviationFlag: dev.flag, deviationNotes: dev.notes },

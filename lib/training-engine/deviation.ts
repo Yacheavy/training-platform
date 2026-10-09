@@ -1,3 +1,6 @@
+/** Sesiones continuas: ahí el desacople Pw:HR significa algo (en intervalos cortos la FC no se estabiliza). */
+export const CONTINUOUS_KEYS = new Set(["z2", "z2_progressive", "endurance_tempo", "sweet_spot", "long_durability"]);
+
 export type DeviationFlag = "NONE" | "HARDER_THAN_PLANNED" | "EASIER_THAN_PLANNED";
 
 export interface DeviationResult {
@@ -22,13 +25,16 @@ export function detectPlanDeviation(activity: {
   tss: number | null;
   plannedTss: number | null;
   decouplingPct: number | null;
+  /** Clave de la sesión planificada: el desacople solo es interpretable en sesiones continuas (si no se pasa, se usa siempre). */
+  workoutKey?: string | null;
 }): DeviationResult {
   if (!activity.plannedTss || !activity.tss) {
     return { flag: "NONE", notes: "Sin plan asociado para comparar" };
   }
 
   const pctDiff = ((activity.tss - activity.plannedTss) / activity.plannedTss) * 100;
-  const highDecoupling = (activity.decouplingPct ?? 0) > 10;
+  const decouplingCounts = !activity.workoutKey || CONTINUOUS_KEYS.has(activity.workoutKey);
+  const highDecoupling = decouplingCounts && (activity.decouplingPct ?? 0) > 10;
 
   if (pctDiff > 25 || (pctDiff > 10 && highDecoupling)) {
     return {

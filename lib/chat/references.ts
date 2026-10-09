@@ -447,6 +447,30 @@ export const REFERENCES: Reference[] = [
     level: "Estudio pequeño en ciclistas (n=11) leído en resumen. Es del año 2000 y la relación se midió en tests escalonados, no en salidas libres.",
     checked: "abstract",
   },
+  {
+    id: "R54",
+    surnames: ["Matomäki", "Matomaki", "Heinonen", "Nummela", "Laukkanen", "Auvinen", "Pirkola", "Kyröläinen", "Kyrolainen"],
+    cite: "Matomäki P, Heinonen OJ, Nummela A, Laukkanen J, Auvinen J, Pirkola S, Kyröläinen H. Durability is improved by both low and high intensity endurance training. Front Physiol. 2023;14:1128111. doi:10.3389/fphys.2023.1128111.",
+    supports: "35 adultos sin entrenamiento, 10 semanas de ciclismo: entrenamiento de baja intensidad (~6,8 h/semana) vs alta intensidad (~1,6 h/semana). La durabilidad (deriva fisiológica durante 3 h de pedaleo al 48% del VO2max previo) mejoró en ambos grupos sin diferencia entre ellos (interacción grupo×tiempo p=0,42). El VO2max subió solo con la alta intensidad.",
+    level: "ECA pequeño en personas SIN entrenamiento: no es extrapolable a ciclistas entrenados. Muestra que la intensidad no dio ventaja en durabilidad en ese grupo; no prueba nada sobre salidas largas con esfuerzo final.",
+    checked: "abstract",
+  },
+  {
+    id: "R55",
+    surnames: ["Stepto", "Hawley", "Dennis", "Hopkins"],
+    cite: "Stepto NK, Hawley JA, Dennis SC, Hopkins WG. Effects of different interval-training programs on cycling time-trial performance. Med Sci Sports Exerc. 1999;31(5):736-741.",
+    supports: "Estudio que compara programas de intervalos sobre el rendimiento en contrarreloj en ciclistas varones adultos. NO se leyó el abstract: no atribuyas resultados ni cifras.",
+    level: "Solo se verificó la cita (título, autores, revista). Contenido no confirmado.",
+    checked: "cita",
+  },
+  {
+    id: "R56",
+    surnames: ["Taylor", "Skovereng", "Tjønna", "Tjonna", "Spencer", "Sandbakk"],
+    cite: "Taylor M, Almquist NW, Rønnestad B, Tjønna AE, Kristoffersen M, Spencer M, Sandbakk Ø, Skovereng K. The inclusion of sprints in low-intensity sessions during the transition period of elite cyclists improves endurance performance 6 weeks into the subsequent preparatory period. Int J Sports Physiol Perform. 2021;16(10):1502-1509. doi:10.1123/IJSPP.2020-0594.",
+    supports: "Seguimiento del ensayo de Almquist 2020: según el título, incluir sprints en sesiones de baja intensidad durante la transición de ciclistas de élite mejora el rendimiento de resistencia 6 semanas después, ya en el período preparatorio. NO se leyó el abstract: no atribuyas cifras.",
+    level: "Solo se verificó la cita y el título. Ciclistas de élite en transición, muestra pequeña: evidencia PRELIMINAR.",
+    checked: "cita",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

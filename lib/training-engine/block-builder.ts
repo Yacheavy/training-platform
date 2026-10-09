@@ -322,7 +322,7 @@ export function buildBlocks(
 
   /**
    * Torque a cadencia baja: 4-5 × 6' a ~72% FTP a 55 rpm (sentado, resistencia alta). La revisión sistemática de
-   * Hansen & Rønnestad (2017) no encontró beneficio sólido y Kristoffersen 2014 (40 rpm) tampoco: es opcional,
+   * Hansen & Rønnestad (2017) no encontró beneficio sólido: es opcional,
    * infrecuente y con aviso de rodilla. Para fuerza, lo respaldado en ciclistas es el gimnasio.
    */
   if (stimulusType === "torque_low_cadence") {
@@ -466,4 +466,4 @@ export function buildBlocks(
     { type: "z2", durationSec: totalSec - warmupSec - cooldownSec, targetWatts: z2Watts },
     ...buildCooldown(cooldownSec, ftp),
   ];
-}
+}

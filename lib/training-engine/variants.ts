@@ -77,13 +77,13 @@ export const VARIANTS: Record<string, VariantDef> = {
   },
   long_durability: {
     key: "long_durability", label: "Salida larga con esfuerzo final", family: "base", evidence: "hipotesis",
-    evidenceNote: "La durabilidad existe y se asocia al rendimiento (Maunder 2021), pero que esta sesión la mejore es una hipótesis (Matomäki 2023 no mostró ventaja de la intensidad).",
+    evidenceNote: "La durabilidad existe y se asocia al rendimiento (Maunder 2021), pero que esta sesión la mejore es una hipótesis (Matomäki 2023, en personas sin entrenar, no mostró ventaja de la intensidad).",
     purpose: "Z2 largo y 2-3 bloques de ~88% FTP al final, con la fatiga acumulada.",
     intensity: 1, minSlotMin: 150, minGapDays: 10, maxPerWeek: 1, indoor: "limited",
   },
   torque_low_cadence: {
     key: "torque_low_cadence", label: "Torque a cadencia baja", family: "fuerza", evidence: "no_concluyente",
-    evidenceNote: "La revisión de Hansen & Rønnestad (2017) no halló beneficio sólido; Kristoffersen 2014 (40 rpm) tampoco.",
+    evidenceNote: "La revisión de Hansen & Rønnestad (2017) no halló beneficio sólido.",
     purpose: "4-5 × 6 min a ~72% FTP a 55 rpm, sentado.",
     caveat: "Si sentís molestia en la rodilla, cortá y volvé a cadencia libre. Para fuerza, lo respaldado es el gimnasio.",
     intensity: 1, minSlotMin: 75, minGapDays: 14, maxPerWeek: 1, indoor: "ok",
@@ -96,7 +96,7 @@ export const VARIANTS: Record<string, VariantDef> = {
   },
   umbral: {
     key: "umbral", label: "Umbral", family: "umbral", evidence: "practica",
-    evidenceNote: "Los formatos de umbral no tienen ensayos propios; Stepto 1999 sugiere que intervalos largos moderados mejoran la contrarreloj.",
+    evidenceNote: "Los formatos de umbral no tienen ensayos propios; Stepto 1999 comparó programas de intervalos sobre la contrarreloj (en esta base solo está verificada la cita, no su resultado).",
     purpose: "Bloques de 8-12 min al 95-105% FTP.",
     intensity: 2, minSlotMin: 60, minGapDays: 3, maxPerWeek: 2, maintainable: true, indoor: "ok",
   },
@@ -126,13 +126,13 @@ export const VARIANTS: Record<string, VariantDef> = {
   },
   z2_sprints: {
     key: "z2_sprints", label: "Z2 + sprints", family: "neuro", evidence: "preliminar",
-    evidenceNote: "Almquist 2020 y Taylor 2021: ciclistas de élite en transición, n pequeño; mantuvo el sprint de 30 s y mejoró el rendimiento de 20 min a las 6 semanas en el seguimiento.",
+    evidenceNote: "Almquist 2020 y Taylor 2021: ciclistas de élite en transición, muestra pequeña; el seguimiento (Taylor 2021) informa mejor rendimiento de resistencia 6 semanas después de empezar la preparación.",
     purpose: "Rodaje Z2 con 3-9 sprints de 30 s a máxima potencia.",
     intensity: 1, neuro: true, minSlotMin: 90, minGapDays: 5, maxPerWeek: 1, maintainable: true, indoor: "ok",
   },
   sprint_neuro: {
     key: "sprint_neuro", label: "Sprints cortos (6 s)", family: "neuro", evidence: "preliminar",
-    evidenceNote: "Kristoffersen 2019 (n=28 ciclistas competitivos): mejoró la potencia pico de 6 s sin cambiar el VO2max. Hecho 2 veces por semana durante 6 semanas.",
+    evidenceNote: "Kristoffersen 2019 (ciclistas competitivos, ensayo pequeño): mejoró la potencia pico de 6 s sin cambiar el VO2max. Hecho 2 veces por semana durante 6 semanas.",
     purpose: "1-3 series de 4 sprints de ~6 s, sentado y desde parado, dentro de un rodaje Z2.",
     caveat: "Calentá bien antes de los sprints.",
     intensity: 1, neuro: true, minSlotMin: 60, minGapDays: 5, maxPerWeek: 1, maintainable: true, indoor: "ok",

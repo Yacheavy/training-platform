@@ -4,6 +4,7 @@
  * y se rotulan así en la interfaz. Los ajustes son acotados (±1 escalón) para que un dato ruidoso no desarme el plan.
  */
 import { VARIANTS } from "./variants";
+import { CONTINUOUS_KEYS } from "./deviation";
 
 export interface ExecutionRecord {
   key: string;
@@ -24,17 +25,17 @@ export interface ProgressionAdjust {
 }
 
 /** Claves cuyo desacople Pw:HR es interpretable (sesiones continuas, no intervalos cortos). */
-const CONTINUOUS = new Set(["z2", "z2_progressive", "endurance_tempo", "sweet_spot", "long_durability"]);
+const CONTINUOUS = CONTINUOUS_KEYS;
 
 const struggled = (r: ExecutionRecord) =>
-  (r.tssRatio != null && r.tssRatio < 0.8) || (r.deviation === "HARDER_THAN_PLANNED" && (r.decouplingPct ?? 0) > 10);
+  (r.tssRatio != null && r.tssRatio < 0.8) || (r.deviation === "HARDER_THAN_PLANNED" && CONTINUOUS.has(r.key) && (r.decouplingPct ?? 0) > 10);
 
 const wentWell = (r: ExecutionRecord, key: string) =>
   r.tssRatio != null &&
   r.tssRatio >= 0.9 &&
   r.tssRatio <= 1.15 &&
   (!CONTINUOUS.has(key) || r.decouplingPct == null || r.decouplingPct <= 7) &&
-  !(r.deviation === "HARDER_THAN_PLANNED" && (r.decouplingPct ?? 0) > 10);
+  !(r.deviation === "HARDER_THAN_PLANNED" && CONTINUOUS.has(key) && (r.decouplingPct ?? 0) > 10);
 
 /**
  * Por variante (solo las que progresan): mira las últimas ejecuciones de esa variante.
@@ -85,7 +86,7 @@ export const GUARD_MID_SHARE = 0.3;
 
 /**
  * Protección de la distribución de intensidad con el tiempo REAL en zonas de los últimos 14 días:
- * - Más del 20% del tiempo en Z5–Z7: referencia de Seiler (~20% de sesiones de alta intensidad en atletas bien entrenados) → se saca el segundo estímulo.
+ * - Más del 20% del tiempo en Z5–Z7 → se saca el segundo estímulo. Umbral de PRÁCTICA: la referencia de Seiler (~20% de alta intensidad) es de SESIONES, no de tiempo en zona, así que no es equivalente.
  * - Más del 30% en Z3–Z4 ("zona gris"): se evitan variantes de intensidad media fuera del estímulo principal.
  * Con menos de 4 h registradas no se decide nada (el porcentaje sería ruido).
  */

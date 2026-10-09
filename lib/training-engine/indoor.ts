@@ -14,7 +14,7 @@ export interface IndoorAdaptation {
  * Adapta una sesión de ruta a rodillo: se guarda la estructura y las potencias (el rodillo las sostiene mejor que la ruta)
  * y solo se acorta el tiempo de Z2 si la sesión supera ~150 min. No cambia la variante.
  * Fundamento de la nota: en interior la temperatura corporal sube más sin viento relativo, por eso se recomienda ventilador
- * fuerte y guiarse por la potencia y no por la frecuencia cardíaca (Junge 2016; O'Connor 2022; evidencia fisiológica, no de rendimiento).
+ * fuerte y guiarse por la potencia y no por la frecuencia cardíaca (Junge 2016; evidencia fisiológica, no de rendimiento).
  */
 export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdaptation {
   const total = blocks.reduce((s, b) => s + b.durationSec, 0);
