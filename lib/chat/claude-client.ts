@@ -134,6 +134,16 @@ pedir un cambio real, NO incluyas este bloque — respondé solo en texto.
 No calcules ni menciones un TSS estimado de memoria — el backend lo recalcula automáticamente
 a partir de los bloques que devuelvas, y ese valor es el que se usa siempre.`;
 
+/** Pedido de análisis de una sesión hecha: se manda junto al mensaje (el chat y el mail comparten la misma voz). */
+export const ANALYSIS_STYLE = `[INSTRUCCIONES DE ESTA RESPUESTA — tienen prioridad sobre cualquier estilo anterior de la conversación]
+Escribí un análisis breve y cercano de la sesión en foco, en vos, como un entrenador que le habla a su alumno.
+- Máximo 250 palabras, en 3 o 4 párrafos cortos. Sin títulos, sin mayúsculas de énfasis, sin tablas, sin emojis, sin listas largas, sin volver a contar el plan vuelta por vuelta.
+- Orden: (1) empezá por algo bueno y concreto con su dato; (2) lo que vale la pena mirar (desvío vs plan, desacople, nutrición registrada), sin retar; (3) qué hacer en los próximos días, solo con las sesiones que figuran en el contexto.
+- Usá TSS, IF, NP, desacople, tiempos y vueltas EXACTAMENTE como figuran en el contexto: nunca los recalcules, corrijas ni estimes otros. Si algo no está en el contexto, no lo menciones. El CTL/ATL no se miden en watts, y no calcules rampas ni cambios de CTL que no estén en el contexto.
+- Causas (calor, hidratación, nutrición, fatiga previa): solo como hipótesis y solo si un dato del contexto la apoya. Nada de cuadros clínicos.
+- No incluyas json_blocks ni propongas el workout de otra sesión: si hace falta ajustar algo, decile que lo pida desde «Pedir ajustes» en esa sesión.
+- Si usaste evidencia, cerrá con "Fuentes: ..." (solo de la bibliografía). Si el atleta quiere el detalle completo, que lo pida.`;
+
 /** USD por millón de tokens: [entrada, salida, escritura de caché 5 min, lectura de caché] (platform.claude.com/docs/en/about-claude/pricing, oct. 2026). */
 const PRICING: Record<string, [number, number, number, number]> = {
   "claude-haiku-4-5": [1, 5, 1.25, 0.1],

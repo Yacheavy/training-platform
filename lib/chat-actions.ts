@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { buildChatContext } from "@/lib/chat/context-builder";
-import { askClaude, type ChatUsage } from "@/lib/chat/claude-client";
+import { askClaude, ANALYSIS_STYLE, type ChatUsage } from "@/lib/chat/claude-client";
 import { parseClaudeResponse } from "@/lib/chat/parse-response";
 import { validateBlocks } from "@/lib/chat/validate-blocks";
 import { findUnverifiedCitations } from "@/lib/chat/citation-check";
@@ -97,11 +97,15 @@ async function sendChatMessageInner(formData: FormData) {
   });
   const history = recentHistory.reverse().slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
 
+  // "Analizá la sesión" sobre una actividad hecha: sin historial (los informes largos viejos se imitan) y con la directiva de formato
+  const isAnalysisRequest = !!focusedActivityId && /^analiz/i.test(messageText.trim());
   let reply: { text: string; truncated: boolean; usage: ChatUsage };
   const totalUsage: ChatUsage = { inputTokens: 0, outputTokens: 0, costUsd: 0 };
   const addUsage = (u: ChatUsage) => { totalUsage.inputTokens += u.inputTokens; totalUsage.outputTokens += u.outputTokens; totalUsage.costUsd += u.costUsd; };
   try {
-    reply = await askClaude(context, messageText, history);
+    reply = isAnalysisRequest
+      ? await askClaude(context, `${messageText}\n\n${ANALYSIS_STYLE}`, [], 1500)
+      : await askClaude(context, messageText, history);
     addUsage(reply.usage);
   } catch (err) {
     console.error("askClaude falló:", err);
@@ -150,7 +154,7 @@ async function sendChatMessageInner(formData: FormData) {
         : "No pude leer el cambio propuesto, así que no lo apliqué. Pedímelo de nuevo.";
     } else if (!focusedWorkoutId) {
       notice = focusedActivityId
-        ? "No apliqué ningún cambio: esa actividad ya se hizo y no se puede modificar. Para cambiar una sesión que viene, abrí el chat desde «Pedir ajustes» en esa sesión."
+        ? null // actividad hecha: el prompt ya prohíbe proponer cambios; no se agrega un cartel que confunde
         : "No apliqué ningún cambio: para editar una sesión abrí el chat desde «Pedir ajustes» en esa sesión.";
     } else {
       const workout = await prisma.generatedWorkout.findFirst({ where: { id: focusedWorkoutId, athleteId } });

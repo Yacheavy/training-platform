@@ -258,7 +258,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       const lines = [
         `SESIÓN EN FOCO — el atleta tiene abierta esta actividad YA REALIZADA y es de lo que habla cuando dice "esta sesión", "la sesión" o "ella". Nunca le pidas que te la describa ni digas que no la ves: tenés todos sus datos acá. No se puede modificar, solo analizarla.`,
         `Actividad del ${a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })} (${relativeDay(a.date.toISOString().slice(0, 10))}): "${a.name ?? a.type}", tipo detectado ${STIMULUS_LABELS[stimulus] ?? stimulus}`,
-        `Duración ${Math.round(a.durationSec / 60)}min, TSS ${f(a.tss)}, IF ${f(a.intensityFactor, 2)}, NP ${f(a.normalizedPower, 0, "W")}, potencia media ${f(a.avgPower, 0, "W")}, VI ${f(a.variabilityIndex, 2)}`,
+        `Duración ${Math.round(a.durationSec / 60)}min, TSS ${f(a.tss)}, IF ${f(a.intensityFactor != null && a.intensityFactor > 3 ? a.intensityFactor / 100 : a.intensityFactor, 2)}, NP ${f(a.normalizedPower, 0, "W")}, potencia media ${f(a.avgPower, 0, "W")}, VI ${f(a.variabilityIndex, 2)}`,
         `FC media ${f(a.avgHr, 0, "lpm")}, FC máx ${f(a.maxHr, 0, "lpm")}, cadencia ${f(a.avgCadence, 0, "rpm")}, trabajo ${f(a.kilojoules, 0, "kJ")}, desacople Pw:HR ${f(a.decouplingPct, 1, "%")}`,
         zt ? `Tiempo por zona: ${zt}` : `Tiempo por zona: sin datos`,
       ];
