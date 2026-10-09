@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma as defaultDb } from "@/lib/prisma";
 import { dateKeyLocal, dayStartLocal } from "@/lib/tz";
 import { proposeSeason, pickPrimaryGoal, type SeasonProposal } from "@/lib/training-engine/season-planner";
 
@@ -16,7 +16,7 @@ export interface SeasonState {
 }
 
 /** Estado de la temporada: objetivo principal, bloques existentes y propuesta (solo servidor). */
-export async function getSeasonState(athleteId: string, now = new Date()): Promise<SeasonState> {
+export async function getSeasonState(athleteId: string, now = new Date(), prisma: typeof defaultDb = defaultDb): Promise<SeasonState> {
   const [goals, blocks, thresholds] = await Promise.all([
     prisma.athleteGoal.findMany({ where: { athleteId, eventDate: { not: null } } }),
     prisma.trainingBlock.findMany({ where: { athleteId, endDate: { gte: dayStartLocal(now) } }, orderBy: { startDate: "asc" } }),

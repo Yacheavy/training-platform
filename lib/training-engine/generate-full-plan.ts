@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma as defaultDb } from "@/lib/prisma";
 import type { Prisma } from "@/app/generated/prisma";
 import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
@@ -8,7 +8,14 @@ import { adaptForIndoor } from "./indoor";
 import { calculateTss, calculateKilojoules } from "./tss";
 import { calculateFueling } from "./fueling";
 
-export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[] }) {
+/** Cliente de base de datos; se inyecta en las pruebas con una base en memoria. */
+export type PlanDb = typeof defaultDb;
+
+export async function generateFullPlan(
+  trainingBlockId: string,
+  opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[]; now?: Date },
+  prisma: PlanDb = defaultDb,
+) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
   if (!block || (opts?.athleteId && block.athleteId !== opts.athleteId)) throw new Error("Bloque no encontrado");
 
@@ -43,8 +50,8 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   const excludeByDate: Record<string, string[]> = opts?.replaceDate && opts.excludeKeys?.length ? { [dateKeyLocal(opts.replaceDate)]: opts.excludeKeys } : {};
 
   // Autorregulación: ejecución real de las últimas 8 semanas y distribución real de intensidad de 14 días
-  const now = new Date();
-  const { execution, guard } = await loadAutoregulation(block.athleteId, now);
+  const now = opts?.now ?? new Date();
+  const { execution, guard } = await loadAutoregulation(block.athleteId, now, prisma);
 
   const plan = buildPlan({
     block: { name: block.name, objective: block.objective, startDate: block.startDate, endDate: block.endDate },
@@ -73,7 +80,8 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts, banned: thresholds?.bannedStimuli ?? [] });
 
   const created: string[] = [];
-  const skipped: string[] = [];
+  const skipped: string[] = []; // solo errores al guardar
+  const kept: string[] = []; // días con una sesión protegida (completada, editada a mano) que no se pisa
   const resendIds: string[] = [];
 
   for (const day of plan) {
@@ -120,7 +128,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
         continue;
       }
       if (existing) {
-        skipped.push(key);
+        kept.push(key);
         continue;
       }
 
@@ -145,5 +153,5 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
     }
   }
 
-  return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped, warnings, resendIds };
+  return { created: created.length, skipped: skipped.length, createdDates: created, skippedDates: skipped, keptDates: kept, warnings, resendIds };
 }

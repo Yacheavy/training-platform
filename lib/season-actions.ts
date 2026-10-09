@@ -3,8 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
-import { getSeasonState, instantForKey } from "@/lib/season-data";
-import { generateFullPlan } from "@/lib/training-engine/generate-full-plan";
+import { applySeasonCore } from "@/lib/season-apply";
 
 async function requireUserId() {
   const session = await auth();
@@ -16,23 +15,14 @@ async function requireUserId() {
 export async function applySeason(): Promise<{ error: string } | { blocks: number; sessions: number }> {
   try {
     const athleteId = await requireUserId();
-    const user = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } });
-    if (!user?.ftp) return { error: "Cargá tu FTP en Ajustes antes de generar la temporada." };
-    const state = await getSeasonState(athleteId);
-    if (state.proposal.covered || state.proposal.blocks.length === 0) return { error: "No hay bloques nuevos para crear." };
-    let sessions = 0;
-    for (const b of state.proposal.blocks) {
-      const block = await prisma.trainingBlock.create({
-        data: { athleteId, name: b.name, objective: b.objective, startDate: instantForKey(state, b.startKey), endDate: instantForKey(state, b.endKey), plannedWeeklyTssProgression: [] },
-      });
-      const r = await generateFullPlan(block.id, { athleteId });
-      sessions += r.created;
-    }
+    const r = await applySeasonCore(prisma, athleteId);
+    if ("error" in r) return r;
+    const { blocks, sessions } = r;
     revalidatePath("/settings");
     revalidatePath("/planificacion");
     revalidatePath("/dashboard");
     revalidatePath("/calendar");
-    return { blocks: state.proposal.blocks.length, sessions };
+    return { blocks, sessions };
   } catch (e) {
     console.error("applySeason falló", e);
     return { error: e instanceof Error && e.message ? `No se pudo crear la temporada: ${e.message}` : "No se pudo crear la temporada. Probá de nuevo." };

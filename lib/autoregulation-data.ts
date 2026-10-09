@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma as defaultDb } from "@/lib/prisma";
 import { progressionAdjustments, intensityGuard, type ExecutionRecord, type ProgressionAdjust, type IntensityGuard, type ZoneHours } from "@/lib/training-engine/autoregulation";
 
 const DAY = 86400000;
@@ -12,7 +12,7 @@ export interface AutoregulationState {
 }
 
 /** Ejecución real de las últimas 8 semanas (sesiones vinculadas a un plan) y distribución de intensidad de 14 días. */
-export async function loadAutoregulation(athleteId: string, now = new Date()): Promise<AutoregulationState> {
+export async function loadAutoregulation(athleteId: string, now = new Date(), prisma: typeof defaultDb = defaultDb): Promise<AutoregulationState> {
   const executed = await prisma.activity.findMany({
     where: { athleteId, generatedWorkoutId: { not: null }, date: { gte: new Date(now.getTime() - 56 * DAY), lte: now } },
     select: { date: true, tss: true, plannedTss: true, deviationFlag: true, decouplingPct: true, generatedWorkout: { select: { workoutLibraryKey: true } } },
