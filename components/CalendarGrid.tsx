@@ -181,7 +181,8 @@ export function CalendarGrid({
               </div>
               <button
                 onClick={() => setDetailWorkout(null)}
-                style={{ background: "transparent", border: "none", color: "var(--text-dim)", fontSize: "18px", cursor: "pointer" }}
+                aria-label="Cerrar"
+                style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "18px", cursor: "pointer", padding: "6px 10px", margin: "-6px -10px 0 0" }}
               >
                 ✕
               </button>

@@ -97,8 +97,8 @@ export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; n
           <div style={{ fontFamily: "var(--font-mono)", fontSize: "10.5px", color: "var(--text-dim)", marginTop: "2px" }}>
             Semana {position} de {totalWeeks}
             {offset === 0 && <span style={{ color: "var(--teal)" }}> · actual</span>}
-            {phase === "DELOAD" && <span style={{ color: "var(--amber)" }}> · deload</span>}
-            {phase === "TAPER" && <span style={{ color: "var(--amber)" }}> · taper</span>}
+            {phase === "DELOAD" && <span style={{ color: "var(--amber)" }}> · descarga</span>}
+            {phase === "TAPER" && <span style={{ color: "var(--amber)" }}> · puesta a punto</span>}
           </div>
         </div>
         <button type="button" className="btn" aria-label="Semana siguiente" disabled={offset >= maxOffset} onClick={() => go(offset + 1)} style={navBtn(offset >= maxOffset)}>

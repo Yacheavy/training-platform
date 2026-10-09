@@ -336,7 +336,7 @@ export function buildPlan(input: {
       const isPrimary = role ? role === "primary" : effectiveStimulusType === primaryStimulus;
       const detail =
         effectiveStimulusType === "hiit_genuino"
-          ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Configuración)"}`
+          ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Ajustes)"}`
           : effectiveStimulusType === "ronnestad_30_15"
             ? ` · ${series} serie${series === 1 ? "" : "s"} de 13×(30s/15s) (progresivo 1→3)`
             : effectiveStimulusType === "z2_sprints"

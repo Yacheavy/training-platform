@@ -107,7 +107,7 @@ async function pickQualityStimulus(athleteId: string, today: Date, rationale: st
 async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   const user = await prisma.user.findUnique({ where: { id: athleteId } });
   if (!user?.ftp) {
-    return { error: "Configurá tu FTP en el perfil antes de generar sugerencias" };
+    return { error: "Cargá tu FTP en Ajustes antes de generar sugerencias" };
   }
 
   const now = new Date();

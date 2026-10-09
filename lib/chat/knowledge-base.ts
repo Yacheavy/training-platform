@@ -51,7 +51,7 @@ intervalos largos igualados por esfuerzo [R3]; la muestra es muy pequeña (n=9 v
 Sin PAM medida el sistema usa ~125-130% FTP como aproximación [PRÁCTICA, no es un valor del estudio]. Para
 HIIT corto el libro da 100-110% de la PAM [R1]. Objetivo similar al HIIT genuino (VO2max) con menor costo
 neuromuscular por las pausas cortas; el sistema ya NO lo usa como segundo estímulo por defecto (ahora es el rodaje
-con sprints, ver abajo), pero el atleta puede elegirlo como su sesión semanal de VO2max en Configuración
+con sprints, ver abajo), pero el atleta puede elegirlo como su sesión semanal de VO2max en Ajustes
 (HIIT genuino, Rønnestad 30/15 o alternar semanas; HIIT genuino es el sugerido para el objetivo VO2max y alternar es [PRÁCTICA]). La
 dosis progresiva de series que usa el sistema (1→3) es [PRÁCTICA].
 
@@ -66,7 +66,7 @@ dosis completa de 9 sprints. La recuperación de 100 W del estudio está escalad
 potencia que muestra el plan para el sprint es un piso de referencia; el esfuerzo es máximo.
 
 VARIANTES DE SESIÓN Y VARIEDAD (el plan rota entre ellas según el nivel de variedad: conservador / equilibrado / variado;
-el atleta puede vetar variantes en Configuración, pedir "Otra variante" o "Pasar a rodillo" en cada sesión). Cada variante tiene
+el atleta puede vetar variantes en Ajustes, pedir "Otra variante" o "Pasar a rodillo" en cada sesión). Cada variante tiene
 un nivel de evidencia honesto; al explicarlas, decí siempre cuál es:
 - Z2 progresivo (base): Z2 en tercios crecientes (62/68/74% FTP). [PRÁCTICA] sin ensayos específicos.
 - Tempo en bloques (base): bloques de 15-25 min a ~82% FTP bajo el umbral. [PRÁCTICA].

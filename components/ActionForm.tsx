@@ -14,17 +14,21 @@ export function ActionForm({
   children,
   className,
   style,
+  confirm,
 }: {
   action: (formData: FormData) => Promise<unknown> | unknown;
   success?: string | null;
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
+  /** Si se pasa, pide confirmación antes de ejecutar (para acciones que borran o reemplazan datos). */
+  confirm?: string;
 }) {
   return (
     <form
       className={className}
       style={style}
+      onSubmit={confirm ? (e) => { if (!window.confirm(confirm)) e.preventDefault(); } : undefined}
       action={async (formData: FormData) => {
         try {
           const result = await action(formData);

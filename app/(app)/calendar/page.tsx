@@ -53,13 +53,13 @@ export default async function CalendarPage({
             href={`/calendar?year=${prevMonth.year}&month=${prevMonth.month}`}
             style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" }}
           >
-            ← anterior
+            ← Anterior
           </a>
           <a
             href={`/calendar?year=${nextMonth.year}&month=${nextMonth.month}`}
             style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" }}
           >
-            siguiente →
+            Siguiente →
           </a>
         </div>
       </div>

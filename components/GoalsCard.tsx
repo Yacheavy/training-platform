@@ -58,7 +58,7 @@ export function GoalsCard({
   const perf = goals.filter((g) => g.goalType === "PERFORMANCE");
 
   const DeleteButton = ({ id }: { id: string }) => (
-    <ActionForm action={deleteAction} success="Objetivo eliminado">
+    <ActionForm action={deleteAction} success="Objetivo eliminado" confirm="¿Quitar este objetivo?">
       <input type="hidden" name="id" value={id} />
       <SubmitButton style={{ background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border-strong)", borderRadius: "8px", padding: "5px 10px", fontSize: "12px" }}>
         Quitar

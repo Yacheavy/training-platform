@@ -355,8 +355,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               )}
 
               <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "14px" }}>
-                <Link href={`/workouts/${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Ver detalle completo</Link>
-                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat</PendingLink>
+                <Link href={`/workouts/${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Ver detalle completo →</Link>
+                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat →</PendingLink>
               </div>
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 {(todayWorkout.status === "SUGGESTED" || todayWorkout.status === "PLANNED") && (
@@ -515,8 +515,8 @@ function ActionButton({ children, primary }: { children: React.ReactNode; primar
       pendingText="Procesando…"
       style={{
         background: primary ? "var(--teal)" : "transparent",
-        color: primary ? "#0A1310" : "var(--text-muted)",
-        border: primary ? "none" : "1px solid var(--border)",
+        color: primary ? "#0A1310" : "var(--text)",
+        border: primary ? "none" : "1px solid var(--border-strong)",
         borderRadius: "8px",
         padding: "9px 16px",
         fontSize: "13px",

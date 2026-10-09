@@ -80,7 +80,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#4FD1C5", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Reenviar</SubmitButton>
                     </ActionForm>
                   )}
-                  <ActionForm action={removeInvite} success="Invitación eliminada">
+                  <ActionForm action={removeInvite} success="Invitación eliminada" confirm="¿Quitar esta invitación? Si el alumno ya ingresó, se le cierra la sesión (sus datos se conservan).">
                     <input type="hidden" name="email" value={i.email} />
                     <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
                   </ActionForm>
@@ -132,7 +132,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </ActionForm>
           )}
           {access.intervals.connected && (
-            <ActionForm action={disconnectIntervals} success="Intervals desconectado">
+            <ActionForm action={disconnectIntervals} success="Intervals desconectado" confirm="¿Desconectar Intervals? La app deja de leer tus datos y de enviar sesiones hasta que lo vuelvas a conectar.">
               <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Desconectar</SubmitButton>
             </ActionForm>
           )}
@@ -296,7 +296,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </span>
             </label>
           </div>
-          <div><SubmitButton style={{ ...btnStyle, padding: "7px 14px" }}>Guardar</SubmitButton></div>
+          <div><SubmitButton style={{ ...btnStyle, padding: "7px 14px" }}>Guardar preferencias de mail</SubmitButton></div>
         </ActionForm>
         <ActionForm action={sendTestEmail} success="Mail de prueba enviado, revisá tu casilla" style={{ marginTop: "12px" }}>
           <SubmitButton pendingText="Enviando…" style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text)", borderRadius: "10px", padding: "7px 14px", fontSize: "12.5px", cursor: "pointer" }}>Enviarme un mail de prueba</SubmitButton>

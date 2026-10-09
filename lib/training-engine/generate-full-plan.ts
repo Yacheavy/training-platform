@@ -10,7 +10,7 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
   if (!block || (opts?.athleteId && block.athleteId !== opts.athleteId)) throw new Error("Bloque no encontrado");
 
   const user = await prisma.user.findUnique({ where: { id: block.athleteId } });
-  if (!user?.ftp) throw new Error("Configurá tu FTP antes de generar un plan completo");
+  if (!user?.ftp) throw new Error("Cargá tu FTP en Ajustes antes de generar un plan completo");
 
   const thresholds = await prisma.athleteThresholds.findUnique({ where: { athleteId: block.athleteId } });
   const template = await prisma.trainingTemplateSlot.findMany({ where: { athleteId: block.athleteId } });

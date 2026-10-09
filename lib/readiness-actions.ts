@@ -37,7 +37,7 @@ export async function decideReadinessAdjustment(formData: FormData) {
     await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { rationale: `${workout.rationale ?? ""} · ${marker}` } });
   } else {
     const user = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } });
-    if (!user?.ftp) throw new Error("Configurá tu FTP primero");
+    if (!user?.ftp) throw new Error("Cargá tu FTP en Ajustes primero");
     const blocks = workout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
     const proposal = proposeReadinessAdjustment(availability.status, workout.workoutLibraryKey, blocks, user.ftp);
     if (!proposal) throw new Error("Con el estado de hoy no hay un ajuste para proponer");

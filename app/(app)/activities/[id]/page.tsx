@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackLink } from "@/components/BackLink";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -71,7 +72,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="page-container-narrow">
-      <Link href="/dashboard" style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none" }}>← Volver</Link>
+      <BackLink fallback="/dashboard" />
 
       <div style={{ margin: "14px 0 20px", display: "flex", gap: "14px", alignItems: "center" }}>
         <div style={{ width: "46px", height: "46px", borderRadius: "12px", background: "rgba(79,209,197,.1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

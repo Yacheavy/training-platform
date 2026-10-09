@@ -1,7 +1,7 @@
 import { ActionForm } from "@/components/ActionForm";
+import { BackLink } from "@/components/BackLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PendingLink } from "@/components/PendingLink";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -122,7 +122,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="page-container-narrow">
-      <Link href="/dashboard" style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none" }}>← Volver</Link>
+      <BackLink fallback="/dashboard" />
 
       <div style={{ margin: "14px 0 20px" }}>
         <div style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "capitalize" }}>{dateLabel}</div>

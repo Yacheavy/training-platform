@@ -140,7 +140,7 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
   const result: SyncResult = { activities: 0, wellness: 0, errors: [] };
   const creds = await getIntervalsCreds(userId);
   if (!creds) {
-    result.errors.push("Intervals no está conectado (cargá tu athlete ID y tu API key en Configuración)");
+    result.errors.push("Intervals no está conectado (cargá tu Athlete ID y tu API key en Ajustes)");
     return result;
   }
   const { apiKey, athleteId } = creds;

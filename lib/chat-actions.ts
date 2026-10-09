@@ -161,7 +161,7 @@ async function sendChatMessageInner(formData: FormData) {
       if (!workout) notice = "No encontré esa sesión, no apliqué el cambio.";
       else if (workout.status === "COMPLETED")
         notice = "Esta sesión ya se realizó, por eso no apliqué el cambio.";
-      else if (!me?.ftp) notice = "Configurá tu FTP para poder editar sesiones; no apliqué el cambio.";
+      else if (!me?.ftp) notice = "Cargá tu FTP en Ajustes para poder editar sesiones; no apliqué el cambio.";
       else {
         const original = (workout.blocksJson as unknown as { durationSec: number }[]).reduce((s, b) => s + (b.durationSec ?? 0), 0);
         const check = validateBlocks(updatedBlocks, { ftp: me.ftp, originalTotalSec: original, originalTypes: (workout.blocksJson as unknown as { type: string }[]).map((b) => b.type) });

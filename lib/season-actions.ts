@@ -16,7 +16,7 @@ async function requireUserId() {
 export async function applySeason() {
   const athleteId = await requireUserId();
   const user = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } });
-  if (!user?.ftp) throw new Error("Configurá tu FTP antes de generar la temporada");
+  if (!user?.ftp) throw new Error("Cargá tu FTP en Ajustes antes de generar la temporada");
   const state = await getSeasonState(athleteId);
   if (state.proposal.covered || state.proposal.blocks.length === 0) throw new Error("No hay bloques nuevos para crear");
   let sessions = 0;

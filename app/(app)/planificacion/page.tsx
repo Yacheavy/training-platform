@@ -151,7 +151,7 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
           Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Se reemplazan todas las sesiones
           desde hoy, también las aprobadas o enviadas (las enviadas se actualizan solas en Intervals). No se tocan las del pasado, las completadas ni las editadas a mano. Si cambiás la potencia, guardá primero y recién después regenerá.
         </p>
-        <ActionForm action={regeneratePlan} success={null}>
+        <ActionForm action={regeneratePlan} success={null} confirm="Se reemplazan todas las sesiones planificadas desde hoy (no las del pasado, las completadas ni las editadas a mano). ¿Regenerar el plan?">
           <SubmitButton style={btnStyle}>Regenerar plan desde hoy</SubmitButton>
         </ActionForm>
         {sp.regenerated != null && (

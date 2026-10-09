@@ -117,7 +117,7 @@ export function SeasonCard({
                 <b>{OBJ_LABEL[b.objective] ?? b.objective}</b> · {fmtKey(b.startKey)} → {fmtKey(b.endKey)}
               </span>
               {b.isFuture && (
-                <ActionForm action={deleteAction} success="Bloque eliminado">
+                <ActionForm action={deleteAction} success="Bloque eliminado" confirm="¿Eliminar este bloque de la temporada?">
                   <input type="hidden" name="blockId" value={b.id} />
                   <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text)", borderRadius: "10px", padding: "4px 10px", fontSize: "11.5px", cursor: "pointer" }}>Eliminar</SubmitButton>
                 </ActionForm>
