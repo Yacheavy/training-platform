@@ -2,8 +2,26 @@ import { prisma } from "@/lib/prisma";
 import { classifyStimulusType } from "./stimulus-classifier";
 import { dateKeyLocal } from "@/lib/tz";
 
-/** Mínimo de sesiones para guardar un perfil: con menos, el promedio es ruido. */
-const MIN_SESSIONS_FOR_PROFILE = 5;
+/** Mínimo de sesiones para guardar un perfil: con menos, el promedio es ruido (criterio propio). */
+export const MIN_SESSIONS_FOR_PROFILE = 8;
+
+/**
+ * Cambio mínimo "distinguible del ruido" de la HRV de este atleta, en %: 0,5 × el desvío del ln(HRV) diario de los últimos 90 días
+ * (el mismo criterio que usa el semáforo para su línea base). Criterio de diseño: no hay una fuente que valide este umbral para el perfil.
+ */
+export function hrvNoiseThresholdPct(lnValues: number[]): number | null {
+  if (lnValues.length < 14) return null;
+  const m = lnValues.reduce((a, b) => a + b, 0) / lnValues.length;
+  const sd = Math.sqrt(lnValues.reduce((a, b) => a + (b - m) ** 2, 0) / (lnValues.length - 1));
+  return (Math.exp(0.5 * sd) - 1) * 100;
+}
+
+/** Un promedio se publica solo con suficientes sesiones y si supera el ruido propio del atleta. */
+export function isReportableImpact(values: number[], noisePct: number | null): boolean {
+  if (values.length < MIN_SESSIONS_FOR_PROFILE || noisePct == null) return false;
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  return Math.abs(avg) >= noisePct;
+}
 const DAY_MS = 86400000;
 /** Suma/resta días a una clave YYYY-MM-DD sin depender de la zona horaria del servidor. */
 const shiftKey = (key: string, days: number) =>
@@ -62,12 +80,17 @@ export async function updateAthleteResponseProfile(athleteId: string) {
     impacts[stimulusType].push(pctImpact);
   }
 
+  // Ruido propio: variabilidad diaria del ln(HRV) en los últimos 90 días
+  const cutoff = Date.now() - 90 * DAY_MS;
+  const lnRecent = wellness.filter((w) => w.date.getTime() >= cutoff && w.hrv && w.hrv > 0).map((w) => Math.log(w.hrv as number));
+  const noisePct = hrvNoiseThresholdPct(lnRecent);
+
   // Guardar/actualizar el perfil por cada tipo de estímulo encontrado
   const results: Record<string, { avgImpact: number; count: number }> = {};
 
   for (const [stimulusType, values] of Object.entries(impacts)) {
-    if (values.length < MIN_SESSIONS_FOR_PROFILE) {
-      // Muestra insuficiente: no se publica un promedio engañoso (y se borra uno viejo)
+    if (!isReportableImpact(values, noisePct)) {
+      // Muestra insuficiente o efecto dentro del ruido: no se publica un promedio engañoso (y se borra uno viejo)
       await prisma.athleteResponseProfile.deleteMany({ where: { athleteId, stimulusType } });
       continue;
     }

@@ -126,6 +126,12 @@ for (const [wk,c] of vo2PerWeek) { const exp = bp.some((d)=>d.weekIndex===wk&&d.
   check("TSB solo → ámbar", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:ok1,tsb:-40,minTsb:-30}).status==="AMBER");
   check("2 señales → rojo", evaluateAvailability({hrvSig:hrvBad,rhrSig:rhrBad,checkin:ok1,tsb:-5,minTsb:-30}).status==="RED");
   check("TSB + 1 señal → rojo", evaluateAvailability({hrvSig:hrvBad,rhrSig:none,checkin:ok1,tsb:-40,minTsb:-30}).status==="RED");
+  const two:CheckinInput = {fatigue:6,stress:6,muscleSoreness:3,sleepQuality:5};
+  const three:CheckinInput = {fatigue:6,stress:6,muscleSoreness:6,sleepQuality:5};
+  check("2 respuestas del check-in solas → ámbar (una señal)", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:two,tsb:-5,minTsb:-30}).status==="AMBER");
+  check("3 respuestas del check-in solas → rojo (cuadro claro)", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:three,tsb:-5,minTsb:-30}).status==="RED");
+  check("1 respuesta + HRV bajo → rojo", evaluateAvailability({hrvSig:hrvBad,rhrSig:none,checkin:bad1,tsb:-5,minTsb:-30}).status==="RED");
+  check("2 respuestas + TSB bajo → rojo", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:two,tsb:-40,minTsb:-30}).status==="RED");
   check("fatiga del check-in cuenta", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:bad1,tsb:-5,minTsb:-30}).signalsTriggered.includes("fatigue"));
   // El puntaje siempre cae en la banda de su semáforo, para cualquier combinación de entradas
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;

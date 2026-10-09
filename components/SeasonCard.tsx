@@ -156,7 +156,7 @@ export function SeasonCard({
       </div>
 
       {!proposal.covered && proposal.blocks.length > 0 && (
-        <ActionForm action={applyAction} success="Temporada creada: bloques y sesiones generados">
+        <ActionForm action={applyAction} success="Temporada creada: bloques y sesiones generados" confirm={`Se van a crear ${proposal.blocks.length} bloque${proposal.blocks.length === 1 ? "" : "s"} (${proposal.blocks.reduce((s, b) => s + b.weeks, 0)} semanas en total) y se generan las sesiones planificadas de cada uno. Podés eliminar los bloques que todavía no empezaron. ¿Crear la temporada?`}>
           <SubmitButton pendingText="Creando bloques…" style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", boxShadow: "0 6px 16px -8px rgba(79,209,197,.6)", color: "#08201C", border: "none", borderRadius: "12px", padding: "11px 22px", fontSize: "14px", fontWeight: 600 }}>
             Crear estos bloques y generar las sesiones
           </SubmitButton>

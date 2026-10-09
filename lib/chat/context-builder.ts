@@ -216,12 +216,13 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
     });
   if (upcomingLines.length) parts.push(`PRÓXIMAS SESIONES PLANIFICADAS (7 días):\n${upcomingLines.join("\n")}`);
 
-  const responseProfiles = await prisma.athleteResponseProfile.findMany({ where: { athleteId } });
+  // Solo perfiles con 8 o más sesiones (los guardados antes con menos no se muestran hasta recalcularlos)
+  const responseProfiles = await prisma.athleteResponseProfile.findMany({ where: { athleteId, sessionsCount: { gte: 8 } } });
   if (responseProfiles.length > 0) {
     const lines = responseProfiles.map(
-      (p) => `- ${p.stimulusType}: impacto HRV promedio ${p.avgHrvImpactNextDayPct?.toFixed(1)}% al día siguiente (n=${p.sessionsCount})`
+      (p) => `- ${p.stimulusType}: HRV promedio ${(p.avgHrvImpactNextDayPct ?? 0) > 0 ? "+" : ""}${p.avgHrvImpactNextDayPct?.toFixed(1).replace(".", ",")}% al día siguiente vs su línea de 7 días (n=${p.sessionsCount})`
     );
-    parts.push(`PERFIL DE RESPUESTA INDIVIDUAL (aprendido de tu historial):\n${lines.join("\n")}`);
+    parts.push(`PERFIL DE RESPUESTA INDIVIDUAL (aprendido del historial; solo figuran los tipos con 8 o más sesiones y un cambio mayor al ruido propio de su HRV). Es una TENDENCIA observada, no una causa: otros factores (sueño, estrés, la sesión del día anterior) también mueven la HRV, y es un criterio de diseño del sistema, no de un estudio:\n${lines.join("\n")}`);
   }
 
   if (focusedWorkoutId) {

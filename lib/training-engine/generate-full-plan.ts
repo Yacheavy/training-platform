@@ -4,6 +4,9 @@ import { buildPlan, PlanLibraryEntry } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
 import { dateKeyLocal } from "../tz";
 import { loadAutoregulation } from "@/lib/autoregulation-data";
+import { adaptForIndoor } from "./indoor";
+import { calculateTss, calculateKilojoules } from "./tss";
+import { calculateFueling } from "./fueling";
 
 export async function generateFullPlan(trainingBlockId: string, opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[] }) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
@@ -90,6 +93,11 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
       if (existing && replacing && existing.status !== "COMPLETED" && !(opts?.replaceAll && !opts?.replaceDate && existing.status === "EDITED")) {
         const wasSent = existing.status === "SENT_TO_INTERVALS";
         const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(existing.status);
+        // Regenerar el PLAN respeta que el día se pasó a rodillo (una restricción real, p. ej. lluvia); regenerar UNA sesión vuelve a ruta a propósito
+        const keepIndoor = existing.environment === "indoor" && !opts?.replaceDate && day.stimulusType !== "gym";
+        const ind = keepIndoor ? adaptForIndoor(day.blocks, day.stimulusType) : null;
+        const outBlocks = ind ? ind.blocks : day.blocks;
+        const outFuel = ind ? calculateFueling(ind.blocks, user.ftp) : day.fueling;
         await prisma.generatedWorkout.update({
           where: { id: existing.id },
           data: {
@@ -97,14 +105,14 @@ export async function generateFullPlan(trainingBlockId: string, opts?: { fromDat
             // Si ya estaba aprobada/enviada queda aprobada, lista para (re)enviar a Intervals
             status: wasConfirmed ? "APPROVED" : "PLANNED",
             sentToIntervalsAt: null,
-            blocksJson: day.blocks as unknown as Prisma.InputJsonValue,
-            estimatedTss: day.tss,
-            estimatedKj: day.fueling.totalKj,
-            suggestedCarbsG: day.fueling.suggestedCarbsG,
-            suggestedCarbsGPerHour: day.fueling.suggestedCarbsGPerHour,
-            requiresMultipleCarbSources: day.fueling.requiresMultipleCarbSources,
-            rationale: day.rationale,
-            environment: "road",
+            blocksJson: outBlocks as unknown as Prisma.InputJsonValue,
+            estimatedTss: ind ? calculateTss(ind.blocks, user.ftp) : day.tss,
+            estimatedKj: ind ? calculateKilojoules(ind.blocks) : day.fueling.totalKj,
+            suggestedCarbsG: outFuel.suggestedCarbsG,
+            suggestedCarbsGPerHour: outFuel.suggestedCarbsGPerHour,
+            requiresMultipleCarbSources: outFuel.requiresMultipleCarbSources,
+            rationale: ind ? `${day.rationale} · ${ind.note}` : day.rationale,
+            environment: ind ? "indoor" : "road",
           },
         });
         created.push(key);

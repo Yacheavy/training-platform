@@ -4,7 +4,7 @@ import { hrvSignal, restingHrSignal, type DailyPoint, type SignalResult } from "
  * Disponibilidad: semáforo + puntaje de una misma fuente.
  *
  * El SEMÁFORO es la autoridad (fusión de HRV + FC de reposo + bienestar subjetivo en ciclistas, Alfonso, Clarke & Capdevila 2025;
- * las 4 dimensiones de Hooper-Mackinnon 1995; exigir coincidencia de 2+ señales para rojo es criterio de diseño). El PUNTAJE (0–100)
+ * las 4 dimensiones de Hooper-Mackinnon 1995; exigir coincidencia de 2+ señales para rojo es criterio de diseño; las 4 preguntas del check-in cuentan como UNA señal, o como dos si 3 o más están en alerta). El PUNTAJE (0–100)
  * es una heurística de práctica, no un puntaje validado: parte de una base por estado y se mueve dentro de la banda de ese estado
  * según cuánto se desvían HRV, FC de reposo, forma (TSB) y check-in. Así nunca contradice al semáforo:
  *   Rojo 15–49 · Moderada (ámbar) 50–74 · Alta (verde) 75–100.
@@ -71,7 +71,13 @@ export function evaluateAvailability(i: EvaluationInput): Evaluation {
   const tsbAlert = tsb != null && tsb < minTsb;
   if (tsbAlert) reasons.push(`TSB en ${tsb!.toFixed(1)}, por debajo de tu mínimo configurado (${minTsb})`);
 
-  const n = signalsTriggered.length;
+  // Las 4 preguntas del check-in se mueven juntas (una mala noche las altera a la vez): cuentan como UNA señal, y como dos solo si
+  // el cuadro es claro (3 o 4 de las 4 en alerta). Criterio de diseño, no un umbral validado en ensayos.
+  const SUBJECTIVE = new Set(["fatigue", "stress", "muscle_soreness", "sleep_quality"]);
+  const subjectiveHits = signalsTriggered.filter((s) => SUBJECTIVE.has(s)).length;
+  const subjectiveWeight = subjectiveHits === 0 ? 0 : subjectiveHits >= 3 ? 2 : 1;
+  if (subjectiveHits === 2) reasons.push("Las respuestas del check-in cuentan como una sola señal (se mueven juntas); con 3 o más en alerta pesan como dos");
+  const n = signalsTriggered.length - subjectiveHits + subjectiveWeight;
   const status: AvailabilityStatus = n >= 2 || (tsbAlert && n >= 1) ? "RED" : n === 1 || tsbAlert ? "AMBER" : "GREEN";
   if (reasons.length === 0) reasons.push("Sin señales de alerta en HRV, FC reposo, check-in o TSB");
   return { status, signalsTriggered, reasons };

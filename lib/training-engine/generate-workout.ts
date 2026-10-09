@@ -7,9 +7,9 @@ import { calculateFueling } from "./fueling";
 import { buildMesocycleWeeks } from "./mesocycle-builder";
 import { primaryStimulusFor, ALTERNATIVE_TO_STIMULUS, MIN_GAP_DAYS_BETWEEN_VO2MAX } from "./quality-assignment";
 import { ronnestadSeriesFor } from "./plan-builder";
+import { isVo2Key } from "./variants";
 import { dayOfWeekLocal, dayStartLocal, dayRangeLocal } from "../tz";
 
-const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst"]);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface QualityContext {
@@ -65,7 +65,7 @@ async function pickQualityStimulus(athleteId: string, today: Date, rationale: st
     select: { workoutLibraryKey: true, date: true },
   });
   const lastVo2 = recent
-    .filter((r) => VO2_STIMULI.has(r.workoutLibraryKey))
+    .filter((r) => (isVo2Key(r.workoutLibraryKey) || r.workoutLibraryKey === "billat_30_30" || r.workoutLibraryKey === "rst"))
     .map((r) => r.date.getTime())
     .sort((x, y) => y - x)[0];
   if (lastVo2 != null && dayStartLocal(today).getTime() - dayStartLocal(new Date(lastVo2)).getTime() < MIN_GAP_DAYS_BETWEEN_VO2MAX * DAY_MS) {

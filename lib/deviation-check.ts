@@ -1,6 +1,7 @@
 // npx tsx lib/deviation-check.ts — el desacople solo cuenta en sesiones continuas (sin red ni base de datos)
 import { detectPlanDeviation } from "./training-engine/deviation";
 import { progressionAdjustments } from "./training-engine/autoregulation";
+import { hrvNoiseThresholdPct, isReportableImpact } from "./training-engine/response-profile";
 
 const problems: string[] = [];
 const eq = (name: string, got: unknown, want: unknown) => { if (JSON.stringify(got) !== JSON.stringify(want)) problems.push(`${name}: ${JSON.stringify(got)} ≠ ${JSON.stringify(want)}`); };
@@ -17,5 +18,13 @@ eq("intervalos más duros con desacople alto no se leen como «costó»", progre
 const cont = [rec("z2", 1, 1.0, "HARDER_THAN_PLANNED", 14), rec("z2", 2, 1.0, "HARDER_THAN_PLANNED", 14)];
 eq("continuas con desacople alto sí", progressionAdjustments(cont)["z2"].adjust, -1);
 
+// Perfil de respuesta: mínimo de sesiones y ruido propio
+const ln = Array.from({ length: 60 }, (_, i) => Math.log(60 + ((i * 7) % 9) - 4));
+const noise = hrvNoiseThresholdPct(ln);
+eq("ruido calculable con 60 días", noise != null && noise > 0 && noise < 10, true);
+eq("sin datos suficientes → sin umbral", hrvNoiseThresholdPct([4, 4.1]), null);
+eq("7 sesiones no alcanzan", isReportableImpact(Array(7).fill(-10), noise), false);
+eq("8 sesiones con efecto grande sí", isReportableImpact(Array(8).fill(-10), noise), true);
+eq("8 sesiones con efecto dentro del ruido no", isReportableImpact(Array(8).fill(0.2), noise), false);
 console.log({ problems: problems.length });
 if (problems.length) { console.log(problems); process.exit(1); }
