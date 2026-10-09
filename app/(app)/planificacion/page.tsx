@@ -22,7 +22,7 @@ const keyMs = (k: string) => new Date(k + "T00:00:00Z").getTime();
 const diffDays = (a: string, b: string) => Math.round((keyMs(b) - keyMs(a)) / DAY);
 const fmtKey = (k: string) => new Date(k + "T00:00:00Z").toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-export default async function PlanningPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; resent?: string; failed?: string; warnings?: string }> }) {
+export default async function PlanningPage({ searchParams }: { searchParams: Promise<{ regenerated?: string; kept?: string; resent?: string; failed?: string; warnings?: string; skipped?: string; blockerr?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -157,6 +157,8 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
         {sp.regenerated != null && (
           <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
             Listo: {sp.regenerated} sesiones nuevas.{Number(sp.resent) > 0 ? ` ${sp.resent} sesión(es) ya enviadas se actualizaron en Intervals.` : ""}{Number(sp.failed) > 0 ? ` ${sp.failed} no se pudieron reenviar a Intervals: abrilas y tocá «Enviar a Intervals».` : ""}{Number(sp.kept) > 0 ? ` ${sp.kept} sesión(es) editadas a mano se conservaron (usá «Regenerar esta sesión» si querés rehacerlas).` : ""}{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
+            {Number(sp.skipped) > 0 && <span style={{ color: "#E8A33D" }}> {sp.skipped} día(s) no se pudieron guardar: volvé a regenerar.</span>}
+            {sp.blockerr && <span style={{ color: "#E8A33D" }}> No se pudo regenerar: {sp.blockerr}. Volvé a intentar.</span>}
           </div>
         )}
       </div>
