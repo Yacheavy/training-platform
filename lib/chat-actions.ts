@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { buildChatContext } from "@/lib/chat/context-builder";
-import { askClaude, ANALYSIS_STYLE, type ChatUsage } from "@/lib/chat/claude-client";
+import { askClaude, ANALYSIS_STYLE, ANALYSIS_MODEL, type ChatUsage } from "@/lib/chat/claude-client";
 import { parseClaudeResponse } from "@/lib/chat/parse-response";
 import { validateBlocks } from "@/lib/chat/validate-blocks";
 import { findUnverifiedCitations } from "@/lib/chat/citation-check";
@@ -104,7 +104,7 @@ async function sendChatMessageInner(formData: FormData) {
   const addUsage = (u: ChatUsage) => { totalUsage.inputTokens += u.inputTokens; totalUsage.outputTokens += u.outputTokens; totalUsage.costUsd += u.costUsd; };
   try {
     reply = isAnalysisRequest
-      ? await askClaude(context, `${messageText}\n\n${ANALYSIS_STYLE}`, [], 1500)
+      ? await askClaude(context, `${messageText}\n\n${ANALYSIS_STYLE}`, [], 1500, ANALYSIS_MODEL)
       : await askClaude(context, messageText, history);
     addUsage(reply.usage);
   } catch (err) {

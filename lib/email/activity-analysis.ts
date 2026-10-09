@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { RIDE_TYPES } from "@/lib/nutrition-data";
 import { buildChatContext } from "@/lib/chat/context-builder";
-import { askClaude, ANALYSIS_STYLE } from "@/lib/chat/claude-client";
+import { askClaude, ANALYSIS_STYLE, ANALYSIS_MODEL } from "@/lib/chat/claude-client";
 import { mailConfigured, sendMail } from "./mailer";
 import { bodyToHtml, layoutEmail } from "./template";
 
@@ -28,7 +28,7 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
 
   try {
     const context = await buildChatContext(a.athleteId, undefined, a.id);
-    const { text } = await askClaude(context, REQUEST, [], 1200);
+    const { text } = await askClaude(context, REQUEST, [], 1200, ANALYSIS_MODEL);
     const clean = text.replace(/```json_blocks[\s\S]*?```/g, "").trim();
     if (!clean) throw new Error("El análisis salió vacío");
     const when = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });

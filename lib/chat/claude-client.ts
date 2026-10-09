@@ -137,6 +137,7 @@ a partir de los bloques que devuelvas, y ese valor es el que se usa siempre.`;
 /** Pedido de análisis de una sesión hecha: se manda junto al mensaje (el chat y el mail comparten la misma voz). */
 export const ANALYSIS_STYLE = `[INSTRUCCIONES DE ESTA RESPUESTA — tienen prioridad sobre cualquier estilo anterior de la conversación]
 Escribí un análisis breve y cercano de la sesión en foco, en vos, como un entrenador que le habla a su alumno.
+- Voseo rioplatense siempre (tenés, hacé, mirá), nunca tuteo. No inventes sensaciones del atleta ("se sintieron bien") ni cosas que "mencionó": solo lo que figure en el perfil, el estado actual o los datos del contexto. Para contar o numerar esfuerzos usá la lista ordenada del contexto; para la nutrición, los valores «sugeridos» del contexto, no los de tu memoria.
 - Máximo 250 palabras, en 3 o 4 párrafos cortos. Sin títulos, sin mayúsculas de énfasis, sin tablas, sin emojis, sin listas largas, sin volver a contar el plan vuelta por vuelta.
 - Orden: (1) empezá por algo bueno y concreto con su dato; (2) lo que vale la pena mirar (desvío vs plan, desacople, nutrición registrada), sin retar; (3) qué hacer en los próximos días, solo con las sesiones que figuran en el contexto.
 - Usá TSS, IF, NP, desacople, tiempos y vueltas EXACTAMENTE como figuran en el contexto: nunca los recalcules, corrijas ni estimes otros. Si algo no está en el contexto, no lo menciones. El CTL/ATL no se miden en watts, y no calcules rampas ni cambios de CTL que no estén en el contexto.
@@ -156,6 +157,8 @@ const PRICING: Record<string, [number, number, number, number]> = {
   "claude-opus-5-5": [4, 20, 5, 0.2],
 };
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-4-5-20251001";
+/** El análisis de una sesión hecha exige leer y ordenar muchos datos sin errores: usa un modelo más fuerte que el chat corriente. */
+export const ANALYSIS_MODEL = process.env.ANALYSIS_MODEL || "claude-sonnet-5-5";
 
 export interface ChatUsage {
   inputTokens: number;
@@ -175,7 +178,7 @@ function trimHistory(history: { role: string; content: string }[]): { role: stri
   return history.map((h, i) => (i < history.length - 1 && h.content.length > MAX ? { ...h, content: `${h.content.slice(0, MAX)} […]` } : h));
 }
 
-export async function askClaude(context: string, userMessage: string, history: { role: string; content: string }[], maxTokens = 4000): Promise<{ text: string; truncated: boolean; usage: ChatUsage }> {
+export async function askClaude(context: string, userMessage: string, history: { role: string; content: string }[], maxTokens = 4000, model = CHAT_MODEL): Promise<{ text: string; truncated: boolean; usage: ChatUsage }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -185,7 +188,7 @@ export async function askClaude(context: string, userMessage: string, history: {
     },
     signal: AbortSignal.timeout(50_000),
     body: JSON.stringify({
-      model: CHAT_MODEL,
+      model,
       max_tokens: maxTokens,
       // Parte fija (instrucciones + base de conocimiento) con caché: las lecturas de caché cuestan ~10% de la entrada normal
       system: [
@@ -199,6 +202,11 @@ export async function askClaude(context: string, userMessage: string, history: {
     }),
   });
 
+  // Si el modelo pedido no existe o no está disponible, se reintenta con el del chat en vez de dejar al atleta sin respuesta
+  if (!res.ok && (res.status === 404 || res.status === 400) && model !== CHAT_MODEL) {
+    console.error(`Modelo ${model} rechazado (${res.status}); se usa ${CHAT_MODEL}`, await res.text());
+    return askClaude(context, userMessage, history, maxTokens, CHAT_MODEL);
+  }
   if (!res.ok) {
     throw new Error(`Anthropic API error: ${res.status} ${await res.text()}`);
   }
@@ -209,6 +217,6 @@ export async function askClaude(context: string, userMessage: string, history: {
   return {
     text: data.content?.[0]?.text ?? "No pude generar una respuesta.",
     truncated: data.stop_reason === "max_tokens",
-    usage: { inputTokens: parts.input + parts.cacheWrite + parts.cacheRead, outputTokens: parts.output, costUsd: costFor(CHAT_MODEL, parts) },
+    usage: { inputTokens: parts.input + parts.cacheWrite + parts.cacheRead, outputTokens: parts.output, costUsd: costFor(model, parts) },
   };
 }

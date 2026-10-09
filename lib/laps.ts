@@ -66,7 +66,18 @@ export function describeLaps(stored: StoredLaps, ftp?: number | null): string {
     const hard = laps.filter((l) => l.durSec >= 60 && l.avgW != null && l.avgW >= 0.9 * ftp);
     work = `\nVueltas de 60 s o más con potencia media ≥ 90% del FTP (${Math.round(0.9 * ftp)} W; criterio práctico para contar el trabajo duro): ${hard.length}${hard.length ? ` (${hard.map((l) => `V${l.n}`).join(", ")})` : ""}.`;
   }
-  return `${head}\n${[...rows, ...extra].join("\n")}${work}`;
+  // Esfuerzos cortos (sprints, 30/15, etc.) numerados en orden: así el modelo no confunde cuál fue el primero ni cuántos hubo
+  let efforts = "";
+  if (ftp && ftp > 0) {
+    const thr = Math.round(1.15 * ftp);
+    const sp = laps.filter((l) => l.durSec >= 10 && l.durSec < 60 && l.avgW != null && l.avgW >= thr);
+    if (sp.length) {
+      const strongest = sp.reduce((m, l) => (l.avgW! > m.l.avgW! ? { l, i: sp.indexOf(l) } : m), { l: sp[0], i: 0 });
+      const weakest = sp.reduce((m, l) => (l.avgW! < m.l.avgW! ? { l, i: sp.indexOf(l) } : m), { l: sp[0], i: 0 });
+      efforts = `\nEsfuerzos cortos (10–59 s) con potencia media ≥ 115% del FTP (${thr} W), en orden cronológico, ${sp.length} en total: ${sp.map((l, i) => `${i + 1}º = V${l.n}, ${l.durSec} s, ${l.avgW} W`).join("; ")}. El más fuerte fue el ${strongest.i + 1}º (${strongest.l.avgW} W) y el más flojo el ${weakest.i + 1}º (${weakest.l.avgW} W). Para numerar o contar esfuerzos usá SOLO esta lista.`;
+    }
+  }
+  return `${head}\n${[...rows, ...extra].join("\n")}${work}${efforts}`;
 }
 
 /**
