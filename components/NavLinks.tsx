@@ -62,16 +62,17 @@ export function NavLinks({ variant }: { variant: "side" | "bottom"; isCoach?: bo
               style={{
                 width: "52px",
                 padding: "8px 0 6px",
-                borderRadius: "10px",
+                borderRadius: "14px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 gap: "3px",
                 color: active ? "var(--teal)" : "var(--text-dim)",
-                background: active ? "rgba(79,209,197,.1)" : "transparent",
+                background: active ? "linear-gradient(160deg, rgba(79,209,197,.18), rgba(79,209,197,.06))" : "transparent",
+                boxShadow: active ? "0 0 0 1px rgba(79,209,197,.18) inset" : "none",
                 textDecoration: "none",
                 fontSize: "9.5px",
-                fontFamily: "var(--font-mono)",
+                fontWeight: 500,
               }}
             >
               <Icon href={item.href} size={20} />
@@ -95,8 +96,8 @@ export function NavLinks({ variant }: { variant: "side" | "bottom"; isCoach?: bo
               gap: "3px",
               color: active ? "var(--teal)" : "var(--text-dim)",
               borderTop: `2px solid ${active ? "var(--teal)" : "transparent"}`,
-              fontFamily: "var(--font-mono)",
-              fontSize: "10px",
+              fontWeight: 500,
+              fontSize: "10.5px",
               textDecoration: "none",
             }}
           >

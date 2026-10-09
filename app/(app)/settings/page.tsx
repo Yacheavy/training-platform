@@ -22,8 +22,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const access = await getAccessData(session.user.id);
   const tab = sp.tab === "alumnos" && access.isCoach ? "alumnos" : "cuenta";
 
-  const cardStyle = { background: "#171E27", border: "1px solid #2A3441", borderRadius: "14px", padding: "20px", marginBottom: "20px" };
-  const labelStyle = { fontSize: "11px", color: "#8A97A6", textTransform: "uppercase" as const, marginBottom: "6px", display: "block" };
+  const cardStyle = { background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px -12px rgba(0,0,0,.5)", borderRadius: "var(--radius)", padding: "22px", marginBottom: "20px" };
+  const labelStyle = { fontSize: "11px", color: "#8A97A6", marginBottom: "6px", display: "block" };
   const inputStyle = { background: "#242F3B", border: "1px solid #2A3441", borderRadius: "7px", color: "#E7ECF2", padding: "7px 9px", fontSize: "13px", width: "100%" };
   const btnStyle = { background: "#4FD1C5", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
   const tabStyle = (active: boolean) => ({
@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   });
 
   return (
-    <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
+    <div className="page-container-narrow" style={{ minHeight: "100vh", fontFamily: "var(--font-display)" }}>
       <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "16px" }}>Ajustes</h1>
       {access.isCoach && (
         <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
@@ -176,7 +176,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               )}
             </div>
 
-            <div style={{ fontSize: "11px", textTransform: "uppercase", color: "#8A97A6", marginBottom: "8px" }}>Curva de potencia — mejores esfuerzos, últimos 90 días</div>
+            <div style={{ fontSize: "11px", color: "#8A97A6", marginBottom: "8px" }}>Curva de potencia — mejores esfuerzos, últimos 90 días</div>
             {curve?.points?.length ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                 {curve.points.map((p) => (

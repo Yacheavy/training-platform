@@ -112,11 +112,11 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   });
 
   const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" } as const;
-  const h = { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "14px" } as const;
+  const h = { fontSize: "12px", color: "var(--text-muted)", marginBottom: "14px" } as const;
   const stat = (label: string, value: string) => (
     <div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: "20px", fontWeight: 600 }}>{value}</div>
-      <div style={{ fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontSize: "10.5px", color: "var(--text-dim)" }}>{label}</div>
     </div>
   );
 
@@ -160,9 +160,9 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         <div style={card}>
           <div style={h}>Estructura</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "8px 16px", fontSize: "13px" }}>
-            <div style={{ color: "var(--text-dim)", fontSize: "10.5px", textTransform: "uppercase" }}>Fase</div>
-            <div style={{ color: "var(--text-dim)", fontSize: "10.5px", textTransform: "uppercase", textAlign: "right" }}>Duración</div>
-            <div style={{ color: "var(--text-dim)", fontSize: "10.5px", textTransform: "uppercase", textAlign: "right" }}>Potencia</div>
+            <div style={{ color: "var(--text-dim)", fontSize: "10.5px" }}>Fase</div>
+            <div style={{ color: "var(--text-dim)", fontSize: "10.5px", textAlign: "right" }}>Duración</div>
+            <div style={{ color: "var(--text-dim)", fontSize: "10.5px", textAlign: "right" }}>Potencia</div>
             {rows.map((r, i) =>
               r.parts.length === 2 ? (
                 [0, 1].map((k) => (

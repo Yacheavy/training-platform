@@ -40,6 +40,10 @@ a {
   color: inherit;
 }
 
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 html, body {
   overflow-x: hidden;
 }

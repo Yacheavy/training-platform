@@ -4,19 +4,18 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireCoachOfStudent } from "@/lib/access";
 import { calculateAvailability } from "@/lib/training-engine/availability";
-import { getPlanVsActual } from "@/lib/analytics";
-import { getDashboardData } from "@/lib/dashboard-data";
+import { getPlanVsActual, getHrvBandData } from "@/lib/analytics";
+import { getDashboardData, getLoadHistory, getAvailabilityHistory } from "@/lib/dashboard-data";
+import { AvailabilityRing } from "@/components/AvailabilityRing";
+import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
+import { Sparkline } from "@/components/Sparkline";
+import { PlanVsActualChart } from "@/components/PlanVsActualChart";
+import { Card, Section } from "@/components/Card";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
 import { getChatUsage } from "@/lib/chat/usage";
 import { getNutritionSummary } from "@/lib/nutrition-data";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
-
-const STATUS = {
-  RED: { label: "Baja", color: "var(--red)" },
-  AMBER: { label: "Moderada", color: "var(--amber)" },
-  GREEN: { label: "Alta", color: "var(--teal)" },
-} as const;
 
 const STATUS_ES: Record<string, string> = {
   PLANNED: "Planificada", SUGGESTED: "Sugerida", EDITED: "Editada", APPROVED: "Aprobada", SENT_TO_INTERVALS: "Enviada", COMPLETED: "Completada",
@@ -34,7 +33,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   if (!student) notFound();
 
   const todayKey = dateKeyLocal(new Date());
-  const [availability, data, weeks, upcoming, activities, checkin, chatUsage, nutrition] = await Promise.all([
+  const [availability, data, weeks, upcoming, activities, checkin, chatUsage, nutrition, load, hrvBand, availHistory] = await Promise.all([
     calculateAvailability(id),
     getDashboardData(id),
     getPlanVsActual(id, 6),
@@ -46,98 +45,114 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: id, date: dayKeyDate(new Date()) } } }),
     getChatUsage(id),
     getNutritionSummary(id, 42),
+    getLoadHistory(id),
+    getHrvBandData(id, 30),
+    getAvailabilityHistory(id),
   ]);
-  const st = STATUS[availability.status];
   const days = upcoming.filter((w) => dateKeyLocal(w.date) >= todayKey);
 
-  const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "16px 18px", marginBottom: "14px" } as const;
-  const h = { fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", margin: "0 0 12px" } as const;
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
+  const l28 = load.slice(-28);
+  const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string }[] = [
+    { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", spark: l28.map((d) => d.ctl), color: "#6FA8DC" },
+    { label: "Fatiga (ATL)", value: data.atl?.toFixed(1) ?? "—", spark: l28.map((d) => d.atl), color: "#B58CE0" },
+    { label: "Forma (TSB)", value: data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—", spark: l28.map((d) => d.tsb) },
+    { label: "HRV", value: data.hrvToday?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.hrv) },
+    { label: "FC reposo", value: data.restingHr?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "#E8A33D" },
+    { label: "Sueño", value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—" },
+  ];
+  const row = { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" as const, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.05)", fontSize: "13px" };
 
   return (
-    <div className="page-container-narrow">
-      <Link href="/settings?tab=alumnos" style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none" }}>← Alumnos</Link>
-      <h1 style={{ fontSize: "22px", fontWeight: 600, margin: "12px 0 2px" }}>{student.name ?? student.email}</h1>
-      <div style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "16px" }}>
+    <div className="page-container">
+      <Link href="/settings?tab=alumnos" style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>← Alumnos</Link>
+      <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: "12px 0 4px" }}>{student.name ?? student.email}</h1>
+      <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px" }}>
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}
       </div>
 
-      <div style={{ ...card, borderLeft: `3px solid ${st.color}` }}>
-        <h2 style={h}>Disponibilidad hoy</h2>
-        <div style={{ fontSize: "15px", fontWeight: 600, color: st.color }}>{st.label}</div>
-        <ul style={{ margin: "8px 0 0", paddingLeft: "18px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.5 }}>
-          {availability.reasons.map((r, i) => <li key={i}>{r}</li>)}
-        </ul>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "12px", marginTop: "14px", fontFamily: "var(--font-mono)", fontSize: "14px" }}>
-          {[["CTL", data.ctl?.toFixed(1)], ["ATL", data.atl?.toFixed(1)], ["TSB", data.tsb?.toString()], ["HRV", data.hrvToday?.toFixed(0)], ["FC reposo", data.restingHr?.toFixed(0)], ["Sueño h", data.sleepHours?.toFixed(1)]].map(([l, v]) => (
-            <div key={l as string}><div style={{ fontWeight: 600 }}>{v ?? "—"}</div><div style={{ fontSize: "11px", color: "var(--text-dim)", fontFamily: "inherit" }}>{l}</div></div>
+      <AvailabilityRing status={availability.status} score={availability.score} reasons={availability.reasons} missing={availability.scoreDetail.missing} />
+
+      <Section title="Cómo está">
+        <div className="metric-strip">
+          {metrics.map((m) => (
+            <div className="metric" key={m.label}>
+              <div className="metric-label">{m.label}</div>
+              <div className="metric-value">{m.value}</div>
+              {m.spark && m.spark.filter((v) => v != null).length > 1 && (
+                <div className="metric-spark"><Sparkline values={m.spark} color={m.color} id={`s${m.label.replace(/\W/g, "")}`} /></div>
+              )}
+            </div>
           ))}
         </div>
         {checkin && (
-          <div style={{ marginTop: "12px", fontSize: "12.5px", color: "var(--text-muted)" }}>
+          <div style={{ marginTop: "12px", fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5 }}>
             Check-in de hoy (1–7): sueño {checkin.sleepQuality} · fatiga {checkin.fatigue} · estrés {checkin.stress} · dolor {checkin.muscleSoreness} · ánimo {checkin.mood}
             {checkin.freeText ? ` — «${checkin.freeText}»` : ""}
           </div>
         )}
-      </div>
+      </Section>
 
-      <div style={card}>
-        <h2 style={h}>Próximos 7 días</h2>
-        {days.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin sesiones planificadas.</div> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-            {days.map((w) => (
-              <div key={w.id} style={{ display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
-                <span><strong style={{ textTransform: "capitalize" }}>{fmtDay(w.date, false).replace(".", "")}</strong> · {STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}</span>
-                <span style={{ color: "var(--text-muted)" }}>{w.workoutLibraryKey === "gym" ? "" : `${mins(w.blocksJson)} min · TSS ${Math.round(w.estimatedTss ?? 0)} · `}{STATUS_ES[w.status] ?? w.status}</span>
+      <Section title="Entrenamiento">
+        <div className="dash-row two">
+          <Card title="Próximos 7 días">
+            {days.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin sesiones planificadas.</div> : (
+              <div>
+                {days.map((w) => (
+                  <div key={w.id} style={row}>
+                    <span><strong style={{ textTransform: "capitalize" }}>{fmtDay(w.date, false).replace(".", "")}</strong> · {STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}</span>
+                    <span style={{ color: "var(--text-muted)" }}>{w.workoutLibraryKey === "gym" ? "" : `${mins(w.blocksJson)} min · TSS ${Math.round(w.estimatedTss ?? 0)} · `}{STATUS_ES[w.status] ?? w.status}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div style={card}>
-        <h2 style={h}>Últimas actividades</h2>
-        {activities.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin actividades.</div> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-            {activities.map((a) => (
-              <div key={a.id} style={{ display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
-                <span><strong style={{ textTransform: "capitalize" }}>{fmtDay(a.date).replace(".", "")}</strong> · {a.name ?? a.type}</span>
-                <span style={{ color: "var(--text-muted)" }}>
-                  {Math.round(a.durationSec / 60)} min · TSS {a.tss != null ? Math.round(a.tss) : "—"}
-                  {a.deviationFlag === "HARDER_THAN_PLANNED" ? " · ▲ más duro que el plan" : a.deviationFlag === "EASIER_THAN_PLANNED" ? " · ▼ más suave que el plan" : ""}
-                </span>
+            )}
+          </Card>
+          <Card title="Últimas actividades">
+            {activities.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin actividades.</div> : (
+              <div>
+                {activities.map((a) => (
+                  <div key={a.id} style={row}>
+                    <span><strong style={{ textTransform: "capitalize" }}>{fmtDay(a.date).replace(".", "")}</strong> · {a.name ?? a.type}</span>
+                    <span style={{ color: "var(--text-muted)" }}>
+                      {Math.round(a.durationSec / 60)} min · TSS {a.tss != null ? Math.round(a.tss) : "—"}
+                      {a.deviationFlag === "HARDER_THAN_PLANNED" ? " · ▲ más duro que el plan" : a.deviationFlag === "EASIER_THAN_PLANNED" ? " · ▼ más suave que el plan" : ""}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )}
+          </Card>
+        </div>
+      </Section>
 
-      <div style={card}>
-        <h2 style={h}>Plan vs realizado (últimas semanas)</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
-          {weeks.map((w) => (
-            <div key={w.weekStart} style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
-              <span>Semana del {fmtDay(new Date(w.weekStart), false)}{w.isCurrent ? " (actual)" : ""}</span>
-              <span style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                {w.actualTss} / {w.plannedTss} TSS{w.compliancePct != null ? ` · ${w.compliancePct}%` : ""}
-              </span>
+      <Section title="Tendencias">
+        <div className="dash-row two">
+          <Card title="Plan vs realizado" subtitle="TSS semanal, últimas semanas.">
+            <PlanVsActualChart data={weeks} />
+          </Card>
+          {availHistory.length > 0 && (
+            <Card title="Disponibilidad, 30 días" subtitle="Mismo cálculo del semáforo, día a día.">
+              <AvailabilityHistoryChart data={availHistory} />
+            </Card>
+          )}
+        </div>
+      </Section>
+
+      <Section title="Nutrición y asistente">
+        <div className="dash-row two">
+          <Card title="Nutrición durante las sesiones (6 semanas)">
+            <NutritionPatterns summary={nutrition} />
+          </Card>
+          <Card title="Uso del asistente (chat)">
+            <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.7 }}>
+              Hoy: {chatUsage.sentToday} de {chatUsage.limit} mensajes · {chatUsage.todayTokens.toLocaleString("es-AR")} tokens · US$ {chatUsage.todayCostUsd.toFixed(3)}
+              <br />
+              Este mes: {chatUsage.monthMessages} respuestas · US$ {chatUsage.monthCostUsd.toFixed(2)}
+              {chatUsage.avgCostPerMessageUsd != null ? ` (≈ US$ ${chatUsage.avgCostPerMessageUsd.toFixed(3)} por respuesta)` : ""}
             </div>
-          ))}
+          </Card>
         </div>
-      </div>
-      <div style={card}>
-        <h2 style={h}>Nutrición durante las sesiones (6 semanas)</h2>
-        <NutritionPatterns summary={nutrition} />
-      </div>
-      <div style={card}>
-        <h2 style={h}>Uso del asistente (chat)</h2>
-        <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.6 }}>
-          Hoy: {chatUsage.sentToday} de {chatUsage.limit} mensajes · {chatUsage.todayTokens.toLocaleString("es-AR")} tokens · US$ {chatUsage.todayCostUsd.toFixed(3)}
-          <br />
-          Este mes: {chatUsage.monthMessages} respuestas · US$ {chatUsage.monthCostUsd.toFixed(2)}
-          {chatUsage.avgCostPerMessageUsd != null ? ` (≈ US$ ${chatUsage.avgCostPerMessageUsd.toFixed(3)} por respuesta)` : ""}
-        </div>
-      </div>
+      </Section>
       <p style={{ fontSize: "11.5px", color: "var(--text-dim)", lineHeight: 1.5 }}>Vista de solo lectura. Los ajustes de sesiones los hace cada alumno desde su cuenta.</p>
     </div>
   );

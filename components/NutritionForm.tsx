@@ -6,7 +6,7 @@ const inputStyle = {
   width: "100%", background: "var(--surface-2, transparent)", border: "1px solid var(--border)", borderRadius: "8px",
   padding: "8px 10px", color: "inherit", fontFamily: "var(--font-mono)", fontSize: "14px",
 } as const;
-const labelStyle = { fontSize: "11px", color: "var(--text-dim)", textTransform: "uppercase", display: "block", marginBottom: "4px" } as const;
+const labelStyle = { fontSize: "11px", color: "var(--text-dim)", display: "block", marginBottom: "4px" } as const;
 
 export interface NutritionFormValues {
   carbsG: number | null;

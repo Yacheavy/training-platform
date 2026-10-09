@@ -35,59 +35,58 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
   const proposedNext = !next && season.proposal.blocks.length ? season.proposal.blocks[0] : null;
   const activeObjective = current?.objective ?? null;
 
-  const cardStyle = { background: "#171E27", border: "1px solid #2A3441", borderRadius: "14px", padding: "20px", marginBottom: "20px" };
-  const btnStyle = { background: "#4FD1C5", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
-  const small = { fontSize: "11px", color: "#8A97A6", textTransform: "uppercase" as const, letterSpacing: "0.07em", marginBottom: "4px" };
-
+  const cardStyle = { background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px -12px rgba(0,0,0,.5)", borderRadius: "var(--radius)", padding: "22px", marginBottom: "20px" };
+  const btnStyle = { background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", border: "none", borderRadius: "12px", padding: "10px 18px", boxShadow: "0 6px 16px -8px rgba(79,209,197,.6)", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
+  
   const warnings: string[] = [];
   if (!user?.ftp) warnings.push("Falta tu FTP: sin eso no se pueden generar sesiones.");
   if (user?.ftp && !user?.pvo2maxWatts) warnings.push("No cargaste tu potencia en VO2max: los intervalos de VO2max usan un % del FTP.");
   if (!season.goal) warnings.push("No hay un objetivo con fecha: cargá uno abajo y la app arma la temporada.");
 
   return (
-    <div className="page-container-narrow" style={{ minHeight: "100vh", background: "#10151C", color: "#E7ECF2", fontFamily: "sans-serif" }}>
-      <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "16px" }}>Planificación</h1>
+    <div className="page-container-narrow" style={{ minHeight: "100vh", fontFamily: "var(--font-display)" }}>
+      <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: "18px" }}>Planificación</h1>
 
       {/* Resumen: dónde estás parado */}
-      <div style={{ ...cardStyle, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
-        <div>
-          <div style={small}>Objetivo</div>
+      <div className="metric-strip" style={{ marginBottom: "20px" }}>
+        <div className="metric">
+          <div className="metric-label" style={{ marginBottom: "6px" }}>Objetivo</div>
           {season.goal ? (
             <>
-              <div style={{ fontSize: "14px", fontWeight: 600 }}>{season.goal.name}</div>
-              <div style={{ fontSize: "12px", color: "#8A97A6" }}>{fmtKey(season.goal.dateKey)} · faltan {diffDays(today, season.goal.dateKey)} días</div>
+              <div style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.01em" }}>{season.goal.name}</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{fmtKey(season.goal.dateKey)} · faltan {diffDays(today, season.goal.dateKey)} días</div>
             </>
           ) : (
-            <div style={{ fontSize: "13px", color: "#8A97A6" }}>Sin objetivo con fecha</div>
+            <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin objetivo con fecha</div>
           )}
         </div>
-        <div>
-          <div style={small}>Bloque actual</div>
+        <div className="metric">
+          <div className="metric-label" style={{ marginBottom: "6px" }}>Bloque actual</div>
           {current ? (
             <>
-              <div style={{ fontSize: "14px", fontWeight: 600 }}>{OBJ_LABEL[current.objective] ?? current.objective}</div>
-              <div style={{ fontSize: "12px", color: "#8A97A6" }}>
+              <div style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.01em" }}>{OBJ_LABEL[current.objective] ?? current.objective}</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                 semana {Math.floor(diffDays(current.startKey, today) / 7) + 1} de {Math.ceil(diffDays(current.startKey, current.endKey) / 7)} · hasta {fmtKey(current.endKey)}
               </div>
             </>
           ) : (
-            <div style={{ fontSize: "13px", color: "#8A97A6" }}>Ninguno en curso</div>
+            <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Ninguno en curso</div>
           )}
         </div>
-        <div>
-          <div style={small}>Siguiente fase</div>
+        <div className="metric">
+          <div className="metric-label" style={{ marginBottom: "6px" }}>Siguiente fase</div>
           {next ? (
             <>
-              <div style={{ fontSize: "14px", fontWeight: 600 }}>{OBJ_LABEL[next.objective] ?? next.objective}</div>
-              <div style={{ fontSize: "12px", color: "#8A97A6" }}>desde {fmtKey(next.startKey)}</div>
+              <div style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.01em" }}>{OBJ_LABEL[next.objective] ?? next.objective}</div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>desde {fmtKey(next.startKey)}</div>
             </>
           ) : proposedNext ? (
             <>
-              <div style={{ fontSize: "14px", fontWeight: 600 }}>{OBJ_LABEL[proposedNext.objective]} <span style={{ fontSize: "11px", color: "#E8A33D", fontWeight: 400 }}>(propuesta)</span></div>
-              <div style={{ fontSize: "12px", color: "#8A97A6" }}>desde {fmtKey(proposedNext.startKey)} · todavía no creada</div>
+              <div style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.01em" }}>{OBJ_LABEL[proposedNext.objective]} <span style={{ fontSize: "11px", color: "#E8A33D", fontWeight: 400 }}>(propuesta)</span></div>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>desde {fmtKey(proposedNext.startKey)} · todavía no creada</div>
             </>
           ) : (
-            <div style={{ fontSize: "13px", color: "#8A97A6" }}>—</div>
+            <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>—</div>
           )}
         </div>
       </div>
@@ -131,7 +130,7 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
       {/* Plantilla semanal */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Días de entrenamiento</h2>
-        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+        <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>
           Elegí qué hacés cada día, cuáles son de calidad (intensidad) y cuánto duran. Se guarda todo junto con un solo botón; después regenerá el plan para aplicarlo.
         </p>
         <TemplateEditor slots={template.map((t) => ({ dayOfWeek: t.dayOfWeek, stimulusType: t.stimulusType, isQualityDay: t.isQualityDay, targetDurationMin: t.targetDurationMin }))} action={saveTemplate} />
@@ -148,7 +147,7 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
       {/* Aplicar los cambios */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Plan de entrenamiento</h2>
-        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+        <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>
           Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Se reemplazan todas las sesiones
           desde hoy, también las aprobadas o enviadas (las enviadas se actualizan solas en Intervals). No se tocan las del pasado, las completadas ni las editadas a mano. Si cambiás la potencia, guardá primero y recién después regenerá.
         </p>

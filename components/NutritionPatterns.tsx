@@ -8,7 +8,7 @@ export function NutritionPatterns({ summary }: { summary: NutritionSummary }) {
   const stat = (v: string, l: string) => (
     <div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: "18px", fontWeight: 600 }}>{v}</div>
-      <div style={{ fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", marginTop: "2px" }}>{l}</div>
+      <div style={{ fontSize: "10.5px", color: "var(--text-dim)", marginTop: "2px" }}>{l}</div>
     </div>
   );
   return (

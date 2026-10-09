@@ -191,7 +191,7 @@ export function PlanStyleCard({
                 if (!items.length) return null;
                 return (
                   <div key={fam} style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--text-muted)", marginBottom: "6px" }}>{FAMILY_LABELS[fam]}</div>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "6px" }}>{FAMILY_LABELS[fam]}</div>
                     {items.map((v) => (
                       <label key={v.key} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "12.5px", marginBottom: "6px", cursor: "pointer" }}>
                         <input type="checkbox" name="banned" value={v.key} defaultChecked={(t.bannedStimuli ?? []).includes(v.key)} style={{ marginTop: "3px" }} />
