@@ -8,6 +8,9 @@ import { ActivityIcon } from "@/components/ActivityIcon";
 import { PendingLink } from "@/components/PendingLink";
 import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
+import { RatingCard } from "@/components/RatingCard";
+import { savePostRide } from "@/lib/postride-actions";
+import { describeRatings } from "@/lib/ratings";
 import { getNutritionSummary, RIDE_TYPES, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
 import { toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 
@@ -129,6 +132,17 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <Link href={`/workouts/${planned.id}`} style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none", display: "inline-block", marginTop: "8px" }}>
               Ver la sesión planificada →
             </Link>
+          )}
+        </div>
+      )}
+
+      {isRide && (
+        <div style={card}>
+          <div style={h}>Cómo te sentiste</div>
+          {session.user.id === a.athleteId ? (
+            <RatingCard activityId={a.id} rpe={a.rpe} feel={a.feel} action={savePostRide} />
+          ) : (
+            <div style={{ fontSize: "13px" }}>{describeRatings(a.rpe, a.feel) ?? "El atleta no cargó RPE ni sensación."}</div>
           )}
         </div>
       )}

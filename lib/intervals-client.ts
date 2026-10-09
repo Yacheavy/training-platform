@@ -131,3 +131,28 @@ export async function getActivityWithIntervals(apiKey: string, activityId: strin
   if (!res.ok) throw new Error(`Intervals API error: ${res.status}`);
   return res.json();
 }
+
+/**
+ * Envía el RPE (1–10) y la sensación (1–5, 1 = fuerte) a la actividad en Intervals.icu.
+ * Verifica que Intervals haya tomado los valores (la respuesta trae la actividad actualizada).
+ */
+export async function updateActivityRatings(apiKey: string, activityId: string, r: { rpe?: number | null; feel?: number | null }): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const body: Record<string, number> = {};
+  if (r.rpe != null) body.icu_rpe = r.rpe;
+  if (r.feel != null) body.feel = r.feel;
+  if (Object.keys(body).length === 0) return { ok: true };
+  const res = await fetch(`${INTERVALS_BASE_URL}/activity/${activityId}`, {
+    method: "PUT",
+    headers: { Authorization: authHeader(apiKey), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) return { ok: false, reason: `Intervals respondió ${res.status}` };
+  const j = (await res.json().catch(() => null)) as { icu_rpe?: number | null; feel?: number | null } | null;
+  if (j) {
+    if (body.icu_rpe != null && j.icu_rpe !== body.icu_rpe) return { ok: false, reason: "Intervals no tomó el RPE" };
+    if (body.feel != null && j.feel !== body.feel) return { ok: false, reason: "Intervals no tomó la sensación" };
+  }
+  return { ok: true };
+}

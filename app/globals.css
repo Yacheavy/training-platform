@@ -540,3 +540,19 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .msg-action { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(255,255,255,.12); color: var(--text-muted); border-radius: 999px; padding: 5px 11px; font-size: 12px; cursor: pointer; font-family: inherit; }
 .msg-action:hover { border-color: var(--teal); color: var(--text); }
 .msg-action:disabled { opacity: .6; cursor: default; }
+
+/* RPE y sensación (popup posterior a la salida y tarjeta de la sesión) */
+.rate-wrap { display: grid; gap: 16px; }
+.rate-block { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 14px; padding: 12px 13px 13px; }
+.rate-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; font-weight: 600; margin-bottom: 9px; }
+.rate-value { font-size: 12px; font-weight: 500; color: var(--teal); }
+.rpe-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+.rpe-btn { height: 38px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1); background: rgba(79,209,197, calc(var(--lvl) * .13)); color: var(--text); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; font-family: inherit; }
+.rpe-btn:hover { border-color: var(--teal); }
+.rpe-btn.on { background: var(--teal); border-color: var(--teal); color: #08201C; }
+.rate-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+.feel-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.feel-btn { min-height: 38px; padding: 6px 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,.1); background: transparent; color: var(--text); font-size: 12.5px; cursor: pointer; font-family: inherit; }
+.feel-btn:hover { border-color: var(--teal); }
+.feel-btn.on { background: var(--teal); border-color: var(--teal); color: #08201C; font-weight: 600; }
+@media (max-width: 420px) { .feel-btn { font-size: 11.5px; } .rpe-btn { height: 36px; } }

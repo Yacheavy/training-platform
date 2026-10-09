@@ -13,17 +13,23 @@ export function SubmitButton({
   style,
   disabled,
   className,
+  name,
+  value,
 }: {
   children: ReactNode;
   pendingText?: string;
   style?: CSSProperties;
   disabled?: boolean;
   className?: string;
+  name?: string;
+  value?: string;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
+      name={name}
+      value={value}
       disabled={pending || disabled}
       aria-busy={pending}
       className={`btn ${className ?? ""}`}

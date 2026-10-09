@@ -4,6 +4,7 @@ import { ensureActivityWeather, type ActivityWeather } from "@/lib/weather";
 import { NUTRITION_SELECT, toNutritionInput } from "@/lib/nutrition-data";
 import { toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 import { appUrl } from "./mailer";
+import { FEEL_LABELS, RPE_LABELS, validFeel, validRpe } from "@/lib/ratings";
 
 /** Resumen de una salida SIN IA: solo datos de la actividad y cuentas hechas en código. */
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -33,7 +34,7 @@ async function loadRow(activityId: string) {
     where: { id: activityId },
     select: {
       ...NUTRITION_SELECT,
-      type: true, normalizedPower: true, avgPower: true, avgHr: true, maxHr: true, avgCadence: true, kilojoules: true,
+      type: true, normalizedPower: true, avgPower: true, avgHr: true, maxHr: true, avgCadence: true, kilojoules: true, rpe: true, feel: true,
       athlete: { select: { ftp: true } },
       generatedWorkout: { select: { suggestedCarbsGPerHour: true, estimatedTss: true, blocksJson: true } },
     },
@@ -63,7 +64,7 @@ export function renderActivitySummary(a: SummaryRow, laps: StoredLaps | null, we
     cell("Duración", `${min} min`), cell("TSS", n0(a.tss)), cell("IF", ift != null ? dec(ift, 2) : "—"),
   ])}${row([cell("Potencia normalizada", n0(a.normalizedPower, " W")), cell("Potencia media", n0(a.avgPower, " W")), cell("Trabajo", n0(a.kilojoules, " kJ"))])}${row([
     cell("FC media", n0(a.avgHr, " lpm")), cell("FC máxima", n0(a.maxHr, " lpm")), cell("Desacople Pw:HR", a.decouplingPct != null ? `${dec(a.decouplingPct)}%` : "—"),
-  ])}</table>`;
+  ])}${a.rpe != null || a.feel != null ? row([cell("RPE", validRpe(a.rpe) ? `${a.rpe} · ${RPE_LABELS[a.rpe]}` : "—"), cell("Sensación", validFeel(a.feel) ? FEEL_LABELS[a.feel] : "—"), cell("", "")]) : ""}</table>`;
   text.push(`Duración ${min} min · TSS ${n0(a.tss)} · IF ${ift != null ? dec(ift, 2) : "—"} · NP ${n0(a.normalizedPower, " W")} · Potencia media ${n0(a.avgPower, " W")} · FC media ${n0(a.avgHr, " lpm")} · Desacople ${a.decouplingPct != null ? `${dec(a.decouplingPct)}%` : "—"}`);
 
   const section = (title: string, color: string, body: string) =>

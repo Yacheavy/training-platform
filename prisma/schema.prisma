@@ -117,6 +117,11 @@ model Activity {
   lapsJson           Json?
   /// Clima de respaldo (Open-Meteo) y chequeo de GPS; no guarda coordenadas. La sync no lo pisa
   weatherJson        Json?
+  /// Percepción del atleta tras la salida, con la escala de Intervals: RPE 1-10 y sensación 1-5 (1 fuerte … 5 sin fuerzas)
+  rpe                Int?
+  feel               Int?
+  /// El popup posterior a la salida ya se completó o se omitió
+  postRideDoneAt     DateTime?
 
   // Nutrición durante la sesión (registro manual, todo opcional)
   nutritionCarbsG       Int?

@@ -46,6 +46,8 @@ export function mapActivity(a: any, userId: string) {
     polarizationIndex: a.polarization_index,
     hrrValue: a.icu_hrr?.hrr ?? null,
     // Carbohidratos que el atleta cargó en Intervals (si existe el campo); undefined = no pisar lo guardado
+    rpe: typeof a.icu_rpe === "number" && a.icu_rpe >= 1 && a.icu_rpe <= 10 ? Math.round(a.icu_rpe) : undefined,
+    feel: typeof a.feel === "number" && a.feel >= 1 && a.feel <= 5 ? Math.round(a.feel) : undefined,
     intervalsCarbsG: typeof a.carbs_ingested === "number" && a.carbs_ingested > 0 ? a.carbs_ingested : undefined,
     // Cajón flexible: zonas, resumen de intervalos en texto ("7x 3m 335w") y CTL/ATL al momento de la sesión
     rawStreamsJson:

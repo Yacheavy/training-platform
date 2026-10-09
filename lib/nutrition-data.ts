@@ -84,3 +84,49 @@ export async function getPendingNutrition(athleteId: string): Promise<PendingNut
     return { id: r.id, dateKey: r.date.toISOString().slice(0, 10), name: r.name, durationSec: r.durationSec, plannedG: Math.round(s.targetGPerHour * s.hours) };
   });
 }
+
+export interface PendingPostRide {
+  id: string;
+  name: string | null;
+  dateLabel: string;
+  minutes: number;
+  tss: number | null;
+  hours: number;
+  targetGPerHour: number;
+  plannedG: number;
+  needsNutrition: boolean;
+  needsRating: boolean;
+}
+
+/**
+ * La salida de bici de las últimas 48 h a la que le falta nutrición y/o RPE y sensación (y no se omitió el popup).
+ * Si el atleta ya cargó RPE o sensación (acá o en Intervals) no se le vuelve a pedir la percepción.
+ */
+export async function getPendingPostRide(athleteId: string): Promise<PendingPostRide | null> {
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  const rows = await prisma.activity.findMany({
+    where: { athleteId, date: { gte: since }, type: { in: RIDE_TYPES }, durationSec: { gte: 30 * 60 }, postRideDoneAt: null },
+    select: { ...NUTRITION_SELECT, nutritionLoggedAt: true, rpe: true, feel: true },
+    orderBy: { date: "desc" },
+    take: 5,
+  });
+  for (const r of rows) {
+    const needsNutrition = r.durationSec >= MIN_ELIGIBLE_SEC && r.nutritionLoggedAt == null && r.nutritionCarbsG == null && r.intervalsCarbsG == null;
+    const needsRating = r.rpe == null && r.feel == null;
+    if (!needsNutrition && !needsRating) continue;
+    const s = toSessionNutrition(toNutritionInput(r));
+    return {
+      id: r.id,
+      name: r.name,
+      dateLabel: r.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }),
+      minutes: Math.round(r.durationSec / 60),
+      tss: r.tss,
+      hours: s.hours,
+      targetGPerHour: s.targetGPerHour,
+      plannedG: Math.round(s.targetGPerHour * s.hours),
+      needsNutrition,
+      needsRating,
+    };
+  }
+  return null;
+}

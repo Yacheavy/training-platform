@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Activity" ADD COLUMN "rpe" INTEGER,
+ADD COLUMN "feel" INTEGER,
+ADD COLUMN "postRideDoneAt" TIMESTAMP(3);

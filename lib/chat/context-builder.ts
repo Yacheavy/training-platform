@@ -1,5 +1,6 @@
 import { ensureActivityLaps, describeLaps } from "@/lib/laps";
 import { ensureActivityWeather, describeWeather } from "@/lib/weather";
+import { describeRatings } from "@/lib/ratings";
 import { getNutritionSummary, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
 import { describeSessionNutrition, toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 import { prisma } from "@/lib/prisma";
@@ -270,6 +271,8 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
           lines.push(`Nutrición durante la sesión (registrada por el atleta): ${describeSessionNutrition(toSessionNutrition(input), input)}`);
         }
       }
+      const rated = describeRatings(a.rpe, a.feel);
+      if (rated) lines.push(`Percepción del atleta tras la salida (la cargó él): ${rated}. El RPE va de 1 (nada) a 10 (máximo); la sensación, de «fuerte» a «sin fuerzas».`);
       if (RIDE_TYPES_SET.has(a.type)) {
         const wtxt = describeWeather(await ensureActivityWeather(a.id).catch(() => ({ weather: null, deviceTemp: null })));
         if (wtxt) lines.push(wtxt);

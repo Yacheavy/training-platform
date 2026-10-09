@@ -7,6 +7,9 @@ import { LogoMark } from "@/components/Logo";
 import { ConsentModal } from "@/components/ConsentModal";
 import { acceptConsent } from "@/lib/consent-actions";
 import { CONSENT_VERSION, CREATOR } from "@/lib/brand";
+import { PostRideModal } from "@/components/PostRideModal";
+import { savePostRide } from "@/lib/postride-actions";
+import { getPendingPostRide } from "@/lib/nutrition-data";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -14,6 +17,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, consentVersion: true, coach: { select: { name: true } } } });
   const isCoach = me?.role === "COACH";
   const needsConsent = me?.consentVersion !== CONSENT_VERSION;
+  // Tras una salida: popup para completar alimentación, RPE y sensación (no se muestra si falta el consentimiento)
+  const pendingRide = needsConsent ? null : await getPendingPostRide(session.user.id).catch(() => null);
   const coachName = isCoach ? CREATOR.name : (me?.coach?.name ?? CREATOR.name);
 
   return (
@@ -69,6 +74,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {children}
       </div>
 
+      {pendingRide && <PostRideModal p={pendingRide} action={savePostRide} />}
       {needsConsent && <ConsentModal action={acceptConsent} coachName={coachName} />}
       <Toaster />
 
