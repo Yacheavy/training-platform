@@ -309,7 +309,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           Creada por <b style={{ color: "var(--text)" }}>{CREATOR.name}</b>, {CREATOR.role.toLowerCase()}. Si algo falla o tenés una duda, escribime.
         </p>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "13px" }}>
-          <a href={CREATOR.whatsappLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>WhatsApp {CREATOR.whatsapp}</a>
           <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>{CREATOR.email}</a>
           <a href="/guia" target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>Guía de uso</a>
           <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>Política de privacidad</a>

@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { APP_NAME } from "@/lib/brand";
+import { APP_NAME, CREATOR } from "@/lib/brand";
 
 /** Gmail por SMTP con contraseña de aplicación (SMTP_USER / SMTP_PASS en Vercel). Sin esas variables no se envía nada. */
 export function mailConfigured(): boolean {
@@ -40,6 +40,7 @@ export async function sendMail(opts: { to: string; subject: string; html: string
   });
   await transport.sendMail({
     from: `"${APP_NAME}" <${smtpUser()}>`,
+    replyTo: CREATOR.email,
     to: opts.to,
     subject: opts.subject,
     html: opts.html,

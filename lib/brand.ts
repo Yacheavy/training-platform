@@ -4,9 +4,7 @@ export const APP_NAME = "Overkill Cycling";
 export const CREATOR = {
   name: "Alejandro Mariano González",
   role: "Entrenador y creador de la app",
-  email: "alejandromarianog@gmail.com",
-  whatsapp: "+54 9 11 3138 1100",
-  whatsappLink: "https://wa.me/5491131381100",
+  email: "overkillcycling@gmail.com",
 };
 
 /** Subir esta versión obliga a todos a volver a aceptar la política (ej. si cambia qué datos se usan). */

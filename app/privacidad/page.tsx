@@ -16,8 +16,7 @@ export default function PrivacyPage() {
 
       <h2 style={h2}>Quién es el responsable</h2>
       <p style={p}>
-        {CREATOR.name}, {CREATOR.role.toLowerCase()}. Contacto: <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>{CREATOR.email}</a> o WhatsApp{" "}
-        <a href={CREATOR.whatsappLink} style={{ color: "var(--teal)" }}>{CREATOR.whatsapp}</a>.
+        {CREATOR.name}, {CREATOR.role.toLowerCase()}. Contacto: <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>{CREATOR.email}</a>.
       </p>
 
       <h2 style={h2}>Qué datos se guardan</h2>

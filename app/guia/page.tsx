@@ -89,7 +89,7 @@ export default function GuidePage() {
       </section>
 
       <p style={{ ...p, fontSize: "13px", textAlign: "center", marginTop: "10px" }}>
-        ¿Algo no funciona o no se entiende? Escribile a {CREATOR.name.split(" ")[0]}: <a href={CREATOR.whatsappLink} style={{ color: "var(--teal)" }}>WhatsApp</a> o <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>email</a>.
+        ¿Algo no funciona o no se entiende? Escribinos a <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>{CREATOR.email}</a>.
       </p>
     </div>
   );
