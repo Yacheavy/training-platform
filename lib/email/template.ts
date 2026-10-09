@@ -54,7 +54,7 @@ export function analysisBodyHtml(text: string): string {
 }
 
 /** Estructura común de los mails: logo, contenido, botón y pie. Tablas y estilos en línea para que funcione en cualquier cliente de mail. */
-export function layoutEmail(o: { title: string; subtitle?: string; bodyHtml: string; ctaLabel?: string; ctaPath?: string; ai?: boolean }): string {
+export function layoutEmail(o: { title: string; subtitle?: string; bodyHtml: string; ctaLabel?: string; ctaPath?: string; ai?: boolean; footerNote?: string }): string {
   const base = appUrl();
   const cta = o.ctaLabel && o.ctaPath
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:22px 0 4px"><tr><td style="border-radius:12px;background:#4FD1C5"><a href="${base}${o.ctaPath}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#08201C;text-decoration:none">${esc(o.ctaLabel)}</a></td></tr></table>`
@@ -74,9 +74,9 @@ ${o.bodyHtml}
 ${cta}
 </td></tr>
 <tr><td style="padding:18px 28px 26px;border-top:1px solid #2A3441;font-size:11.5px;line-height:1.6;color:#5A6673">
-${o.ai === false ? "Resumen automático con los datos de tu actividad en Intervals.icu, sin IA. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos." : "Este análisis lo genera una IA con tus datos de entrenamiento. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos."}<br>
+${o.footerNote ? esc(o.footerNote) : o.ai === false ? "Resumen automático con los datos de tu actividad en Intervals.icu, sin IA. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos." : "Este análisis lo genera una IA con tus datos de entrenamiento. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos."}<br>
 ${APP_NAME} · creada por ${esc(CREATOR.name)}.<br>
-${base ? `<a href="${base}/settings" style="color:#8A97A6">Dejar de recibir estos mails (Ajustes)</a> · <a href="${base}/privacidad" style="color:#8A97A6">Privacidad</a>` : ""}
+${base ? `${o.footerNote ? "" : `<a href="${base}/settings" style="color:#8A97A6">Dejar de recibir estos mails (Ajustes)</a> · `}<a href="${base}/privacidad" style="color:#8A97A6">Privacidad</a>` : ""}
 </td></tr>
 </table></td></tr></table></body></html>`;
 }

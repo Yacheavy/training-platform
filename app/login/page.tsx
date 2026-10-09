@@ -35,7 +35,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </form>
         <p style={{ marginTop: "22px", fontSize: "11.5px", lineHeight: 1.6, color: "var(--text-dim)" }}>
           Creada por {CREATOR.name}.<br />
-          <a href={CREATOR.whatsappLink} style={{ color: "var(--text-muted)" }}>WhatsApp</a> · <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--text-muted)" }}>Email</a> · <a href="/privacidad" style={{ color: "var(--text-muted)" }}>Privacidad</a>
+          <a href={CREATOR.whatsappLink} style={{ color: "var(--text-muted)" }}>WhatsApp</a> · <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--text-muted)" }}>Email</a> · <a href="/guia" style={{ color: "var(--text-muted)" }}>Guía</a> · <a href="/privacidad" style={{ color: "var(--text-muted)" }}>Privacidad</a>
         </p>
       </div>
     </div>

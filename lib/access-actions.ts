@@ -10,6 +10,7 @@ import { encryptSecret } from "@/lib/crypto";
 import { getWellness } from "@/lib/intervals-client";
 import { syncIntervals } from "@/lib/intervals-sync";
 import { dateKeyLocal } from "@/lib/tz";
+import { sendInvitationEmail } from "@/lib/email/invite";
 
 async function requireUserId() {
   const session = await auth();
@@ -19,13 +20,28 @@ async function requireUserId() {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+async function coachName(coachId: string) {
+  return (await prisma.user.findUnique({ where: { id: coachId }, select: { name: true } }))?.name ?? null;
+}
+
 export async function inviteAthlete(formData: FormData) {
   const coachId = await requireCoachId();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!EMAIL_RE.test(email) || email.length > 200) redirect("/settings?tab=alumnos&invite=invalid");
   await prisma.allowedEmail.upsert({ where: { email }, update: {}, create: { email, invitedById: coachId } });
+  const mail = await sendInvitationEmail(email, await coachName(coachId));
   revalidatePath("/settings");
-  redirect("/settings?tab=alumnos&invite=ok");
+  redirect(`/settings?tab=alumnos&invite=${mail === "sent" ? "sent" : mail === "failed" ? "mailfail" : "ok"}`);
+}
+
+/** Vuelve a mandar el mail de invitación a alguien ya invitado que todavía no ingresó. */
+export async function resendInvite(formData: FormData) {
+  const coachId = await requireCoachId();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const invite = await prisma.allowedEmail.findFirst({ where: { email, OR: [{ invitedById: coachId }, { invitedById: null }] } });
+  if (!invite) redirect("/settings?tab=alumnos&invite=invalid");
+  const mail = await sendInvitationEmail(email, await coachName(coachId));
+  redirect(`/settings?tab=alumnos&invite=${mail === "sent" ? "resent" : "mailfail"}`);
 }
 
 export async function removeInvite(formData: FormData) {

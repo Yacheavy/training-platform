@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { auth } from "@/auth";
 import { getAccessData } from "@/lib/access-data";
 import { getSettingsData } from "@/lib/settings-data";
-import { inviteAthlete, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
+import { inviteAthlete, resendInvite, removeInvite, connectIntervals, disconnectIntervals, syncFullHistory } from "@/lib/access-actions";
 import { redirect } from "next/navigation";
 import { saveThresholds, saveProfile, saveMetrics, applyIntervalsValue, refreshMetricsNow } from "@/lib/settings-actions";
 import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from "@/lib/athlete-metrics";
@@ -53,13 +53,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <div style={cardStyle}>
           <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Alumnos</h2>
           <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
-            Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
+            Al invitar, le llega un mail con los pasos para entrar, instalar la app y conectar Intervals. Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
           </p>
           <ActionForm action={inviteAthlete} success={null} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
             <input name="email" type="email" placeholder="email@gmail.com" style={{ ...inputStyle, flex: "1 1 220px", width: "auto" }} required />
             <SubmitButton style={btnStyle}>Invitar</SubmitButton>
           </ActionForm>
-          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada. Avisale que entre con esa cuenta de Google.</div>}
+          {sp.invite === "sent" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada y mail enviado, con los pasos para entrar e instalar la app.</div>}
+          {sp.invite === "resent" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación reenviada.</div>}
+          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada (el envío de mails no está configurado). Avisale que entre con esa cuenta de Google.</div>}
+          {sp.invite === "mailfail" && <div style={{ fontSize: "12px", color: "#E8A33D", marginBottom: "10px" }}>La invitación está guardada pero no se pudo enviar el mail. Probá «Reenviar» en un rato o avisale vos.</div>}
           {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginBottom: "10px" }}>Ese email no es válido.</div>}
           {access.invites.map((i) => (
             <div key={i.email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #2A3441", fontSize: "13px" }}>
@@ -70,10 +73,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               {i.isCoach ? (
                 <span style={{ color: "#5A6673", fontSize: "11px" }}>Entrenador</span>
               ) : (
-                <ActionForm action={removeInvite} success="Invitación eliminada">
-                  <input type="hidden" name="email" value={i.email} />
-                  <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
-                </ActionForm>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  {!i.joined && (
+                    <ActionForm action={resendInvite} success={null}>
+                      <input type="hidden" name="email" value={i.email} />
+                      <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#4FD1C5", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Reenviar</SubmitButton>
+                    </ActionForm>
+                  )}
+                  <ActionForm action={removeInvite} success="Invitación eliminada">
+                    <input type="hidden" name="email" value={i.email} />
+                    <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
+                  </ActionForm>
+                </div>
               )}
             </div>
           ))}
@@ -300,6 +311,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "13px" }}>
           <a href={CREATOR.whatsappLink} target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>WhatsApp {CREATOR.whatsapp}</a>
           <a href={`mailto:${CREATOR.email}`} style={{ color: "var(--teal)" }}>{CREATOR.email}</a>
+          <a href="/guia" target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>Guía de uso</a>
           <a href="/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: "var(--teal)" }}>Política de privacidad</a>
         </div>
         <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "10px" }}>Política versión {CONSENT_VERSION}</div>

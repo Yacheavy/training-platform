@@ -25,6 +25,7 @@ export default function PrivacyPage() {
         <li>Tu cuenta: nombre y email de Google, con los que ingresás.</li>
         <li>Datos de entrenamiento que traemos de tu cuenta de Intervals.icu: salidas, potencia, frecuencia cardíaca, carga.</li>
         <li>Datos de recuperación: HRV, frecuencia cardíaca en reposo, sueño.</li>
+        <li>El email con el que tu entrenador te invita, para enviarte la invitación.</li>
         <li>Tu email también se usa para enviarte el análisis de tus salidas, que podés desactivar en Ajustes.</li>
         <li>Lo que cargás vos: perfil (peso, FTP, objetivos, preferencias), check-ins diarios, nutrición de las salidas y tus mensajes con el asistente.</li>
         <li>Tu clave de Intervals, guardada cifrada. Solo se usa para traer tus datos y enviar tus sesiones.</li>
