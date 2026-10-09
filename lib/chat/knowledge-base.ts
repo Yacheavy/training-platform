@@ -145,6 +145,22 @@ Z2 / BASE: 56-75% FTP [PRÁCTICA, rango de zonas].
 - Ningún marcador aislado de fatiga es confiable [R20]; conviene combinar HRV + FC de reposo + bienestar
   subjetivo [R4][R21][R16]. Evidencia preliminar (R4: 28 ciclistas varones, 40 días, grupos de 8-12). Las
   medidas subjetivas reflejaron la carga con mayor sensibilidad y consistencia que las objetivas [R19].
+- RPE y sensación (percepción del atleta): el método session-RPE multiplica un RPE único de toda la sesión (CR-10)
+  por los minutos [R48][R49]; la fiabilidad es buena y se correlaciona con la carga por FC, pero con variación grande
+  según el tipo de sesión (r=0,88 en remo; r=0,31 en sesiones intermitentes/de velocidad) [R49]; en fútbol
+  r=0,50-0,85 [R50]. Es carga INTERNA (la respuesta del atleta), distinta de la EXTERNA (vatios, kJ, TSS) y conviene
+  medir las dos [R51]. Cómo leerlo:
+  · Un RPE aislado dice poco; el valor está en la TENDENCIA a igual carga externa. En remeros, el RPE subió (y
+    se asoció a más fatiga) sin que cambiara la distribución por FC [R52]; en ciclistas, tras 6 semanas de
+    intervalos el esfuerzo percibido para la misma FC era mayor y eso predijo la respuesta a la descarga [R53].
+    Son estudios chicos o de otro deporte: hipótesis, no regla.
+  · Sesiones con esfuerzos cortos (sprints, microintervalos) y mucha parte suave: el RPE es UN número que promedia
+    todo; un RPE bajo no prueba que los esfuerzos hayan sido fáciles [R49, limitación de un único número].
+  · Si el contexto trae «RPE vs carga (calculado)» y «Tendencia», usalos tal cual. Los rangos de RPE por IF son un
+    criterio aproximado del sistema [PRÁCTICA].
+  · Sensación floja o RPE llamativamente alto a igual carga: se menciona como señal a confirmar con FC de reposo,
+    HRV y bienestar [R20][R4]; nunca como diagnóstico de fatiga u overreaching por sí sola.
+  · Con menos de 3 sesiones previas con RPE no hay tendencia que comentar.
 - HRV: usar promedios de 7 días en vez de valores aislados, que pueden ser engañosos [R5]; promediar mejora la
   validez y se recomiendan al menos 3 registros válidos por semana [R17]. El cambio mínimo relevante se expresa en
   múltiplos del coeficiente de variación [R16]. La línea base de 60 días y el umbral de −0,5·SD que usa el

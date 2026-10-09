@@ -1,6 +1,6 @@
 import { ensureActivityLaps, describeLaps } from "@/lib/laps";
 import { ensureActivityWeather, describeWeather } from "@/lib/weather";
-import { describeRatings } from "@/lib/ratings";
+import { describeRatings, readRatings, validRpe, ifRatio } from "@/lib/ratings";
 import { getNutritionSummary, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
 import { describeSessionNutrition, toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 import { prisma } from "@/lib/prisma";
@@ -272,7 +272,18 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
         }
       }
       const rated = describeRatings(a.rpe, a.feel);
-      if (rated) lines.push(`Percepción del atleta tras la salida (la cargó él): ${rated}. El RPE va de 1 (nada) a 10 (máximo); la sensación, de «fuerte» a «sin fuerzas».`);
+      if (rated) {
+        lines.push(`Percepción del atleta tras la salida (la cargó él): ${rated}. El RPE va de 1 (nada) a 10 (máximo); la sensación, de «fuerte» a «sin fuerzas».`);
+        const prevRated = await prisma.activity.findMany({
+          where: { athleteId, id: { not: a.id }, date: { lt: a.date }, rpe: { not: null } },
+          orderBy: { date: "desc" },
+          take: 6,
+          select: { rpe: true, feel: true, intensityFactor: true, date: true, name: true },
+        });
+        const prior = prevRated.filter((p) => validRpe(p.rpe)).map((p) => ({ rpe: p.rpe as number, feel: p.feel, ifr: ifRatio(p.intensityFactor), label: p.date.toISOString().slice(0, 10) }));
+        lines.push(...readRatings({ rpe: a.rpe, feel: a.feel, durationMin: Math.round(a.durationSec / 60), intensityFactor: a.intensityFactor, variabilityIndex: a.variabilityIndex, prior }));
+        if (prior.length) lines.push(`Sesiones anteriores con RPE (de la más reciente): ${prior.slice(0, 5).map((p) => `${p.label} RPE ${p.rpe}${p.ifr != null ? ` (IF ${p.ifr.toFixed(2).replace(".", ",")})` : ""}`).join("; ")}.`);
+      }
       if (RIDE_TYPES_SET.has(a.type)) {
         const wtxt = describeWeather(await ensureActivityWeather(a.id).catch(() => ({ weather: null, deviceTemp: null })));
         if (wtxt) lines.push(wtxt);

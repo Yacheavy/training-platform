@@ -398,6 +398,55 @@ export const REFERENCES: Reference[] = [
     level: "Ensayo pequeño (menos de 20 ciclistas) y corto. El sistema NO replica el protocolo (usa 2 sesiones en la semana intensificada, no 5) y lo presenta como adaptación propia.",
     checked: "cita",
   },
+  // ── RPE y percepción del esfuerzo ───────────────────────────────────────────
+  {
+    id: "R48",
+    surnames: ["Foster"],
+    cite: "Foster C, et al. A new approach to monitoring exercise training. J Strength Cond Res. 2001;15(1):109-115 (PMID 11708692).",
+    supports: "Origen del método session-RPE: el atleta puntúa la sesión entera con la escala CR-10 (Borg adaptada) y se multiplica por los minutos para obtener una carga en unidades arbitrarias (ej.: 87 min a RPE 4 = 348 u.a.). Los detalles se confirmaron a través de la revisión de Haddad [R49], no del abstract original.",
+    level: "Trabajo fundacional, no leído directamente (PubMed bloqueó la lectura). Una sola cifra por sesión: promedia toda la sesión, no el pico.",
+    checked: "resumen",
+  },
+  {
+    id: "R49",
+    surnames: ["Haddad", "Stylianides", "Djaoui", "Dellal", "Chamari"],
+    cite: "Haddad M, Stylianides G, Djaoui L, Dellal A, Chamari K. Session-RPE method for training load monitoring: validity, ecological usefulness, and influencing factors. Front Neurosci. 2017;11:612. doi:10.3389/fnins.2017.00612.",
+    supports: "Mini-revisión: 36 estudios de validez/fiabilidad con la CR-10 apoyan el método en distintos deportes, edades y sexos; la fiabilidad es buena (CCI ~0,95 en varios). Se valida contra la carga por FC (TRIMP) con correlaciones muy variables (r=0,88 en remo; r=0,31 en sesiones intermitentes/de velocidad en taekwondo). El atleta da un solo número para toda la sesión, conviene familiarizarlo con la escala, y algunos autores recomiendan combinarlo con la FC. En un estudio, sacar las pausas del cálculo mejoró la correlación (0,86 vs 0,82).",
+    level: "Revisión narrativa (mini-review). Casi todo en deportes de equipo y con FC como comparador; la carga por potencia no se discute en el texto leído (se leyeron los primeros 100.000 caracteres).",
+    checked: "abstract",
+  },
+  {
+    id: "R50",
+    surnames: ["Impellizzeri", "Rampinini", "Coutts", "Sassi", "Marcora"],
+    cite: "Impellizzeri FM, Rampinini E, Coutts AJ, Sassi A, Marcora SM. Use of RPE-based training load in soccer. Med Sci Sports Exerc. 2004;36(6):1042-1047.",
+    supports: "19 jóvenes futbolistas, 479 sesiones durante 7 semanas: la carga session-RPE se correlacionó con tres métodos de carga por FC (Edwards, Banister, Lucia) con r=0,50 a 0,85. Concluyen que es un buen indicador de la carga interna global del entrenamiento.",
+    level: "Estudio observacional en fútbol, no en ciclismo; las correlaciones de 0,50 a 0,85 son de grupo y dejan mucho sin explicar en cada persona.",
+    checked: "abstract",
+  },
+  {
+    id: "R51",
+    surnames: ["Impellizzeri", "Marcora", "Coutts"],
+    cite: "Impellizzeri FM, Marcora SM, Coutts AJ. Internal and external training load: 15 years on. Int J Sports Physiol Perform. 2019;14(2):270-273. doi:10.1123/ijspp.2018-0935.",
+    supports: "Comentario conceptual: la carga EXTERNA (lo que se hace: vatios, kJ) y la INTERNA (la respuesta fisiológica y psicológica del atleta, incluida la percepción) son cosas distintas; la adaptación la dirige la interna, por eso conviene medir las dos.",
+    level: "Comentario/marco conceptual leído solo en resumen (autores tomados de la búsqueda, no de la página). No da umbrales ni reglas de interpretación.",
+    checked: "abstract",
+  },
+  {
+    id: "R52",
+    surnames: ["Pind", "Hofmann", "Mäestu", "Maestu", "Vahtra", "Purge"],
+    cite: "Pind R, Hofmann P, Mäestu E, Vahtra E, Purge P, Mäestu J. Increases in RPE rating predict fatigue accumulation without changes in heart rate zone distribution after 4-week low-intensity high-volume training period in high-level rowers. Front Physiol. 2021;12:735565.",
+    supports: "19 remeros de alto nivel, 4 semanas con ~50% más de volumen suave: la distribución por zonas de FC no cambió pero las sesiones puntuadas Moderadas/Difíciles por RPE aumentaron y se asociaron con más fatiga (cuestionario RESTQ-Sport); la FC no mostró esa asociación. Sugieren que el RPE junto con la FC puede ser más sensible que la FC sola.",
+    level: "Estudio observacional en REMO (no ciclismo), 4 semanas, sin medir rendimiento y sin control. Apoya mirar la TENDENCIA del RPE a igual carga, no un valor aislado.",
+    checked: "abstract",
+  },
+  {
+    id: "R53",
+    surnames: [],
+    cite: "Estudio en 11 ciclistas universitarios: Heart rate-perceived exertion relationship during training and taper. J Sports Med Phys Fitness. 2000;40(3):201-208 (autores no verificados: no la cites por apellido).",
+    supports: "6 semanas de intervalos de alta intensidad y 1 de descarga: al final del entrenamiento el esfuerzo percibido era mayor para la misma FC; los cambios en la relación FC–esfuerzo percibido y la caída de la FC a igual potencia fueron los mejores predictores de la respuesta a la descarga. Los autores proponen usarla para monitorear el overreaching y la fatiga.",
+    level: "Estudio pequeño en ciclistas (n=11) leído en resumen. Es del año 2000 y la relación se midió en tests escalonados, no en salidas libres.",
+    checked: "abstract",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */
