@@ -1,12 +1,13 @@
 import { signIn } from "@/auth"
+import { LogoMark, Wordmark } from "@/components/Logo"
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const sp = await searchParams
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="login-logo">i</div>
-        <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: "0 0 8px" }}>Tu entrenamiento, ordenado</h1>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}><LogoMark size={140} /></div>
+        <div style={{ marginBottom: "18px" }}><Wordmark size={38} /></div>
         <p style={{ fontSize: "14px", color: "var(--text-muted)", lineHeight: 1.55, margin: "0 0 24px" }}>
           Ingresá con la cuenta de Google con la que te invitó tu entrenador.
         </p>

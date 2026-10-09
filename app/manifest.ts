@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Training Platform",
-    short_name: "Training",
+    name: "Overkill Cycling",
+    short_name: "Overkill",
     description: "Plataforma de entrenamiento personal de ciclismo",
     start_url: "/dashboard",
     scope: "/",

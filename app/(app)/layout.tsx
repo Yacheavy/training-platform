@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Toaster } from "@/components/Toaster";
+import { LogoMark } from "@/components/Logo";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -31,24 +32,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           zIndex: 10,
         }}
       >
-        <div
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "11px",
-            boxShadow: "0 6px 16px -6px rgba(79,209,197,.5)",
-            background: "linear-gradient(135deg, var(--teal), #2E8B82)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "var(--font-mono)",
-            fontWeight: 600,
-            fontSize: "14px",
-            color: "#0A1310",
-            marginBottom: "24px",
-          }}
-        >
-          i
+        <div style={{ marginBottom: "20px" }}>
+          <LogoMark size={54} />
         </div>
         <NavLinks variant="side" isCoach={isCoach} />
       </div>

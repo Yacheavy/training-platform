@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Training Platform",
+  title: "Overkill Cycling",
   description: "Plataforma de entrenamiento personal",
-  appleWebApp: { capable: true, title: "Training", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: "Overkill", statusBarStyle: "black" },
 };
 
 export const viewport: Viewport = {
