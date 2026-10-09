@@ -55,7 +55,7 @@ export function LoadChart({ data }: { data: { date: string; ctl: number | null; 
       legend: {
         position: "top" as const,
         align: "end" as const,
-        labels: { boxWidth: 10, boxHeight: 2, color: "#8A97A6", padding: 14, font: { family: "IBM Plex Mono", size: 10.5 } },
+        labels: { boxWidth: 10, boxHeight: 2, color: "#8A97A6", padding: 14, font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10.5 } },
       },
     },
     scales: {

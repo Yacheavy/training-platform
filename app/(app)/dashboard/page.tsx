@@ -19,6 +19,7 @@ import {
   getUpcomingBlocks,
 } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
+import { Sparkline } from "@/components/Sparkline";
 import { PlanNavigator } from "@/components/PlanNavigator";
 import { HrvRhrChart } from "@/components/HrvRhrChart";
 import { IntensityChart } from "@/components/IntensityChart";
@@ -181,10 +182,33 @@ export default async function DashboardPage() {
             {data.hrvDate ? `Último dato de recuperación: ${ageLabel(data.hrvDate).replace(/[()]/g, "")}` : "Todavía no hay datos de recuperación"}
           </div>
         </div>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "14px 18px", maxWidth: "100%" }}>
-          <AvailabilityRing status={availability.status} signalsTriggered={availability.signalsTriggered} reasons={availability.reasons} />
-        </div>
       </div>
+
+      <AvailabilityRing status={availability.status} score={availability.score} reasons={availability.reasons} missing={availability.scoreDetail.missing} />
+
+      <Section title="Cómo estás">
+        <div className="metric-strip">
+          <StatCard label="Fitness (CTL)" value={data.ctl?.toFixed(1) ?? "—"} spark={loadHistory.slice(-28).map((d) => d.ctl)} color="#6FA8DC" />
+          <StatCard label="Fatiga (ATL)" value={data.atl?.toFixed(1) ?? "—"} spark={loadHistory.slice(-28).map((d) => d.atl)} color="#B58CE0" />
+          <StatCard
+            label="Forma (TSB)"
+            value={data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—"}
+            sub={data.tsb == null ? undefined : data.tsb < -25 ? "Muy fatigado" : data.tsb > 5 ? "Fresco" : "Entrenable"}
+            spark={loadHistory.slice(-28).map((d) => d.tsb)}
+            color={data.tsb != null && data.tsb < -25 ? "#E5636A" : "#4FD1C5"}
+            accent={data.tsb != null ? (data.tsb < -25 ? "red" : data.tsb > 5 ? "teal" : undefined) : undefined}
+          />
+          <StatCard
+            label={`HRV ${ageLabel(data.hrvDate)}`}
+            value={data.hrvToday?.toFixed(0) ?? "—"}
+            sub={hrvDeltaPct != null ? `${hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(hrvDeltaPct)}% vs 7d` : undefined}
+            spark={hrvBand.points.slice(-28).map((p) => p.hrv)}
+            color="#4FD1C5"
+          />
+          <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} spark={hrvBand.points.slice(-28).map((p) => p.restingHr)} color="#E8A33D" />
+          <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} />
+        </div>
+      </Section>
 
       <Section title="Hoy">
         {pendingNutrition.length > 0 && (
@@ -344,27 +368,6 @@ export default async function DashboardPage() {
         </div>
       </Section>
 
-      <Section title="Cómo estás">
-        <div className="grid-stats">
-          <StatCard label="CTL · Fitness" value={data.ctl?.toFixed(1) ?? "—"} desc="Carga crónica: promedio de 42 días de TSS" />
-          <StatCard label="ATL · Fatiga" value={data.atl?.toFixed(1) ?? "—"} desc="Carga aguda: promedio de 7 días de TSS" />
-          <StatCard
-            label="TSB · Forma"
-            value={data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—"}
-            desc="CTL menos ATL: positivo es fresco, negativo es fatigado"
-            accent={data.tsb != null ? (data.tsb < -25 ? "red" : data.tsb > 5 ? "teal" : undefined) : undefined}
-          />
-          <StatCard
-            label={`HRV ${ageLabel(data.hrvDate)}`}
-            value={data.hrvToday?.toFixed(0) ?? "—"}
-            sub={hrvDeltaPct != null ? `${hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(hrvDeltaPct)}% vs 7d` : undefined}
-            desc="Se compara contra tu media de 7 días"
-          />
-          <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} desc="Pulsaciones en reposo; sube con la fatiga acumulada" />
-          <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} desc="Horas dormidas" />
-        </div>
-      </Section>
-
       <Section title="Tu plan">
         <Card title="Plan de entrenamiento" subtitle="Navegá semana a semana con las flechas, o deslizando en el celular.">
           <PlanNavigator workouts={planWorkouts} nowISO={new Date().toISOString()} />
@@ -388,7 +391,7 @@ export default async function DashboardPage() {
             <HrvRhrChart points={hrvBand.points} band={hrvBand.band} />
           </Card>
           {availabilityHistory.length > 0 && (
-            <Card title="Disponibilidad, 30 días" subtitle="Puntaje que combina tu HRV contra tu media de 7 días y tu forma (TSB), día a día. Solo se calcula en días con datos.">
+            <Card title="Disponibilidad, 30 días" subtitle="El mismo cálculo del semáforo de hoy, aplicado día a día con los datos que había ese día. Los puntos huecos son días sin check-in.">
               <AvailabilityHistoryChart data={availabilityHistory} />
             </Card>
           )}
@@ -453,32 +456,29 @@ function StatCard({
   label,
   value,
   sub,
-  desc,
   accent,
+  spark,
+  color,
 }: {
   label: string;
   value: string;
   sub?: string;
-  desc?: string;
   accent?: "red" | "teal";
+  spark?: (number | null)[];
+  color?: string;
 }) {
   return (
-    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "12px", padding: "14px" }}>
-      <div style={{ fontSize: "10.5px", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "6px" }}>
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: "22px",
-          fontWeight: 600,
-          color: accent === "red" ? "var(--red)" : accent === "teal" ? "var(--teal)" : "var(--text)",
-        }}
-      >
+    <div className="metric">
+      <div className="metric-label">{label}</div>
+      <div className="metric-value" style={{ color: accent === "red" ? "var(--red)" : accent === "teal" ? "var(--teal)" : "var(--text)" }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: "10.5px", color: "var(--text-dim)", marginTop: "3px" }}>{sub}</div>}
-      {desc && <div style={{ fontSize: "9.5px", color: "var(--text-dim)", marginTop: "6px", lineHeight: 1.3 }}>{desc}</div>}
+      {sub && <div className="metric-sub">{sub}</div>}
+      {spark && spark.filter((v) => v != null).length > 1 && (
+        <div className="metric-spark">
+          <Sparkline values={spark} color={color} id={label.replace(/\W/g, "")} />
+        </div>
+      )}
     </div>
   );
 }

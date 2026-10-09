@@ -23,7 +23,7 @@ export function IntensityChart({ data }: { data: WeeklyIntensity[] }) {
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
     plugins: {
-      legend: { position: "top", align: "end", labels: { boxWidth: 10, boxHeight: 8, color: "#8A97A6", padding: 12, font: { family: "IBM Plex Mono", size: 10 } } },
+      legend: { position: "top", align: "end", labels: { boxWidth: 10, boxHeight: 8, color: "#8A97A6", padding: 12, font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 } } },
       tooltip: {
         callbacks: {
           label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y} h`,

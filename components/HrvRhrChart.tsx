@@ -74,7 +74,7 @@ export function HrvRhrChart({ points, band }: Props) {
           boxHeight: 3,
           color: "#8A97A6",
           padding: 12,
-          font: { family: "IBM Plex Mono", size: 10 },
+          font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 },
           filter: (item: { text: string }) => item.text !== "Banda alta",
         },
       },
