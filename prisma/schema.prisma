@@ -111,6 +111,8 @@ model Activity {
   deviationNotes    String?
 
   rawStreamsJson     Json?
+  // Vueltas (laps) del archivo original o, si no hay, intervalos de Intervals.icu: { source, fetchedAt, laps[] }
+  lapsJson           Json?
 
   // Nutrición durante la sesión (registro manual, todo opcional)
   nutritionCarbsG       Int?

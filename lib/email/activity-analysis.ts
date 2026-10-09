@@ -7,7 +7,7 @@ import { bodyToHtml, layoutEmail } from "./template";
 
 const REQUEST = `Escribí el análisis de la salida en foco para enviarlo por email al atleta, en español rioplatense (vos).
 Formato: texto plano, de 3 a 5 párrafos cortos separados por una línea en blanco, máximo 250 palabras, sin títulos ni listas, sin markdown salvo **negrita** para 2 o 3 datos clave.
-Contenido: (1) cómo salió la sesión frente a lo planificado (TSS, intensidad y desacople si hay dato); (2) la nutrición registrada (si no hay dato, decilo en una frase y no la evalúes); (3) qué implica para los próximos días, en línea con la disponibilidad de hoy.
+Contenido: (1) cómo salió la sesión frente a lo planificado (TSS, intensidad y desacople si hay dato); si hay vueltas (laps), basate en ellas para contar y describir los intervalos realmente hechos, nunca en el resumen automático; (2) la nutrición registrada (si no hay dato, decilo en una frase y no la evalúes); (3) qué implica para los próximos días, en línea con la disponibilidad de hoy.
 Respetá todas las reglas: citá solo fuentes de la bibliografía y distinguí evidencia de criterio de práctica, no inventes datos, no diagnostiques. No incluyas bloques json_blocks ni propongas cambios de workout. Si usaste evidencia, cerrá con una línea "Fuentes: ...".`;
 
 export type AnalysisMailResult = "sent" | "skipped" | "failed";

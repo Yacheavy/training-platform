@@ -115,3 +115,19 @@ export async function getSportSettings(athleteId: string, apiKey: string) {
   }
   return res.json();
 }
+
+
+/** Archivo original de la actividad (FIT) tal como lo subió el dispositivo; null si Intervals no lo guarda (ej. actividades que vienen de Strava). */
+export async function getActivityFile(apiKey: string, activityId: string): Promise<Buffer | null> {
+  const res = await fetch(`${INTERVALS_BASE_URL}/activity/${activityId}/file`, { headers: { Authorization: authHeader(apiKey) }, cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  if (res.status === 404 || res.status === 403 || res.status === 422) return null;
+  if (!res.ok) throw new Error(`Intervals API error: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+/** Actividad con los intervalos que detectó Intervals.icu (icu_intervals). */
+export async function getActivityWithIntervals(apiKey: string, activityId: string) {
+  const res = await fetch(`${INTERVALS_BASE_URL}/activity/${activityId}?intervals=true`, { headers: { Authorization: authHeader(apiKey) }, cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`Intervals API error: ${res.status}`);
+  return res.json();
+}

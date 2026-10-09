@@ -15,6 +15,7 @@
     "@prisma/client": "^7.9.1",
     "chart.js": "^4.5.1",
     "dotenv": "^17.4.2",
+    "fit-file-parser": "^6.1.2",
     "next": "16.3.1",
     "next-auth": "^5.0.0-beta.32",
     "nodemailer": "^8.0.11",

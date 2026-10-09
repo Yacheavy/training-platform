@@ -1,3 +1,4 @@
+import { ensureActivityLaps, describeLaps } from "@/lib/laps";
 import { getNutritionSummary, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
 import { describeSessionNutrition, toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 import { prisma } from "@/lib/prisma";
@@ -269,8 +270,13 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
         }
       }
       if (a.deviationFlag !== "NONE") lines.push(`Desvío vs plan: ${a.deviationFlag}${a.deviationNotes ? ` — ${a.deviationNotes}` : ""}`);
+      // Vueltas del archivo original (o intervalos de Intervals.icu como respaldo): nunca debe romper el contexto
+      const lapsData = RIDE_TYPES_SET.has(a.type) ? await ensureActivityLaps(a.id).catch((e) => { console.error("ensureActivityLaps falló", e); return null; }) : null;
       const summary = (a.rawStreamsJson as { intervalSummary?: unknown } | null)?.intervalSummary;
-      if (summary) lines.push(`Intervalos detectados por Intervals.icu en la actividad (lo realmente hecho): ${JSON.stringify(summary)}`);
+      if (lapsData) {
+        lines.push(describeLaps(lapsData, user?.ftp));
+        if (summary) lines.push(`Resumen automático de Intervals.icu (puede ser impreciso; si no coincide con las vueltas, usá las vueltas): ${JSON.stringify(summary)}`);
+      } else if (summary) lines.push(`Intervalos detectados por Intervals.icu en la actividad (detección automática, puede omitir o fusionar intervalos): ${JSON.stringify(summary)}`);
       if (a.generatedWorkout) {
         const pb = a.generatedWorkout.blocksJson as unknown as Blk[];
         lines.push(
