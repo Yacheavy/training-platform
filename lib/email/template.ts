@@ -1,5 +1,6 @@
 import { APP_NAME, CREATOR } from "@/lib/brand";
 import { appUrl } from "./mailer";
+import { parseAnalysis, SECTION_META, type Block } from "@/lib/analysis-format";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const inline = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b style="color:#E7ECF2">$1</b>');
@@ -17,8 +18,43 @@ export function bodyToHtml(text: string): string {
     .join("");
 }
 
+const ICON_FILE = { good: "icon-good.png", watch: "icon-watch.png", next: "icon-next.png", other: "" } as const;
+
+function blocksHtml(blocks: Block[]): string {
+  let out = "";
+  let items: string[] = [];
+  const flush = () => {
+    if (items.length) out += `<ul style="margin:0 0 12px;padding-left:18px;font-size:15px;line-height:1.6;color:#C5CED8">${items.map((t) => `<li style="margin:0 0 4px">${inline(t)}</li>`).join("")}</ul>`;
+    items = [];
+  };
+  for (const b of blocks) {
+    if (b.type === "li") { items.push(b.text); continue; }
+    flush();
+    out += `<p style="margin:0 0 12px;font-size:15px;line-height:1.65;color:#C5CED8">${inline(b.text)}</p>`;
+  }
+  flush();
+  return out;
+}
+
+/** Cuerpo del mail del análisis: secciones con ícono (PNG, porque Gmail no muestra SVG). Si el texto no trae secciones, queda como texto corrido. */
+export function analysisBodyHtml(text: string): string {
+  const parsed = parseAnalysis(text);
+  if (!parsed) return bodyToHtml(text);
+  const base = appUrl();
+  const sections = parsed.sections
+    .map((s) => {
+      const file = ICON_FILE[s.key];
+      const icon = base && file ? `<img src="${base}/brand/${file}" width="20" height="20" alt="" style="display:block;border:0">` : "";
+      return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 6px;border-top:1px solid #2A3441"><tr><td style="padding:14px 0 6px"><table role="presentation" cellspacing="0" cellpadding="0"><tr>${icon ? `<td style="padding-right:9px;vertical-align:middle">${icon}</td>` : ""}<td style="vertical-align:middle;font-size:15px;font-weight:600;color:${SECTION_META[s.key].color}">${esc(s.heading)}</td></tr></table></td></tr><tr><td>${blocksHtml(s.blocks)}</td></tr></table>`;
+    })
+    .join("");
+  const intro = parsed.intro.length ? blocksHtml(parsed.intro) : "";
+  const src = parsed.sources ? `<p style="margin:10px 0 0;font-size:12px;line-height:1.5;color:#8A97A6">Fuentes: ${inline(parsed.sources)}</p>` : "";
+  return `${intro}${sections}${src}`;
+}
+
 /** Estructura común de los mails: logo, contenido, botón y pie. Tablas y estilos en línea para que funcione en cualquier cliente de mail. */
-export function layoutEmail(o: { title: string; subtitle?: string; bodyHtml: string; ctaLabel?: string; ctaPath?: string }): string {
+export function layoutEmail(o: { title: string; subtitle?: string; bodyHtml: string; ctaLabel?: string; ctaPath?: string; ai?: boolean }): string {
   const base = appUrl();
   const cta = o.ctaLabel && o.ctaPath
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:22px 0 4px"><tr><td style="border-radius:12px;background:#4FD1C5"><a href="${base}${o.ctaPath}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#08201C;text-decoration:none">${esc(o.ctaLabel)}</a></td></tr></table>`
@@ -38,7 +74,7 @@ ${o.bodyHtml}
 ${cta}
 </td></tr>
 <tr><td style="padding:18px 28px 26px;border-top:1px solid #2A3441;font-size:11.5px;line-height:1.6;color:#5A6673">
-Este análisis lo genera una IA con tus datos de entrenamiento. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos.<br>
+${o.ai === false ? "Resumen automático con los datos de tu actividad en Intervals.icu, sin IA. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos." : "Este análisis lo genera una IA con tus datos de entrenamiento. Es una guía deportiva: no reemplaza a un médico ni da diagnósticos."}<br>
 ${APP_NAME} · creada por ${esc(CREATOR.name)}.<br>
 ${base ? `<a href="${base}/settings" style="color:#8A97A6">Dejar de recibir estos mails (Ajustes)</a> · <a href="${base}/privacidad" style="color:#8A97A6">Privacidad</a>` : ""}
 </td></tr>

@@ -18,6 +18,8 @@ model User {
   consentAcceptedAt DateTime?
   consentVersion    String?
   emailAnalysis     Boolean  @default(true)
+  /// Qué mail recibe al terminar una salida: "AI" (análisis con IA) o "SUMMARY" (resumen de la actividad, sin IA)
+  emailKind         String   @default("AI")
 
   coachId           String?
   coach             User?    @relation("CoachedAthletes", fields: [coachId], references: [id])

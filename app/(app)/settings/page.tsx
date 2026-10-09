@@ -262,14 +262,30 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Mails</h2>
         <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.6, margin: "0 0 12px" }}>
-          Cuando terminás una salida de bici de una hora o más y cargás (o omitís) la nutrición, te mandamos por mail el análisis de la sesión. Llega a {user ? "tu casilla de Google" : "tu email"}.
+          Cuando terminás una salida de bici de una hora o más y cargás (o omitís) la nutrición, te mandamos por mail el análisis o el resumen de la sesión, el que elijas abajo. Llega a {user ? "tu casilla de Google" : "tu email"}.
         </p>
-        <ActionForm action={setEmailAnalysis} success="Preferencia guardada" style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <ActionForm action={setEmailAnalysis} success="Preferencia guardada" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
             <input type="checkbox" name="enabled" defaultChecked={user?.emailAnalysis ?? true} style={{ width: "17px", height: "17px", accentColor: "#4FD1C5" }} />
-            Recibir el análisis de mis salidas por mail
+            Recibir un mail de cada salida
           </label>
-          <SubmitButton style={{ ...btnStyle, padding: "7px 14px" }}>Guardar</SubmitButton>
+          <div role="radiogroup" aria-label="Tipo de mail" style={{ display: "flex", flexDirection: "column", gap: "8px", paddingLeft: "2px" }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "9px", fontSize: "13px", cursor: "pointer" }}>
+              <input type="radio" name="kind" value="AI" defaultChecked={(user?.emailKind ?? "AI") !== "SUMMARY"} style={{ marginTop: "3px", accentColor: "#4FD1C5" }} />
+              <span>
+                <b style={{ fontWeight: 600 }}>Análisis con IA</b>
+                <span style={{ display: "block", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.5 }}>Una lectura de la salida en tres partes: lo que salió bien, lo que conviene mirar y lo que sigue.</span>
+              </span>
+            </label>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "9px", fontSize: "13px", cursor: "pointer" }}>
+              <input type="radio" name="kind" value="SUMMARY" defaultChecked={user?.emailKind === "SUMMARY"} style={{ marginTop: "3px", accentColor: "#4FD1C5" }} />
+              <span>
+                <b style={{ fontWeight: 600 }}>Solo resumen de la actividad</b>
+                <span style={{ display: "block", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.5 }}>Los datos de la salida, el plan contra lo real, la nutrición y el clima. Sin IA.</span>
+              </span>
+            </label>
+          </div>
+          <div><SubmitButton style={{ ...btnStyle, padding: "7px 14px" }}>Guardar</SubmitButton></div>
         </ActionForm>
         <ActionForm action={sendTestEmail} success="Mail de prueba enviado, revisá tu casilla" style={{ marginTop: "12px" }}>
           <SubmitButton pendingText="Enviando…" style={{ background: "transparent", border: "1px solid rgba(255,255,255,.14)", color: "var(--text)", borderRadius: "10px", padding: "7px 14px", fontSize: "12.5px", cursor: "pointer" }}>Enviarme un mail de prueba</SubmitButton>

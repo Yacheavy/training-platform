@@ -3,10 +3,11 @@ import { RIDE_TYPES } from "@/lib/nutrition-data";
 import { buildChatContext } from "@/lib/chat/context-builder";
 import { askClaude, ANALYSIS_STYLE, ANALYSIS_MODEL } from "@/lib/chat/claude-client";
 import { mailConfigured, sendMail } from "./mailer";
-import { bodyToHtml, layoutEmail } from "./template";
+import { analysisBodyHtml, layoutEmail } from "./template";
+import { buildActivitySummary } from "./activity-summary";
 
 const REQUEST = `${ANALYSIS_STYLE}
-Este texto se envía por email: texto plano, sin markdown salvo **negrita** para 2 o 3 datos clave. Si hay vueltas (laps), basate en ellas para describir los intervalos realmente hechos. Si la nutrición no tiene dato, decilo en una frase y no la evalúes.`;
+Este texto se envía por email: sin markdown salvo los títulos «### » de las secciones, las viñetas «- » y **negrita** para 2 o 3 datos clave. Si hay vueltas (laps), basate en ellas para describir los intervalos realmente hechos. Si la nutrición no tiene dato, decilo en una frase y no la evalúes.`;
 
 export type AnalysisMailResult = "sent" | "skipped" | "failed";
 
@@ -18,7 +19,7 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
   if (!mailConfigured()) return "skipped";
   const a = await prisma.activity.findUnique({
     where: { id: activityId },
-    select: { id: true, athleteId: true, type: true, name: true, date: true, durationSec: true, tss: true, nutritionLoggedAt: true, analysisEmailSentAt: true, athlete: { select: { email: true, name: true, emailAnalysis: true } } },
+    select: { id: true, athleteId: true, type: true, name: true, date: true, durationSec: true, tss: true, nutritionLoggedAt: true, analysisEmailSentAt: true, athlete: { select: { email: true, name: true, emailAnalysis: true, emailKind: true } } },
   });
   if (!a || !a.athlete.emailAnalysis || a.analysisEmailSentAt || !a.nutritionLoggedAt) return "skipped";
   if (!RIDE_TYPES.includes(a.type) || a.durationSec < 3600) return "skipped";
@@ -27,6 +28,18 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
   if (claim.count === 0) return "skipped";
 
   try {
+    if (a.athlete.emailKind === "SUMMARY") {
+      // Resumen sin IA: solo datos de la actividad y cuentas hechas en código
+      const sum = await buildActivitySummary(a.id);
+      if (!sum) throw new Error("No se pudo armar el resumen");
+      await sendMail({
+        to: a.athlete.email,
+        subject: sum.title,
+        html: layoutEmail({ title: sum.title, subtitle: sum.subtitle, bodyHtml: sum.bodyHtml, ctaLabel: "Ver la sesión en la app", ctaPath: `/activities/${a.id}`, ai: false }),
+        text: `${sum.title}\n\n${sum.text}\n\nResumen automático sin IA.`,
+      });
+      return "sent";
+    }
     const context = await buildChatContext(a.athleteId, undefined, a.id);
     const { text } = await askClaude(context, REQUEST, [], 3000, ANALYSIS_MODEL);
     const clean = text.replace(/```json_blocks[\s\S]*?```/g, "").trim();
@@ -39,11 +52,11 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
       html: layoutEmail({
         title,
         subtitle: `${when} · ${Math.round(a.durationSec / 60)} min${a.tss != null ? ` · TSS ${Math.round(a.tss)}` : ""}`,
-        bodyHtml: bodyToHtml(clean),
+        bodyHtml: analysisBodyHtml(clean),
         ctaLabel: "Ver la sesión en la app",
         ctaPath: `/activities/${a.id}`,
       }),
-      text: `${title}\n\n${clean}\n\nEste análisis lo genera una IA y no reemplaza a un médico.`,
+      text: `${title}\n\n${clean.replace(/^#{1,4}\s+/gm, "")}\n\nEste análisis lo genera una IA y no reemplaza a un médico.`,
     });
     return "sent";
   } catch (e) {

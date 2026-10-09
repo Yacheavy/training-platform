@@ -5,6 +5,11 @@ import Link from "next/link";
 import { ATHLETE_TZ } from "@/lib/tz";
 import { splitOptions } from "@/lib/chat/parse-response";
 import type { ChatUsageSummary } from "@/lib/chat/usage";
+import { parseAnalysis } from "@/lib/analysis-format";
+import { AnalysisView } from "./AnalysisView";
+import { ActionForm } from "./ActionForm";
+import { SubmitButton } from "./SubmitButton";
+import { emailAnalysisToMe } from "@/lib/email-actions";
 
 const usd = (n: number) => `US$ ${n < 0.1 ? n.toFixed(3) : n.toFixed(2)}`.replace(".", ",");
 
@@ -255,7 +260,19 @@ export function ChatView({
           const isLast = i === messages.length - 1;
           return (
             <div key={m.id} className={`msg ${isBot ? "msg-bot" : "msg-user"}`}>
-              <div className="bubble">{isBot ? renderContent(body) : <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>}</div>
+              <div className="bubble">{isBot ? (() => { const parsed = parseAnalysis(body); return parsed ? <AnalysisView parsed={parsed} /> : renderContent(body); })() : <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>}</div>
+              {isBot && activityId && parseAnalysis(body) && (
+                <ActionForm action={emailAnalysisToMe} success="Te lo mandé por mail" className="msg-actions">
+                  <input type="hidden" name="messageId" value={m.id} />
+                  <SubmitButton className="msg-action" pendingText="Enviando…">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="m3 7 9 6 9-6" />
+                    </svg>
+                    Enviarme por mail
+                  </SubmitButton>
+                </ActionForm>
+              )}
               {isBot && options.length > 0 && isLast && !pending && (
                 <div className="msg-options" role="group" aria-label="Opciones de respuesta">
                   {options.map((o) => (
