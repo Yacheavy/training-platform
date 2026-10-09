@@ -1,3 +1,4 @@
+import { buildAvailabilityHistory } from "@/lib/training-engine/availability-score";
 import { dayKeyDate, dayRangeLocal, weekRangeLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
 import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
@@ -140,39 +141,26 @@ export async function getHrvRhrHistory(athleteId: string, days: number = 7) {
 }
 
 export async function getAvailabilityHistory(athleteId: string, days: number = 30) {
-  const startDate = new Date(Date.now() - (days + 7) * 24 * 60 * 60 * 1000);
-  const records = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: startDate, lte: dayKeyDate(new Date()) } },
-    orderBy: { date: "asc" },
-    select: { date: true, hrv: true, ctl: true, atl: true },
-  });
-
-  const result: { date: string; score: number }[] = [];
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-  for (const record of records) {
-    if (record.date < cutoff) continue;
-
-    const priorSeven = records.filter((r) => {
-      const diff = (record.date.getTime() - r.date.getTime()) / (1000 * 60 * 60 * 24);
-      return diff > 0 && diff <= 7 && r.hrv != null;
-    });
-    // Sin datos suficientes no se inventa un puntaje (antes los faltantes contaban como 0 → 70 falso)
-    if (record.hrv == null || record.ctl == null || record.atl == null || priorSeven.length < 4) continue;
-    const hrvAvg7d = priorSeven.reduce((s, r) => s + (r.hrv ?? 0), 0) / priorSeven.length;
-
-    const hrvDeltaPct = hrvAvg7d > 0 ? ((record.hrv - hrvAvg7d) / hrvAvg7d) * 100 : 0;
-    const tsb = record.ctl - record.atl;
-
-    let score = 70;
-    score += Math.max(-20, Math.min(20, hrvDeltaPct * 2));
-    score += Math.max(-15, Math.min(15, tsb * 0.5));
-    score = Math.round(Math.max(0, Math.min(100, score)));
-
-    result.push({ date: record.date.toISOString(), score });
-  }
-
-  return result;
+  const today = dayKeyDate(new Date());
+  const from = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+  // La línea base individual usa los 60 días previos a cada día: se traen 62 días más atrás del inicio
+  const [records, checkins, thresholds] = await Promise.all([
+    prisma.wellness.findMany({
+      where: { athleteId, date: { gte: new Date(from.getTime() - 62 * 24 * 60 * 60 * 1000), lte: today } },
+      orderBy: { date: "asc" },
+      select: { date: true, hrv: true, restingHr: true, ctl: true, atl: true },
+    }),
+    prisma.dailyCheckin.findMany({
+      where: { athleteId, date: { gte: from, lte: today } },
+      select: { date: true, fatigue: true, stress: true, muscleSoreness: true, sleepQuality: true },
+    }),
+    prisma.athleteThresholds.findUnique({ where: { athleteId }, select: { minTsb: true, hrvDropAlertPct: true } }),
+  ]);
+  const checkinByDay = new Map(checkins.map((c) => [c.date.getTime(), { fatigue: c.fatigue, stress: c.stress, muscleSoreness: c.muscleSoreness, sleepQuality: c.sleepQuality }]));
+  return buildAvailabilityHistory(
+    records.map((r) => ({ ...r, checkin: checkinByDay.get(r.date.getTime()) ?? null })),
+    { from, to: today, minTsb: thresholds?.minTsb ?? -30, hrvDropAlertPct: thresholds?.hrvDropAlertPct ?? 7.5 }
+  );
 }
 export async function getUpcomingBlocks(athleteId: string) {
   const today = new Date();

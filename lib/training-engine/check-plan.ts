@@ -1,5 +1,7 @@
 import { buildPlan } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
+import { evaluateAvailability, scoreAvailability, buildAvailabilityHistory, SCORE_BANDS, type CheckinInput } from "./availability-score";
+import { hrvSignal, restingHrSignal } from "./recovery-signals";
 import { proposeSeason, pickPrimaryGoal } from "./season-planner";
 import { progressionAdjustments, intensityGuard, type ExecutionRecord } from "./autoregulation";
 const L = (lo:number|null,hi:number|null,mx:number|null=null)=>({intensityPctFtpLow:lo,intensityPctFtpHigh:hi,maxSessionsPerWeek:mx});
@@ -109,6 +111,55 @@ for (const [wk,c] of vo2PerWeek) { const exp = bp.some((d)=>d.weekIndex===wk&&d.
   }
   const g = pickPrimaryGoal([{priority:"B",dateKey:"2026-12-01"},{priority:"A",dateKey:"2027-03-01"},{priority:"A",dateKey:"2026-11-01"},{priority:"A",dateKey:"2026-01-01"}],"2026-10-07");
   check("objetivo principal: A más cercano futuro", g?.dateKey==="2026-11-01");
+}
+
+// Disponibilidad: semáforo y puntaje unificados
+{
+  const check = (name:string, ok:boolean) => { if(!ok){ console.log("FALLA disponibilidad:",name); bad++; } };
+  const none:any = {method:"baseline",triggered:false,rolling7:60,baseline:60,delta:0,reason:null};
+  const hrvBad:any = {method:"baseline",triggered:true,rolling7:50,baseline:60,delta:-16,reason:"HRV bajo"};
+  const rhrBad:any = {method:"baseline",triggered:true,rolling7:55,baseline:50,delta:5,reason:"FC alta"};
+  const ok1:CheckinInput = {fatigue:2,stress:2,muscleSoreness:2,sleepQuality:6};
+  const bad1:CheckinInput = {fatigue:6,stress:3,muscleSoreness:3,sleepQuality:4};
+  check("verde sin señales", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:ok1,tsb:-5,minTsb:-30}).status==="GREEN");
+  check("1 señal → ámbar", evaluateAvailability({hrvSig:hrvBad,rhrSig:none,checkin:ok1,tsb:-5,minTsb:-30}).status==="AMBER");
+  check("TSB solo → ámbar", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:ok1,tsb:-40,minTsb:-30}).status==="AMBER");
+  check("2 señales → rojo", evaluateAvailability({hrvSig:hrvBad,rhrSig:rhrBad,checkin:ok1,tsb:-5,minTsb:-30}).status==="RED");
+  check("TSB + 1 señal → rojo", evaluateAvailability({hrvSig:hrvBad,rhrSig:none,checkin:ok1,tsb:-40,minTsb:-30}).status==="RED");
+  check("fatiga del check-in cuenta", evaluateAvailability({hrvSig:none,rhrSig:none,checkin:bad1,tsb:-5,minTsb:-30}).signalsTriggered.includes("fatigue"));
+  // El puntaje siempre cae en la banda de su semáforo, para cualquier combinación de entradas
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let k = 0; k < 20000; k++) {
+    const status = (["GREEN","AMBER","RED"] as const)[Math.floor(rnd()*3)];
+    const r = scoreAvailability({ status, hrvDeltaPct: rnd()<0.1?null:(rnd()-0.5)*80, restingHrDeltaAbs: rnd()<0.1?null:(rnd()-0.5)*30, tsb: rnd()<0.1?null:(rnd()-0.7)*80, checkin: rnd()<0.4?null:{fatigue:1+Math.floor(rnd()*7),stress:1+Math.floor(rnd()*7),muscleSoreness:1+Math.floor(rnd()*7),sleepQuality:1+Math.floor(rnd()*7)} });
+    const b = SCORE_BANDS[status];
+    if (r.score < b.lo || r.score > b.hi || !Number.isInteger(r.score)) { check(`banda ${status} → ${r.score}`, false); break; }
+  }
+  check("verde no baja de 75 aunque todo sea malo salvo el semáforo", scoreAvailability({status:"GREEN",hrvDeltaPct:-30,restingHrDeltaAbs:10,tsb:-60,checkin:bad1}).score>=75);
+  check("rojo no sube de 49", scoreAvailability({status:"RED",hrvDeltaPct:30,restingHrDeltaAbs:-10,tsb:20,checkin:ok1}).score<=49);
+  check("mejores señales → mayor puntaje (mismo estado)", scoreAvailability({status:"GREEN",hrvDeltaPct:10,restingHrDeltaAbs:-2,tsb:5,checkin:ok1}).score > scoreAvailability({status:"GREEN",hrvDeltaPct:-2,restingHrDeltaAbs:1,tsb:-10,checkin:ok1}).score);
+  check("sin check-in se informa", scoreAvailability({status:"GREEN",hrvDeltaPct:0,restingHrDeltaAbs:0,tsb:0,checkin:null}).missing.includes("check-in"));
+  // Historial: usa la misma lógica y no mira el futuro
+  const day0 = Date.UTC(2026,5,1);
+  const mk = (n:number, hrvFn:(i:number)=>number) => Array.from({length:n},(_,i)=>({date:new Date(day0+i*86400000),hrv:hrvFn(i),restingHr:50+(i%3),ctl:50+i*0.1,atl:55+(i%5),checkin:i%4===0?ok1:null}));
+  const base = mk(100,(i)=>i<90?62+((i*7)%5):44);
+  const opts = {from:new Date(day0+70*86400000),to:new Date(day0+99*86400000),minTsb:-30,hrvDropAlertPct:7.5};
+  const h1 = buildAvailabilityHistory(base,opts);
+  check("historial tiene puntos", h1.length>20);
+  check("historial: hay días con peor estado tras la caída de HRV", h1.some(p=>p.status!=="GREEN"));
+  check("historial: cada puntaje está en la banda de su estado", h1.every(p=>p.score>=SCORE_BANDS[p.status].lo && p.score<=SCORE_BANDS[p.status].hi));
+  const changedFuture = base.map((d,i)=> i>=95 ? {...d,hrv:20} : d);
+  const h2 = buildAvailabilityHistory(changedFuture,opts);
+  const key = (p:any)=>`${p.date}|${p.score}|${p.status}`;
+  const early1 = h1.filter(p=>new Date(p.date).getTime()<day0+95*86400000).map(key).join(",");
+  const early2 = h2.filter(p=>new Date(p.date).getTime()<day0+95*86400000).map(key).join(",");
+  check("historial no depende de datos futuros", early1===early2);
+  const dd = base[99];
+  const todaySig = {h:hrvSignal(base.map(d=>({date:d.date,hrv:d.hrv,restingHr:d.restingHr})),dd.date,7.5), r:restingHrSignal(base.map(d=>({date:d.date,hrv:d.hrv,restingHr:d.restingHr})),dd.date)};
+  const tEv = evaluateAvailability({hrvSig:todaySig.h,rhrSig:todaySig.r,checkin:dd.checkin,tsb:dd.ctl-dd.atl,minTsb:-30});
+  const tSc = scoreAvailability({status:tEv.status,hrvDeltaPct:todaySig.h.delta,restingHrDeltaAbs:todaySig.r.delta,tsb:dd.ctl-dd.atl,checkin:dd.checkin});
+  const last = h1[h1.length-1];
+  check("el último punto del historial coincide con el cálculo de hoy", last && last.score===tSc.score && last.status===tEv.status);
 }
 console.log({scenariosTotal:n,withProblems:bad});
 if (bad) process.exitCode = 1;
