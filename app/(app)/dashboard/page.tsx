@@ -20,6 +20,10 @@ import {
 } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
 import { Sparkline } from "@/components/Sparkline";
+import { ConnectIntervalsModal } from "@/components/ConnectIntervalsModal";
+import { getAccessData } from "@/lib/access-data";
+import { connectIntervals, postponeIntervalsPrompt } from "@/lib/access-actions";
+import { cookies } from "next/headers";
 import { PlanNavigator } from "@/components/PlanNavigator";
 import { HrvRhrChart } from "@/components/HrvRhrChart";
 import { IntensityChart } from "@/components/IntensityChart";
@@ -49,11 +53,16 @@ function ageLabel(d: Date | null): string {
   return `(hace ${days} d)`;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ intervals?: string }> }) {
+  const sp = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
   await syncIfStale(session.user.id);
+  const access = await getAccessData(session.user.id);
+  const needsIntervals = !access.intervals.connected && !access.intervals.usingLegacyEnv;
+  const postponed = (await cookies()).get("ivl_later")?.value === "1";
+  const showIntervalsModal = needsIntervals && (!postponed || sp.intervals === "invalid" || sp.intervals === "rejected");
   const data = await getDashboardData(session.user.id);
   const todayWorkout = await getTodayWorkout(session.user.id);
   const loadHistory = await getLoadHistory(session.user.id);
@@ -175,6 +184,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="page-container">
+      {showIntervalsModal && (
+        <ConnectIntervalsModal
+          name={session.user.name?.split(" ")[0] ?? ""}
+          error={sp.intervals === "invalid" || sp.intervals === "rejected" ? sp.intervals : undefined}
+          connectAction={connectIntervals}
+          laterAction={postponeIntervalsPrompt}
+        />
+      )}
       <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Hola, {session.user.name?.split(" ")[0]}</h1>

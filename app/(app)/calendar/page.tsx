@@ -45,19 +45,19 @@ export default async function CalendarPage({
   return (
     <div className="page-container">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h1 style={{ fontSize: "20px", fontWeight: 600 }}>
+        <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: 0 }}>
           {monthNames[month]} {year}
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>
           <a
             href={`/calendar?year=${prevMonth.year}&month=${prevMonth.month}`}
-            style={{ color: "var(--text-muted)", textDecoration: "none", fontFamily: "var(--font-mono)", fontSize: "13px" }}
+            style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" }}
           >
             ← anterior
           </a>
           <a
             href={`/calendar?year=${nextMonth.year}&month=${nextMonth.month}`}
-            style={{ color: "var(--text-muted)", textDecoration: "none", fontFamily: "var(--font-mono)", fontSize: "13px" }}
+            style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" }}
           >
             siguiente →
           </a>

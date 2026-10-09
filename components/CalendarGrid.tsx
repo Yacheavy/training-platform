@@ -1,5 +1,7 @@
 "use client";
 
+import { STIMULUS_LABELS } from "@/lib/labels";
+
 import { useState } from "react";
 import { WorkoutMiniChart } from "./WorkoutMiniChart";
 import { moveWorkoutToDate, swapWorkouts } from "@/lib/calendar-actions";
@@ -89,7 +91,7 @@ export function CalendarGrid({
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "4px", marginBottom: "6px" }}>
         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((d) => (
-          <div key={d} style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-dim)", textAlign: "center" }}>
+          <div key={d} style={{ fontSize: "11.5px", color: "var(--text-muted)", textAlign: "center", fontWeight: 500 }}>
             {d}
           </div>
         ))}
@@ -108,14 +110,14 @@ export function CalendarGrid({
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(dayNumber)}
               style={{
-                border: `1px solid ${isToday ? "var(--teal)" : "var(--border)"}`,
-                borderRadius: "8px",
-                padding: "6px",
-                minHeight: "80px",
-                background: isToday ? "rgba(79,209,197,.05)" : "var(--surface)",
+                border: `1px solid ${isToday ? "rgba(79,209,197,.6)" : "rgba(255,255,255,.06)"}`,
+                borderRadius: "14px",
+                padding: "7px",
+                minHeight: "88px",
+                background: isToday ? "linear-gradient(160deg, rgba(79,209,197,.14), rgba(79,209,197,.03))" : "var(--grad-card)",
               }}
             >
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-dim)", marginBottom: "4px" }}>
+              <div style={{ fontSize: "11.5px", fontWeight: isToday ? 700 : 500, color: isToday ? "var(--teal)" : "var(--text-muted)", marginBottom: "4px" }}>
                 {dayNumber}
               </div>
               {workout && (
@@ -127,14 +129,14 @@ export function CalendarGrid({
                   style={{
                     cursor: "grab",
                     border: `1px solid ${STATUS_BORDER[workout.status] ?? "var(--border)"}`,
-                    borderRadius: "6px",
-                    padding: "5px",
-                    background: "var(--surface-2)",
+                    borderRadius: "10px",
+                    padding: "6px",
+                    background: "rgba(255,255,255,.04)",
                   }}
                   title="Click para ver detalle - arrastra para mover"
                 >
                   <div style={{ fontSize: "9.5px", color: "var(--text-muted)", marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {workout.workoutLibraryKey}
+                    {STIMULUS_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}
                   </div>
                   <WorkoutMiniChart blocks={workout.blocksJson} />
                   <div style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "var(--text-dim)", marginTop: "3px" }}>
@@ -153,7 +155,8 @@ export function CalendarGrid({
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,.6)",
+            background: "rgba(6,9,13,.72)",
+            backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -163,10 +166,11 @@ export function CalendarGrid({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "14px",
-              padding: "24px",
+              background: "var(--grad-card)",
+              border: "1px solid rgba(255,255,255,.09)",
+              boxShadow: "0 30px 80px -20px rgba(0,0,0,.8)",
+              borderRadius: "22px",
+              padding: "26px",
               maxWidth: "480px",
               width: "90%",
             }}
@@ -193,7 +197,7 @@ export function CalendarGrid({
               <MiniStat label="Carbos" value={`${detailWorkout.suggestedCarbsG ?? 0}g`} />
             </div>
 
-            <div style={{ fontSize: "11px", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: "8px" }}>
+            <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "8px" }}>
               Tiempo estimado en zonas
             </div>
             <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
@@ -206,14 +210,14 @@ export function CalendarGrid({
               )}
             </div>
 
-            <div style={{ fontSize: "11px", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: "6px" }}>
+            <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "6px" }}>
               Descripción
             </div>
             <div style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6, marginBottom: "16px" }}>
               {detailWorkout.rationale}
             </div>
 
-            <div style={{ fontSize: "11px", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: "8px" }}>
+            <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "8px" }}>
               Sugerencias de ejecución
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -234,7 +238,7 @@ export function CalendarGrid({
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div style={{ fontFamily: "var(--font-mono)", fontSize: "9.5px", color: "var(--text-dim)", textTransform: "uppercase" }}>{label}</div>
+      <div style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase" }}>{label}</div>
       <div style={{ fontFamily: "var(--font-mono)", fontSize: "16px", fontWeight: 600, marginTop: "2px" }}>{value}</div>
     </div>
   );

@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -41,16 +42,18 @@ export async function removeInvite(formData: FormData) {
 /** Guarda (cifradas) las credenciales de Intervals del usuario, tras comprobar que funcionan. */
 export async function connectIntervals(formData: FormData) {
   const userId = await requireUserId();
+  // Si viene del pop-up de bienvenida, los resultados se muestran en el dashboard
+  const base = formData.get("from") === "modal" ? "/dashboard" : "/settings";
   const athleteId = String(formData.get("athleteId") ?? "").trim();
   const apiKey = String(formData.get("apiKey") ?? "").trim();
-  if (!/^i?\d{3,12}$/.test(athleteId) || apiKey.length < 10 || apiKey.length > 200) redirect("/settings?intervals=invalid");
+  if (!/^i?\d{3,12}$/.test(athleteId) || apiKey.length < 10 || apiKey.length > 200) redirect(`${base}?intervals=invalid`);
 
   const normalizedId = athleteId.startsWith("i") ? athleteId : `i${athleteId}`;
   try {
     const today = dateKeyLocal(new Date());
     await getWellness(normalizedId, apiKey, today, today);
   } catch {
-    redirect("/settings?intervals=rejected");
+    redirect(`${base}?intervals=rejected`);
   }
 
   await prisma.user.update({
@@ -60,7 +63,7 @@ export async function connectIntervals(formData: FormData) {
   await syncIntervals(userId, 365); // primer sync: último año; el historial completo se pide aparte
   revalidatePath("/settings");
   revalidatePath("/dashboard");
-  redirect("/settings?intervals=ok");
+  redirect(`${base}?intervals=ok`);
 }
 
 export async function disconnectIntervals() {
@@ -76,4 +79,11 @@ export async function syncFullHistory() {
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   redirect(`/settings?history=${r.activities}${r.errors.length ? `&historyErrors=${r.errors.length}` : ""}`);
+}
+
+/** "Más tarde" en el pop-up de Intervals: no vuelve a aparecer por 3 días. */
+export async function postponeIntervalsPrompt() {
+  await requireUserId();
+  (await cookies()).set("ivl_later", "1", { maxAge: 3 * 24 * 3600, path: "/", httpOnly: true, sameSite: "lax" });
+  revalidatePath("/dashboard");
 }
