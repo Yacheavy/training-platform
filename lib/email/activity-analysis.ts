@@ -31,7 +31,7 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
 
   try {
     const context = await buildChatContext(a.athleteId, undefined, a.id);
-    const { text } = await askClaude(context, REQUEST, []);
+    const { text } = await askClaude(context, REQUEST, [], 1200);
     const clean = text.replace(/```json_blocks[\s\S]*?```/g, "").trim();
     if (!clean) throw new Error("El análisis salió vacío");
     const when = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });

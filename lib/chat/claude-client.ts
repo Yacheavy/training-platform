@@ -80,7 +80,7 @@ menos"). No sugieras cambios de estructura sin razón fisiológica.
 8. EXPLICABILIDAD SIEMPRE: cada sugerencia debe dejar claro el "por qué", citando el dato concreto del
 contexto en el que se basa. Nunca una recomendación genérica sin anclar en algo real de este atleta.
 
-TONO: directo, conciso (2-5 oraciones salvo que pidan más detalle, más la línea de Fuentes), constructivo — como un entrenador
+TONO: directo, conciso (2-5 oraciones en consultas puntuales; el análisis de una sesión hecha sigue el formato de más abajo; más la línea de Fuentes), constructivo — como un entrenador
 que confía en el atleta pero no le teme a decirle que no cuando corresponde.
 
 9. CUANDO EL FOCO ES UNA ACTIVIDAD YA REALIZADA: analizala con los datos del contexto (cumplimiento vs plan,
@@ -154,7 +154,13 @@ export function costFor(model: string, u: { input: number; output: number; cache
   return (u.input * pin + u.output * pout + u.cacheWrite * pw + u.cacheRead * pr) / 1_000_000;
 }
 
-export async function askClaude(context: string, userMessage: string, history: { role: string; content: string }[]): Promise<{ text: string; truncated: boolean; usage: ChatUsage }> {
+/** Las respuestas largas viejas se reenvían en cada pregunta y cuestan entrada: se recortan salvo la última. */
+function trimHistory(history: { role: string; content: string }[]): { role: string; content: string }[] {
+  const MAX = 1500;
+  return history.map((h, i) => (i < history.length - 1 && h.content.length > MAX ? { ...h, content: `${h.content.slice(0, MAX)} […]` } : h));
+}
+
+export async function askClaude(context: string, userMessage: string, history: { role: string; content: string }[], maxTokens = 4000): Promise<{ text: string; truncated: boolean; usage: ChatUsage }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -165,14 +171,14 @@ export async function askClaude(context: string, userMessage: string, history: {
     signal: AbortSignal.timeout(50_000),
     body: JSON.stringify({
       model: CHAT_MODEL,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
       // Parte fija (instrucciones + base de conocimiento) con caché: las lecturas de caché cuestan ~10% de la entrada normal
       system: [
         { type: "text", text: `${SYSTEM_PROMPT}\n\n${KNOWLEDGE_BASE}`, cache_control: { type: "ephemeral" } },
         { type: "text", text: `CONTEXTO ACTUAL DEL ATLETA (datos reales de hoy):\n${context}` },
       ],
       messages: [
-        ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
+        ...trimHistory(history).map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
         { role: "user", content: userMessage },
       ],
     }),
