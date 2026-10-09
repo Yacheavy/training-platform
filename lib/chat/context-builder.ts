@@ -269,6 +269,20 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
           lines.push(`Nutrición durante la sesión (registrada por el atleta): ${describeSessionNutrition(toSessionNutrition(input), input)}`);
         }
       }
+      const w = (a.rawStreamsJson as { weather?: Record<string, number | null> | null } | null)?.weather;
+      if (w && (w.temp != null || w.feels != null)) {
+        const r = (v: number | null | undefined, u = "") => (v == null ? null : `${Math.round(v)}${u}`);
+        const range = (lo: number | null | undefined, hi: number | null | undefined) => (lo != null && hi != null ? ` (${Math.round(lo)}–${Math.round(hi)} °C)` : "");
+        const bits = [
+          w.temp != null ? `temperatura media ${r(w.temp, " °C")}${range(w.tempMin, w.tempMax)}` : null,
+          w.feels != null ? `sensación térmica media ${r(w.feels, " °C")}${w.feelsMax != null ? `, máxima ${r(w.feelsMax, " °C")}` : ""}` : null,
+          w.windMs != null ? `viento medio ${r(w.windMs * 3.6, " km/h")}${w.gustMs != null ? ` (ráfagas ${r(w.gustMs * 3.6, " km/h")})` : ""}` : null,
+          w.headPct != null && w.tailPct != null ? `viento de frente ${r(w.headPct, "%")} y de cola ${r(w.tailPct, "%")} del recorrido` : null,
+          w.clouds != null ? `nubosidad ${r(w.clouds, "%")}` : null,
+          w.rain != null && w.rain > 0 ? `lluvia máx. ${w.rain.toFixed(1)} mm/h` : null,
+        ].filter(Boolean);
+        lines.push(`Clima durante la salida (estimado por Intervals.icu a partir de la ruta; es una referencia, no una medición): ${bits.join("; ")}.`);
+      }
       if (a.deviationFlag !== "NONE") lines.push(`Desvío vs plan: ${a.deviationFlag}${a.deviationNotes ? ` — ${a.deviationNotes}` : ""}`);
       // Vueltas del archivo original (o intervalos de Intervals.icu como respaldo): nunca debe romper el contexto
       const lapsData = RIDE_TYPES_SET.has(a.type) ? await ensureActivityLaps(a.id).catch((e) => { console.error("ensureActivityLaps falló", e); return null; }) : null;

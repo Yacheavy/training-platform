@@ -6,6 +6,19 @@ import { getIntervalsCreds } from "@/lib/intervals-creds";
 import { detectPlanDeviation } from "@/lib/training-engine/deviation";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/** Clima de la salida según Intervals.icu (estimado por la ruta; solo si la cuenta lo tiene y la actividad tiene GPS). */
+function mapWeather(a: any) {
+  if (!a.has_weather) return null;
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  return {
+    temp: n(a.average_weather_temp), tempMin: n(a.min_weather_temp), tempMax: n(a.max_weather_temp),
+    feels: n(a.average_feels_like), feelsMin: n(a.min_feels_like), feelsMax: n(a.max_feels_like),
+    windMs: n(a.average_wind_speed), gustMs: n(a.average_wind_gust), windDeg: n(a.prevailing_wind_deg),
+    headPct: n(a.headwind_percent), tailPct: n(a.tailwind_percent),
+    clouds: n(a.average_clouds), rain: n(a.max_rain), snow: n(a.max_snow),
+  };
+}
+
 export function mapActivity(a: any, userId: string) {
   return {
     athleteId: userId,
@@ -36,13 +49,14 @@ export function mapActivity(a: any, userId: string) {
     intervalsCarbsG: typeof a.carbs_ingested === "number" && a.carbs_ingested > 0 ? a.carbs_ingested : undefined,
     // Cajón flexible: zonas, resumen de intervalos en texto ("7x 3m 335w") y CTL/ATL al momento de la sesión
     rawStreamsJson:
-      a.icu_zone_times || a.interval_summary || a.icu_ctl != null
+      a.icu_zone_times || a.interval_summary || a.icu_ctl != null || a.has_weather
         ? {
             zoneTimes: a.icu_zone_times ?? null,
             hrZoneTimes: a.icu_hr_zone_times ?? null,
             intervalSummary: a.interval_summary ?? null,
             ctl: a.icu_ctl ?? null,
             atl: a.icu_atl ?? null,
+            weather: mapWeather(a),
           }
         : undefined,
   };
