@@ -40,8 +40,9 @@ export default function PrivacyPage() {
         <li>Vos, en tu cuenta.</li>
         <li>Tu entrenador, que ve tus datos para acompañarte.</li>
         <li>
-          Proveedores que hacen funcionar la app: Vercel (alojamiento), Neon (base de datos), Google (inicio de sesión), Intervals.icu (origen de tus datos) y Anthropic (el asistente de chat).
+          Proveedores que hacen funcionar la app: Vercel (alojamiento), Neon (base de datos), Google (inicio de sesión y envío de los mails), Intervals.icu (origen de tus datos), Open-Meteo (clima de tus salidas) y Anthropic (el asistente de chat).
           A Anthropic se le envían tus datos de entrenamiento y tus mensajes para generar la respuesta, sin tu nombre ni tu email.
+          A Open-Meteo solo se le envía la ubicación aproximada del inicio de la salida y la fecha, para estimar el clima; esa ubicación no se guarda en la app.
         </li>
       </ul>
 

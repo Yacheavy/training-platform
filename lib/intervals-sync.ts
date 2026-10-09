@@ -49,7 +49,7 @@ export function mapActivity(a: any, userId: string) {
     intervalsCarbsG: typeof a.carbs_ingested === "number" && a.carbs_ingested > 0 ? a.carbs_ingested : undefined,
     // Cajón flexible: zonas, resumen de intervalos en texto ("7x 3m 335w") y CTL/ATL al momento de la sesión
     rawStreamsJson:
-      a.icu_zone_times || a.interval_summary || a.icu_ctl != null || a.has_weather
+      a.icu_zone_times || a.interval_summary || a.icu_ctl != null || a.has_weather || a.average_temp != null
         ? {
             zoneTimes: a.icu_zone_times ?? null,
             hrZoneTimes: a.icu_hr_zone_times ?? null,
@@ -57,6 +57,7 @@ export function mapActivity(a: any, userId: string) {
             ctl: a.icu_ctl ?? null,
             atl: a.icu_atl ?? null,
             weather: mapWeather(a),
+            deviceTemp: a.average_temp != null || a.max_temp != null ? { avg: typeof a.average_temp === "number" ? a.average_temp : null, min: typeof a.min_temp === "number" ? a.min_temp : null, max: typeof a.max_temp === "number" ? a.max_temp : null } : null,
           }
         : undefined,
   };

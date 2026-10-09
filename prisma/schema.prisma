@@ -113,6 +113,8 @@ model Activity {
   rawStreamsJson     Json?
   // Vueltas (laps) del archivo original o, si no hay, intervalos de Intervals.icu: { source, fetchedAt, laps[] }
   lapsJson           Json?
+  /// Clima de respaldo (Open-Meteo) y chequeo de GPS; no guarda coordenadas. La sync no lo pisa
+  weatherJson        Json?
 
   // Nutrición durante la sesión (registro manual, todo opcional)
   nutritionCarbsG       Int?
