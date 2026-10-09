@@ -19,21 +19,30 @@ export async function setEmailAnalysis(formData: FormData) {
 }
 
 /** Manda un mail de prueba a la propia casilla para verificar la configuración. */
-export async function sendTestEmail() {
+export async function sendTestEmail(): Promise<{ error: string } | void> {
   const id = await me();
-  if (!mailConfigured()) throw new Error("Falta configurar SMTP_USER y SMTP_PASS en Vercel.");
+  if (!mailConfigured()) return { error: "Falta configurar SMTP_USER y SMTP_PASS en Vercel (y redesplegar)." };
   const u = await prisma.user.findUnique({ where: { id }, select: { email: true, name: true } });
-  if (!u) throw new Error("Usuario no encontrado");
-  await sendMail({
-    to: u.email,
-    subject: "Prueba de mail de Overkill Cycling",
-    html: layoutEmail({
-      title: "Los mails funcionan",
-      subtitle: "Mail de prueba",
-      bodyHtml: bodyToHtml(`Hola${u.name ? ` ${u.name.split(" ")[0]}` : ""}. Si estás leyendo esto, la app ya puede enviarte el análisis de tus salidas.`),
-      ctaLabel: "Abrir la app",
-      ctaPath: "/dashboard",
-    }),
-    text: "Los mails funcionan. Si estás leyendo esto, la app ya puede enviarte el análisis de tus salidas.",
-  });
+  if (!u) return { error: "Usuario no encontrado" };
+  try {
+    await sendMail({
+      to: u.email,
+      subject: "Prueba de mail de Overkill Cycling",
+      html: layoutEmail({
+        title: "Los mails funcionan",
+        subtitle: "Mail de prueba",
+        bodyHtml: bodyToHtml(`Hola${u.name ? ` ${u.name.split(" ")[0]}` : ""}. Si estás leyendo esto, la app ya puede enviarte el análisis de tus salidas.`),
+        ctaLabel: "Abrir la app",
+        ctaPath: "/dashboard",
+      }),
+      text: "Los mails funcionan. Si estás leyendo esto, la app ya puede enviarte el análisis de tus salidas.",
+    });
+  } catch (e) {
+    const err = e as { code?: string; responseCode?: number; message?: string };
+    console.error("sendTestEmail falló", e);
+    if (err.code === "EAUTH" || err.responseCode === 535) {
+      return { error: "Gmail rechazó el usuario o la contraseña de aplicación (error 535). Revisá que la contraseña sea de la cuenta overkillcycling@gmail.com, sin espacios, y que hayas redesplegado." };
+    }
+    return { error: `No se pudo enviar: ${err.message ?? "error desconocido"}` };
+  }
 }

@@ -27,7 +27,12 @@ export function ActionForm({
       style={style}
       action={async (formData: FormData) => {
         try {
-          await action(formData);
+          const result = await action(formData);
+          // Las acciones pueden devolver { error } con un mensaje legible (en producción, un error lanzado llega sin mensaje)
+          if (result && typeof result === "object" && "error" in result && typeof (result as { error: unknown }).error === "string") {
+            toast((result as { error: string }).error, "error");
+            return;
+          }
           if (success) toast(success, "success");
         } catch (e) {
           // Un redirect() de la server action NO es un error: Next navega solo
