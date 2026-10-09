@@ -17,6 +17,7 @@ model User {
   createdAt         DateTime @default(now())
   consentAcceptedAt DateTime?
   consentVersion    String?
+  emailAnalysis     Boolean  @default(true)
 
   coachId           String?
   coach             User?    @relation("CoachedAthletes", fields: [coachId], references: [id])
@@ -118,6 +119,7 @@ model Activity {
   nutritionGiComfort    Int?      // 1 = molestias, 2 = aceptable, 3 = sin problemas
   nutritionFollowedPlan Boolean?  // true si se cargó con el botón 'consumí lo planificado'
   nutritionLoggedAt     DateTime?
+  analysisEmailSentAt   DateTime?
   intervalsCarbsG       Float?    // carbs_ingested de Intervals (si lo trae); el manual tiene prioridad
 
   createdAt         DateTime @default(now())

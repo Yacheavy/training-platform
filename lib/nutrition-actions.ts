@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendActivityAnalysis } from "@/lib/email/activity-analysis";
 import { NUTRITION_SELECT, RIDE_TYPES, toNutritionInput } from "@/lib/nutrition-data";
 import { toSessionNutrition } from "@/lib/training-engine/nutrition-analysis";
 
@@ -47,6 +49,7 @@ export async function saveActivityNutrition(formData: FormData) {
   });
   revalidatePath(`/activities/${activityId}`);
   revalidatePath("/dashboard");
+  after(() => sendActivityAnalysis(activityId));
 }
 
 /** "Consumí lo planificado": guarda los carbohidratos sugeridos para esa sesión (proporcionales a la duración real). */
@@ -63,6 +66,7 @@ export async function applyPlannedNutrition(formData: FormData) {
   });
   revalidatePath(`/activities/${activityId}`);
   revalidatePath("/dashboard");
+  after(() => sendActivityAnalysis(activityId));
 }
 
 /** "Omitir": no se acuerda o no quiere cargarla; deja de aparecer el aviso. Sigue siendo "sin dato". */
@@ -70,4 +74,5 @@ export async function skipActivityNutrition(formData: FormData) {
   const { activityId } = await ownRide(String(formData.get("activityId")));
   await prisma.activity.update({ where: { id: activityId }, data: { nutritionLoggedAt: new Date() } });
   revalidatePath("/dashboard");
+  after(() => sendActivityAnalysis(activityId));
 }

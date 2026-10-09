@@ -10,4 +10,4 @@ export const CREATOR = {
 };
 
 /** Subir esta versión obliga a todos a volver a aceptar la política (ej. si cambia qué datos se usan). */
-export const CONSENT_VERSION = "2026-10";
+export const CONSENT_VERSION = "2026-10.1";

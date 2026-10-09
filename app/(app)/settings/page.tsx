@@ -1,4 +1,5 @@
 import { CREATOR, APP_NAME, CONSENT_VERSION } from "@/lib/brand";
+import { setEmailAnalysis, sendTestEmail } from "@/lib/email-actions";
 import { StudentsList } from "@/components/StudentsList";
 import { RecoveryRulesCard } from "@/components/ThresholdsCard";
 import Link from "next/link";
@@ -257,6 +258,23 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       />
         </>
       )}
+
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Mails</h2>
+        <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.6, margin: "0 0 12px" }}>
+          Cuando terminás una salida de bici de una hora o más y cargás (o omitís) la nutrición, te mandamos por mail el análisis de la sesión. Llega a {user ? "tu casilla de Google" : "tu email"}.
+        </p>
+        <ActionForm action={setEmailAnalysis} success="Preferencia guardada" style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
+            <input type="checkbox" name="enabled" defaultChecked={user?.emailAnalysis ?? true} style={{ width: "17px", height: "17px", accentColor: "#4FD1C5" }} />
+            Recibir el análisis de mis salidas por mail
+          </label>
+          <SubmitButton style={{ ...btnStyle, padding: "7px 14px" }}>Guardar</SubmitButton>
+        </ActionForm>
+        <ActionForm action={sendTestEmail} success="Mail de prueba enviado, revisá tu casilla" style={{ marginTop: "12px" }}>
+          <SubmitButton pendingText="Enviando…" style={{ background: "transparent", border: "1px solid rgba(255,255,255,.14)", color: "var(--text)", borderRadius: "10px", padding: "7px 14px", fontSize: "12.5px", cursor: "pointer" }}>Enviarme un mail de prueba</SubmitButton>
+        </ActionForm>
+      </div>
 
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Acerca de {APP_NAME}</h2>
