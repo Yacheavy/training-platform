@@ -70,7 +70,7 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
         href: `/activities/${a.id}`,
         linkLabel: "Ver actividad",
         suggestions: [
-          { label: "Analizá la sesión", prompt: `Analizá esta sesión (${a.name ?? a.type}, ${fmtDate(a.date)}) con todos sus datos.` },
+          { label: "Analizá la sesión", prompt: `Analizá esta sesión (${a.name ?? a.type}, ${fmtDate(a.date)}): contame cómo salió y qué sigue.` },
           ...(a.generatedWorkout ? [{ label: "¿Cumplí el plan?", prompt: "¿Cumplí con lo planificado en esta sesión? Compará lo hecho contra lo previsto." }] : []),
           { label: "Impacto en recuperación", prompt: "¿Cómo impacta esta sesión en mi recuperación?" },
           { label: "¿Qué hago mañana?", prompt: "Según esta sesión, ¿qué debería hacer mañana?" },
