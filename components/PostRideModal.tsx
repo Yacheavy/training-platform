@@ -91,7 +91,7 @@ export function PostRideCard({ p, action, onLater }: { p: PendingPostRide; actio
                 </details>
                 {p.targetGPerHour > 0 && (
                   <div style={{ marginTop: "12px" }}>
-                    <SubmitButton name="intent" value="planned" pendingText="Guardando…" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", borderRadius: "10px", padding: "8px 12px", fontSize: "12.5px" }}>
+                    <SubmitButton name="intent" value="planned" pendingText="Guardando…" style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text)", borderRadius: "10px", padding: "8px 12px", fontSize: "12.5px" }}>
                       Consumí lo planificado ({p.plannedG} g)
                     </SubmitButton>
                   </div>

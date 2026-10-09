@@ -238,19 +238,19 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         {workout.status !== "COMPLETED" && (
           <ActionForm action={regenerateWorkout} success="Sesión regenerada con tus valores actuales">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Volver a ruta (regenerar)" : "Regenerar esta sesión"}</SubmitButton>
+            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Volver a ruta (regenerar)" : "Regenerar esta sesión"}</SubmitButton>
           </ActionForm>
         )}
         {workout.status !== "COMPLETED" && workout.workoutLibraryKey !== "gym" && !workout.workoutLibraryKey.startsWith("ftp_test") && (
           <ActionForm action={alternativeWorkout} success="Variante cambiada">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Otra variante</SubmitButton>
+            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Otra variante</SubmitButton>
           </ActionForm>
         )}
         {workout.status !== "COMPLETED" && workout.workoutLibraryKey !== "gym" && workout.environment !== "indoor" && (
           <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Pasar a rodillo</SubmitButton>
+            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Pasar a rodillo</SubmitButton>
           </ActionForm>
         )}
       </div>

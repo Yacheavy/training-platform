@@ -4,6 +4,7 @@
   --surface-2: #1E2731;
   --surface-3: #242F3B;
   --border: #2A3441;
+  --border-strong: #4B5A6B;
   --text: #E7ECF2;
   --text-muted: #8A97A6;
   --text-dim: #5A6673;
@@ -202,8 +203,63 @@ a.row-link:active > div {
   background: rgba(79, 209, 197, 0.14);
 }
 
+/* Todos los botones responden: hover, toque, foco y deshabilitado (también los que no usan .btn) */
+button, a.btn, .btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button:not(:disabled) {
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+@media (hover: hover) {
+  button:not(:disabled):hover { filter: brightness(1.12); box-shadow: inset 0 0 0 1px rgba(79, 209, 197, 0.4); }
+}
+button:not(:disabled):active { transform: scale(0.96); filter: brightness(0.92); }
+button:focus-visible, a.btn:focus-visible, a.pending-link:focus-visible {
+  outline: 2px solid var(--teal, #4fd1c5);
+  outline-offset: 2px;
+}
+button:disabled { cursor: not-allowed; }
+
+/* Botón principal destacado (un solo foco por pantalla) */
+.btn-primary {
+  background: linear-gradient(135deg, #5BDDD1, #3DB8AD);
+  color: #08201C;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 8px 20px -10px rgba(79, 209, 197, 0.7);
+  white-space: nowrap;
+}
+a.btn-primary:active { transform: scale(0.96); filter: brightness(0.92); }
+a.btn-primary:hover { filter: brightness(1.08); }
+
+/* Tarjeta de acción destacada (análisis con IA) */
+.cta-card {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(79, 209, 197, 0.14), rgba(127, 178, 240, 0.08)), var(--surface);
+  border: 1px solid rgba(79, 209, 197, 0.35);
+  border-radius: 16px; padding: 18px 20px; margin-bottom: 16px;
+}
+.cta-card .cta-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  background: rgba(79, 209, 197, 0.16); color: var(--teal);
+  display: flex; align-items: center; justify-content: center;
+}
+.cta-card .cta-text { flex: 1 1 220px; min-width: 0; }
+.cta-card .cta-title { font-size: 15px; font-weight: 600; }
+.cta-card .cta-sub { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-top: 2px; }
+@media (max-width: 560px) { .cta-card .btn-primary { width: 100%; } }
+
+.chip.chip-primary { border-color: var(--teal); background: rgba(79, 209, 197, 0.14); color: var(--teal); font-weight: 600; }
+
 @media (prefers-reduced-motion: reduce) {
-  .btn, .spinner, .toast-in, .week-fade { animation: none !important; transition: none !important; }
+  .btn, .spinner, .toast-in, .week-fade, button { animation: none !important; transition: none !important; }
+  button:active, a.btn-primary:active { transform: none !important; }
 }
 a.activity-card:hover > div { border-color: var(--teal); background: rgba(79,209,197,.05) !important; }
 a.activity-card:active > div { transform: scale(0.99); }

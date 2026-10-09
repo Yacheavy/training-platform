@@ -6,6 +6,7 @@ import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier"
 import { STIMULUS_LABELS, ZONE_LABELS } from "@/lib/labels";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { PendingLink } from "@/components/PendingLink";
+import { Sparkle } from "@/components/Sparkle";
 import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
 import { RatingCard } from "@/components/RatingCard";
@@ -86,6 +87,17 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           )}
         </div>
       </div>
+
+      {isRide && session.user.id === a.athleteId && (
+        <div className="cta-card">
+          <div className="cta-icon" aria-hidden><Sparkle size={22} /></div>
+          <div className="cta-text">
+            <div className="cta-title">Análisis de esta sesión con IA</div>
+            <div className="cta-sub">Qué salió bien, qué mirar y qué sigue, con los datos de esta salida{a.rpe != null ? ", tu RPE" : ""}{a.nutritionLoggedAt ? " y tu nutrición" : ""}.</div>
+          </div>
+          <PendingLink href={`/chat?activityId=${a.id}&analyze=1`} className="btn btn-primary">Analizar con IA</PendingLink>
+        </div>
+      )}
 
       <div style={card}>
         <div style={h}>Resumen</div>
@@ -174,7 +186,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       )}
 
       <PendingLink href={`/chat?activityId=${a.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
-        Analizar esta sesión con el chat →
+        Preguntarle algo más al chat sobre esta sesión →
       </PendingLink>
     </div>
   );

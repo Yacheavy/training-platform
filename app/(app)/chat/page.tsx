@@ -15,8 +15,8 @@ const fmtMin = (sec: number) => {
 };
 const fmtDate = (d: Date, tz: string = ATHLETE_TZ) => d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: tz });
 
-export default async function ChatPage({ searchParams }: { searchParams: Promise<{ workoutId?: string; activityId?: string }> }) {
-  const { workoutId, activityId } = await searchParams;
+export default async function ChatPage({ searchParams }: { searchParams: Promise<{ workoutId?: string; activityId?: string; analyze?: string }> }) {
+  const { workoutId, activityId, analyze } = await searchParams;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   await syncIfStale(session.user.id);
@@ -80,5 +80,5 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
   }
 
   const usage = await getChatUsage(session.user.id);
-  return <ChatView usage={usage} messages={messages} workoutId={focus?.kind === "workout" ? workoutId : undefined} activityId={focus?.kind === "activity" ? activityId : undefined} focus={focus} action={sendChatMessage} />;
+  return <ChatView usage={usage} messages={messages} workoutId={focus?.kind === "workout" ? workoutId : undefined} activityId={focus?.kind === "activity" ? activityId : undefined} focus={focus} autoAnalyze={analyze === "1" && focus?.kind === "activity"} action={sendChatMessage} />;
 }

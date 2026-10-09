@@ -10,9 +10,9 @@ function Spin() {
 }
 
 /** Link que muestra un indicador mientras la navegación está en curso. */
-export function PendingLink({ href, children, style }: { href: string; children: ReactNode; style?: CSSProperties }) {
+export function PendingLink({ href, children, style, className }: { href: string; children: ReactNode; style?: CSSProperties; className?: string }) {
   return (
-    <Link href={href} className="pending-link" style={style}>
+    <Link href={href} className={`pending-link${className ? ` ${className}` : ""}`} style={style}>
       {children}
       <Spin />
     </Link>

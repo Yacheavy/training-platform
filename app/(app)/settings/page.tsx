@@ -77,12 +77,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   {!i.joined && (
                     <ActionForm action={resendInvite} success={null}>
                       <input type="hidden" name="email" value={i.email} />
-                      <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#4FD1C5", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Reenviar</SubmitButton>
+                      <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#4FD1C5", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Reenviar</SubmitButton>
                     </ActionForm>
                   )}
                   <ActionForm action={removeInvite} success="Invitación eliminada">
                     <input type="hidden" name="email" value={i.email} />
-                    <SubmitButton style={{ background: "transparent", border: "1px solid #2A3441", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
+                    <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
                   </ActionForm>
                 </div>
               )}
@@ -128,12 +128,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
           {(access.intervals.connected || access.intervals.usingLegacyEnv) && (
             <ActionForm action={syncFullHistory} success={null}>
-              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</SubmitButton>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</SubmitButton>
             </ActionForm>
           )}
           {access.intervals.connected && (
             <ActionForm action={disconnectIntervals} success="Intervals desconectado">
-              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>Desconectar</SubmitButton>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Desconectar</SubmitButton>
             </ActionForm>
           )}
         </div>
@@ -211,7 +211,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               {user?.powerCurveSyncedAt ? `Última lectura de Intervals: ${new Date(user.powerCurveSyncedAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : "Sin lectura de Intervals todavía"}
             </div>
             <ActionForm action={refreshMetricsNow} success="Datos de Intervals actualizados" style={{ marginTop: "8px" }}>
-              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>
                 Leer de Intervals ahora
               </SubmitButton>
             </ActionForm>
@@ -299,7 +299,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div><SubmitButton style={{ ...btnStyle, padding: "7px 14px" }}>Guardar</SubmitButton></div>
         </ActionForm>
         <ActionForm action={sendTestEmail} success="Mail de prueba enviado, revisá tu casilla" style={{ marginTop: "12px" }}>
-          <SubmitButton pendingText="Enviando…" style={{ background: "transparent", border: "1px solid rgba(255,255,255,.14)", color: "var(--text)", borderRadius: "10px", padding: "7px 14px", fontSize: "12.5px", cursor: "pointer" }}>Enviarme un mail de prueba</SubmitButton>
+          <SubmitButton pendingText="Enviando…" style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text)", borderRadius: "10px", padding: "7px 14px", fontSize: "12.5px", cursor: "pointer" }}>Enviarme un mail de prueba</SubmitButton>
         </ActionForm>
       </div>
 

@@ -119,7 +119,7 @@ export function SeasonCard({
               {b.isFuture && (
                 <ActionForm action={deleteAction} success="Bloque eliminado">
                   <input type="hidden" name="blockId" value={b.id} />
-                  <SubmitButton style={{ background: "transparent", border: "1px solid rgba(255,255,255,.12)", color: "var(--text)", borderRadius: "10px", padding: "4px 10px", fontSize: "11.5px", cursor: "pointer" }}>Eliminar</SubmitButton>
+                  <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text)", borderRadius: "10px", padding: "4px 10px", fontSize: "11.5px", cursor: "pointer" }}>Eliminar</SubmitButton>
                 </ActionForm>
               )}
             </div>

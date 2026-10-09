@@ -109,6 +109,7 @@ export function ChatView({
   workoutId,
   activityId,
   focus,
+  autoAnalyze,
   action,
   usage,
 }: {
@@ -117,6 +118,7 @@ export function ChatView({
   workoutId?: string;
   activityId?: string;
   focus?: ChatFocus;
+  autoAnalyze?: boolean;
   action: (formData: FormData) => Promise<unknown>;
 }) {
   const [text, setText] = useState("");
@@ -166,6 +168,16 @@ export function ChatView({
     if (activityId) fd.set("focusedActivityId", activityId);
     void send(fd);
   };
+
+  // Viene del botón «Analizar con IA» de la actividad: manda el análisis una sola vez y limpia la URL para que recargar no lo repita
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (!autoAnalyze || autoSent.current || !focus?.suggestions[0]) return;
+    autoSent.current = true;
+    try { window.history.replaceState(null, "", `/chat?activityId=${activityId ?? ""}`); } catch {}
+    sendSuggestion(focus.suggestions[0].prompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="chat-shell">
@@ -308,8 +320,8 @@ export function ChatView({
 
       {focus && !pending && (
         <div className="chat-chips" role="group" aria-label="Sugerencias">
-          {focus.suggestions.map((s) => (
-            <button key={s.label} type="button" className="btn chip" onClick={() => sendSuggestion(s.prompt)}>
+          {focus.suggestions.map((s, i) => (
+            <button key={s.label} type="button" className={`btn chip${focus.kind === "activity" && i === 0 ? " chip-primary" : ""}`} onClick={() => sendSuggestion(s.prompt)}>
               {s.label}
             </button>
           ))}

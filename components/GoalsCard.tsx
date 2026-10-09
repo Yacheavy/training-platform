@@ -60,7 +60,7 @@ export function GoalsCard({
   const DeleteButton = ({ id }: { id: string }) => (
     <ActionForm action={deleteAction} success="Objetivo eliminado">
       <input type="hidden" name="id" value={id} />
-      <SubmitButton style={{ background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border)", borderRadius: "8px", padding: "5px 10px", fontSize: "12px" }}>
+      <SubmitButton style={{ background: "transparent", color: "var(--text-dim)", border: "1px solid var(--border-strong)", borderRadius: "8px", padding: "5px 10px", fontSize: "12px" }}>
         Quitar
       </SubmitButton>
     </ActionForm>
@@ -246,7 +246,7 @@ export function GoalsCard({
               <SubmitButton pendingText="Guardando…" style={{ background: "var(--teal)", color: "#08201C", border: "none", borderRadius: "10px", padding: "10px 18px", fontSize: "14px", fontWeight: 600 }}>
                 Guardar objetivo
               </SubmitButton>
-              <button type="button" className="btn" onClick={() => setOpen(false)} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: "10px", padding: "10px 16px", fontSize: "14px", cursor: "pointer" }}>
+              <button type="button" className="btn" onClick={() => setOpen(false)} style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-muted)", borderRadius: "10px", padding: "10px 16px", fontSize: "14px", cursor: "pointer" }}>
                 Cancelar
               </button>
             </div>

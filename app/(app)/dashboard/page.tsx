@@ -126,7 +126,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       subtitle="Tocá una para ver su resumen."
       action={
         <ActionForm action={syncNow} success="Datos actualizados desde Intervals">
-          <SubmitButton pendingText="Sincronizando…" style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", borderRadius: "8px", padding: "5px 12px", fontSize: "12px" }}>
+          <SubmitButton pendingText="Sincronizando…" style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-muted)", borderRadius: "8px", padding: "5px 12px", fontSize: "12px" }}>
             Sincronizar
           </SubmitButton>
         </ActionForm>
@@ -250,7 +250,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         <ActionButton primary>Consumí lo planificado ({p.plannedG} g)</ActionButton>
                       </ActionForm>
                     )}
-                    <Link href={`/activities/${p.id}`} className="btn" style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Cargar detalle</Link>
+                    <Link href={`/activities/${p.id}`} className="btn" style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border-strong)", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Cargar detalle</Link>
                     <ActionForm action={skipActivityNutrition} success="Omitida">
                       <input type="hidden" name="activityId" value={p.id} />
                       <ActionButton>Omitir</ActionButton>
