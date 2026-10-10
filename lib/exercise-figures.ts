@@ -12,7 +12,7 @@ type P = { x: number; y: number };
 const dir = (a: number): P => ({ x: Math.sin((a * Math.PI) / 180), y: Math.cos((a * Math.PI) / 180) });
 const add = (p: P, d: P, l: number): P => ({ x: p.x + d.x * l, y: p.y + d.y * l });
 
-const L = { torso: 1.0, thigh: 0.92, shin: 0.9, foot: 0.32, ua: 0.55, fa: 0.5, head: 0.2, neck: 0.12 };
+const L = { torso: 1.0, thigh: 0.92, shin: 0.9, foot: 0.42, ua: 0.58, fa: 0.52, head: 0.22, neck: 0.1 };
 
 export type Prop =
   | { k: "plate"; at: "shoulder" | "wrist"; r?: number; dx?: number; dy?: number }
@@ -73,11 +73,11 @@ function solve(p: Pose): Joints {
 
 let U = 44; // px por unidad (se ajusta por figura para que entre completa)
 const W = 200;
-const H = 172;
+const H = 178;
 const GROUND = 150;
 let TOP = 0; // borde superior visible (se recalcula por figura)
 
-const COL = { near: "#E7ECF2", far: "#7C8A9A", accent: "#4FD1C5", prop: "#B79BEF", floor: "#3A4656" };
+const COL = { near: "#E7ECF2", far: "#6B7A8C", accent: "#4FD1C5", prop: "#B79BEF", floor: "#3A4656", bg: "#171E27", propFill: "#232B3D" };
 
 function frameSvg(p: Pose, ox: number): string {
   const j = solve(p);
@@ -95,8 +95,9 @@ function frameSvg(p: Pose, ox: number): string {
 
   const out: string[] = [];
   const gy = GROUND + 2;
-  // piso
-  out.push(line({ x: ox + 10, y: gy }, { x: ox + W - 10, y: gy }, COL.floor, 2));
+  // piso con degradé y un leve resplandor bajo los pies
+  out.push(`<rect x="${ox + 10}" y="${gy - 1}" width="${W - 20}" height="2" rx="1" fill="url(#gfloor)"/>`);
+  if (!lift) out.push(`<ellipse cx="${(ox + W / 2).toFixed(1)}" cy="${gy}" rx="${(1.3 * U).toFixed(1)}" ry="4" fill="rgba(79,209,197,.10)"/>`);
 
   // props detrás de la figura
   const propSvg: string[] = [];
@@ -104,26 +105,26 @@ function frameSvg(p: Pose, ox: number): string {
     if (pr.k === "box") {
       const a = g.ankle;
       const w = (pr.w ?? 1.1) * U, x0 = a.x + (pr.dx ?? -0.2) * U - w / 2 + w / 2;
-      propSvg.push(`<rect x="${(x0 - w / 2).toFixed(1)}" y="${(a.y + 4).toFixed(1)}" width="${w.toFixed(1)}" height="${(gy - a.y - 4).toFixed(1)}" rx="3" fill="#2A3350" stroke="${COL.prop}" stroke-width="1.5"/>`);
+      propSvg.push(`<rect x="${(x0 - w / 2).toFixed(1)}" y="${(a.y + 4).toFixed(1)}" width="${w.toFixed(1)}" height="${(gy - a.y - 4).toFixed(1)}" rx="3" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1.5"/>`);
     } else if (pr.k === "boxFront") {
       const t = g.toe;
       const x0 = t.x + (pr.gap ?? 0.25) * U, w = (pr.w ?? 1.0) * U, hh = pr.h * U;
-      propSvg.push(`<rect x="${x0.toFixed(1)}" y="${(gy - hh).toFixed(1)}" width="${w.toFixed(1)}" height="${hh.toFixed(1)}" rx="3" fill="#2A3350" stroke="${COL.prop}" stroke-width="1.5"/>`);
+      propSvg.push(`<rect x="${x0.toFixed(1)}" y="${(gy - hh).toFixed(1)}" width="${w.toFixed(1)}" height="${hh.toFixed(1)}" rx="3" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1.5"/>`);
     } else if (pr.k === "bench") {
       const a = g.fankle;
-      propSvg.push(`<rect x="${(a.x - 0.9 * U).toFixed(1)}" y="${(a.y + 4).toFixed(1)}" width="${(1.15 * U).toFixed(1)}" height="${(gy - a.y - 4).toFixed(1)}" rx="3" fill="#2A3350" stroke="${COL.prop}" stroke-width="1.5"/>`);
+      propSvg.push(`<rect x="${(a.x - 0.9 * U).toFixed(1)}" y="${(a.y + 4).toFixed(1)}" width="${(1.15 * U).toFixed(1)}" height="${(gy - a.y - 4).toFixed(1)}" rx="3" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1.5"/>`);
     } else if (pr.k === "benchBack") {
       const s = g.shoulder;
       const w = (pr.w ?? 1.0) * U;
-      propSvg.push(`<rect x="${(s.x - w + 0.15 * U).toFixed(1)}" y="${(s.y + 0.2 * U).toFixed(1)}" width="${w.toFixed(1)}" height="${(gy - s.y - 0.2 * U).toFixed(1)}" rx="3" fill="#2A3350" stroke="${COL.prop}" stroke-width="1.5"/>`);
+      propSvg.push(`<rect x="${(s.x - w + 0.15 * U).toFixed(1)}" y="${(s.y + 0.2 * U).toFixed(1)}" width="${w.toFixed(1)}" height="${(gy - s.y - 0.2 * U).toFixed(1)}" rx="3" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1.5"/>`);
     } else if (pr.k === "platform") {
       const a = g.ankle;
-      propSvg.push(`<rect x="${(a.x + 0.05 * U).toFixed(1)}" y="${(a.y - 0.7 * U).toFixed(1)}" width="5" height="${(1.4 * U).toFixed(1)}" rx="2" fill="#2A3350" stroke="${COL.prop}" stroke-width="1.5"/>`);
+      propSvg.push(`<rect x="${(a.x + 0.05 * U).toFixed(1)}" y="${(a.y - 0.7 * U).toFixed(1)}" width="5" height="${(1.4 * U).toFixed(1)}" rx="2" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1.5"/>`);
     } else if (pr.k === "seat") {
       const h = g.hip;
-      propSvg.push(`<rect x="${(h.x - 0.6 * U).toFixed(1)}" y="${(h.y + 5).toFixed(1)}" width="${(1.2 * U).toFixed(1)}" height="${(gy - h.y - 5).toFixed(1)}" rx="3" fill="#2A3350" stroke="${COL.prop}" stroke-width="1.5"/>`);
+      propSvg.push(`<rect x="${(h.x - 0.6 * U).toFixed(1)}" y="${(h.y + 5).toFixed(1)}" width="${(1.2 * U).toFixed(1)}" height="${(gy - h.y - 5).toFixed(1)}" rx="3" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1.5"/>`);
     } else if (pr.k === "mat") {
-      propSvg.push(`<rect x="${ox + 14}" y="${gy - 3}" width="${W - 28}" height="5" rx="2" fill="#2A3350" stroke="${COL.prop}" stroke-width="1"/>`);
+      propSvg.push(`<rect x="${ox + 14}" y="${gy - 3}" width="${W - 28}" height="5" rx="2" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="1"/>`);
     } else if (pr.k === "band") {
       const to = pr.to === "wrist" ? g.wrist : pr.to === "farAnkle" ? g.fankle : pr.to === "knee" ? g.knee : g.ankle;
       const len = (pr.len ?? 1.5) * U;
@@ -137,17 +138,23 @@ function frameSvg(p: Pose, ox: number): string {
   }
   out.push(...propSvg);
 
+  const wl = U * 0.2, wa = U * 0.17, wt = U * 0.27;
   // extremidades lejanas
-  out.push(poly([g.hip, g.fknee, g.fankle, g.ftoe], COL.far, 6));
-  out.push(poly([g.shoulder, g.felbow, g.fwrist], COL.far, 5));
-  // torso
-  out.push(line(g.hip, g.shoulder, COL.near, 9));
+  out.push(poly([g.hip, g.fknee, g.fankle, g.ftoe], COL.far, wl));
+  out.push(poly([g.shoulder, g.felbow, g.fwrist], COL.far, wa));
+  // torso y cuello
+  out.push(line(g.hip, g.shoulder, COL.near, wt));
+  out.push(line(g.shoulder, g.head, COL.near, wa));
   // extremidades cercanas
-  out.push(poly([g.hip, g.knee, g.ankle, g.toe], COL.near, 7));
-  out.push(poly([g.shoulder, g.elbow, g.wrist], COL.accent, 6));
+  out.push(poly([g.hip, g.knee, g.ankle, g.toe], COL.near, wl));
+  out.push(poly([g.shoulder, g.elbow, g.wrist], COL.accent, wa));
+  // articulaciones (puntos del color del fondo) y manos
+  const dot = (q: P, r: number, c: string) => `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${r.toFixed(1)}" fill="${c}"/>`;
+  for (const q of [g.knee, g.ankle]) out.push(dot(q, U * 0.055, COL.bg));
+  out.push(dot(g.elbow, U * 0.05, COL.bg), dot(g.wrist, U * 0.085, COL.accent));
   // cabeza
   const hc = g.head;
-  out.push(`<circle cx="${hc.x.toFixed(1)}" cy="${hc.y.toFixed(1)}" r="${(L.head * U).toFixed(1)}" fill="#1B2530" stroke="${COL.near}" stroke-width="3"/>`);
+  out.push(`<circle cx="${hc.x.toFixed(1)}" cy="${hc.y.toFixed(1)}" r="${(L.head * U).toFixed(1)}" fill="${COL.bg}" stroke="${COL.near}" stroke-width="${(U * 0.09).toFixed(1)}"/>`);
 
   // props delante de la figura (en la mano / hombro)
   for (const pr of p.props ?? []) {
@@ -160,10 +167,10 @@ function frameSvg(p: Pose, ox: number): string {
       out.push(`<circle cx="${cx2.toFixed(1)}" cy="${cy2.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${COL.prop}" stroke-width="3"/><circle cx="${cx2.toFixed(1)}" cy="${cy2.toFixed(1)}" r="3" fill="${COL.prop}"/>`);
     } else if (pr.k === "ball") {
       const c = g.wrist, r = (pr.r ?? 0.26) * U;
-      out.push(`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${r.toFixed(1)}" fill="#2A3350" stroke="${COL.prop}" stroke-width="2.5"/>`);
+      out.push(`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${r.toFixed(1)}" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="2.5"/>`);
     } else if (pr.k === "kb") {
       const c = g.wrist, r = 0.24 * U;
-      out.push(`<circle cx="${c.x.toFixed(1)}" cy="${(c.y + r * 0.9).toFixed(1)}" r="${r.toFixed(1)}" fill="#2A3350" stroke="${COL.prop}" stroke-width="2.5"/><path d="M ${(c.x - r * 0.5).toFixed(1)} ${(c.y + r * 0.2).toFixed(1)} q ${(r * 0.5).toFixed(1)} ${(-r * 0.9).toFixed(1)} ${r.toFixed(1)} 0" fill="none" stroke="${COL.prop}" stroke-width="2.5"/>`);
+      out.push(`<circle cx="${c.x.toFixed(1)}" cy="${(c.y + r * 0.9).toFixed(1)}" r="${r.toFixed(1)}" fill="${COL.propFill}" stroke="${COL.prop}" stroke-width="2.5"/><path d="M ${(c.x - r * 0.5).toFixed(1)} ${(c.y + r * 0.2).toFixed(1)} q ${(r * 0.5).toFixed(1)} ${(-r * 0.9).toFixed(1)} ${r.toFixed(1)} 0" fill="none" stroke="${COL.prop}" stroke-width="2.5"/>`);
     } else if (pr.k === "db") {
       const c = g.wrist;
       out.push(`<rect x="${(c.x - 7).toFixed(1)}" y="${(c.y - 4).toFixed(1)}" width="14" height="8" rx="2" fill="${COL.prop}"/>`);
@@ -199,9 +206,14 @@ export function figureSvg(def: FigureDef, title: string): string {
   TOP = Math.max(0, Math.floor(GROUND - maxH * U - (hasCable ? 28 : 6)));
   const labels = def.labels ?? (n === 1 ? ["Posición"] : ["Inicio", "Final"]);
   const body = def.frames.map((f, i) => frameSvg(f, i * W)).join("");
-  const texts = labels.map((t, i) => `<text x="${i * W + W / 2}" y="${H - 2}" text-anchor="middle" font-size="11" fill="#8A97A6" font-family="system-ui,sans-serif">${t}</text>`).join("");
-  const arrow = Array.from({ length: n - 1 }, (_, i) => `<path d="M ${(i + 1) * W - 12} ${GROUND - 50} l 24 0 m -6 -5 l 6 5 l -6 5" fill="none" stroke="#5A6673" stroke-width="2" stroke-linecap="round"/>`).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${TOP} ${W * n} ${H - TOP}" role="img" aria-label="${title.replace(/"/g, "'")}" style="width:100%;max-width:${n === 1 ? 240 : n === 2 ? 440 : 620}px;height:auto;display:block">${body}${arrow}${texts}</svg>`;
+  const texts = labels.map((t, i) => {
+    const cx = i * W + W / 2, tw = t.length * 5.7, ly = H - 9;
+    const badge = n > 1 ? `<circle cx="${(cx - tw / 2 - 11).toFixed(1)}" cy="${ly - 3.5}" r="7.5" fill="#2A5C56"/><text x="${(cx - tw / 2 - 11).toFixed(1)}" y="${ly - 0.2}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#4FD1C5" font-family="system-ui,sans-serif">${i + 1}</text>` : "";
+    return `${badge}<text x="${(n > 1 ? cx + 4 : cx).toFixed(1)}" y="${ly}" text-anchor="middle" font-size="11" fill="#8A97A6" font-family="system-ui,sans-serif">${t}</text>`;
+  }).join("");
+  const arrow = Array.from({ length: n - 1 }, (_, i) => `<circle cx="${(i + 1) * W}" cy="${GROUND - 46}" r="11" fill="#1E2733" stroke="#2A3441"/><path d="M ${(i + 1) * W - 3} ${GROUND - 51} l 5 5 l -5 5" fill="none" stroke="#4FD1C5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`).join("");
+  const defs = `<defs><linearGradient id="gfloor" x1="0" x2="1"><stop offset="0" stop-color="#3A4656" stop-opacity="0"/><stop offset=".2" stop-color="#3A4656"/><stop offset=".8" stop-color="#3A4656"/><stop offset="1" stop-color="#3A4656" stop-opacity="0"/></linearGradient></defs>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${TOP} ${W * n} ${H - TOP}" role="img" aria-label="${title.replace(/"/g, "'")}" style="width:100%;max-width:${n === 1 ? 240 : n === 2 ? 440 : 620}px;height:auto;display:block">${defs}${body}${arrow}${texts}</svg>`;
 }
 
 const STAND: Pose = { t: 180, th: 0, sh: 0 };
@@ -217,8 +229,8 @@ export const FIGURES: Record<string, FigureDef> = {
   },
   sentadilla_barra: {
     frames: [
-      { ...STAND, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.2, dy: -0.05 }] },
-      { ...SQ_BOTTOM, t: 145, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.2, dy: -0.05 }] },
+      { ...STAND, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.34, dy: 0.02, r: 0.26 }] },
+      { ...SQ_BOTTOM, t: 145, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.34, dy: 0.02, r: 0.26 }] },
     ],
   },
   prensa: {
@@ -236,8 +248,8 @@ export const FIGURES: Record<string, FigureDef> = {
   },
   buenos_dias: {
     frames: [
-      { ...STAND, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.2, dy: -0.05 }] },
-      { t: 105, th: 15, sh: -5, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.2, dy: -0.05 }] },
+      { ...STAND, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.34, dy: 0.02, r: 0.26 }] },
+      { t: 105, th: 15, sh: -5, ua: -30, fa: 165, props: [{ k: "plate", at: "shoulder", dx: -0.34, dy: 0.02, r: 0.26 }] },
     ],
   },
   pm_unipodal: {
@@ -299,7 +311,7 @@ export const FIGURES: Record<string, FigureDef> = {
   cmj: {
     frames: [
       { t: 155, th: 65, sh: -35, ua: -60, fa: -60 },
-      { ...STAND, foot: 30, ua: 170, fa: 170, lift: 0.7 },
+      { ...STAND, foot: 30, ua: 150, fa: 160, lift: 0.4 },
       { t: 160, th: 60, sh: -30, ua: 60, fa: 70 },
     ],
     labels: ["Bajada rápida", "Salto", "Aterrizaje suave"],

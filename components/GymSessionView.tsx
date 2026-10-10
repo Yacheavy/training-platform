@@ -54,7 +54,7 @@ export function GymSessionView({ gym }: { gym: GymSession }) {
                 {FIGURES[e.id] && (
                   <div style={{ marginTop: "10px" }}>
                     {/* SVG propio y estático generado en código (no hay contenido de usuarios) */}
-                    <div style={{ background: "#12181F", border: "1px solid var(--border)", borderRadius: "10px", padding: "8px 10px", display: "inline-block", maxWidth: "100%" }}
+                    <div style={{ background: "linear-gradient(160deg, #1B2430 0%, #151C26 100%)", border: "1px solid var(--border)", borderRadius: "12px", padding: "10px 12px 6px", display: "inline-block", maxWidth: "100%" }}
                       dangerouslySetInnerHTML={{ __html: figureSvg(FIGURES[e.id], e.name) }} />
                     <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "4px" }}>
                       Esquema de referencia, no reemplaza la técnica que te corrija un profesional.{FIGURES[e.id].note ? ` ${FIGURES[e.id].note}` : ""}
