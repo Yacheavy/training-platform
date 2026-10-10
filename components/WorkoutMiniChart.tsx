@@ -11,6 +11,7 @@ const TYPE_COLORS: Record<string, string> = {
   cooldown_z2: "#2A5C56",
   cooldown_z1: "#2A3350",
   gym: "#B79BEF",
+  flexibility: "#B79BEF",
   test_20min: "#B79BEF",
   test_8min: "#B79BEF",
   test_5min: "#B79BEF",

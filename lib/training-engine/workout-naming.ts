@@ -1,4 +1,5 @@
 import { WorkoutBlock } from "./tss";
+import { isOffBike } from "./off-bike";
 
 const PREFIX: Record<string, string> = {
   z2: "Z2",
@@ -17,6 +18,7 @@ const PREFIX: Record<string, string> = {
   billat_30_30: "30/30",
   rst: "RST",
   gym: "GYM",
+  flexibility: "FLEX",
 };
 
 function formatTime(sec: number): string {
@@ -54,7 +56,7 @@ export function buildWorkoutName(
   if (stimulusType === "ftp_test" || stimulusType === "ftp_test_8min" || stimulusType === "ftp_test_5min") { return "TEST FTP"; }
 
   const hasIntervals = blocks.some((b) => b.type === "interval");
-  if (stimulusType === "gym" || (stimulusType === "z2" && !hasIntervals)) {
+  if (isOffBike(stimulusType) || (stimulusType === "z2" && !hasIntervals)) {
     const totalMin = Math.round(blocks.reduce((s, b) => s + b.durationSec, 0) / 60);
     return `${prefix} ${totalMin}'`;
   }

@@ -12,6 +12,7 @@ interface Thresholds {
   varietyLevel?: string | null;
   bannedStimuli?: string[] | null;
   periodization?: string | null;
+  flexibilityEnabled?: boolean | null;
 }
 
 function Field({ label, hint, why, unit, children }: { label: string; hint: string; why?: string; unit?: string; children: React.ReactNode }) {
@@ -167,6 +168,25 @@ export function PlanStyleCard({
               </select>
             </Field>
           </div>
+        </div>
+
+        <div className="group">
+          <h3 className="group-title">Gimnasio y flexibilidad</h3>
+          <p className="group-desc">
+            Los días de gimnasio de tu semana ahora traen ejercicios: fuerza pesada, potencia, core y propiocepción, según la fase del bloque
+            (fuerza en la base, mantenimiento en intensidad, menos volumen en descarga y puesta a punto). La flexibilidad se elige acá.
+          </p>
+          <input type="hidden" name="_gym" value="1" />
+          <label style={{ display: "flex", gap: "10px", alignItems: "flex-start", fontSize: "13px", cursor: "pointer" }}>
+            <input type="checkbox" name="flexibilityEnabled" defaultChecked={!!t.flexibilityEnabled} style={{ marginTop: "3px" }} />
+            <span>
+              <b>Sumar un set de flexibilidad (8 min)</b> al final de las sesiones de gimnasio y como sugerencia después de rodar.
+              <span style={{ display: "block", color: "var(--text-muted)", marginTop: "2px" }}>
+                Honestamente: estirar no previene lesiones ni mejora el rendimiento según los metaanálisis; sirve para comodidad y rango de movimiento.
+                Va siempre al final, porque estirar justo antes de rendir lo baja. También podés agregar un día de «Flexibilidad» propio en tu semana.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="group">

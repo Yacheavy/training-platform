@@ -1,6 +1,7 @@
 /** Etiquetas legibles de los tipos de estímulo (compartidas por dashboard y detalle de actividad). */
 export const STIMULUS_LABELS: Record<string, string> = {
   gym: "Gimnasio",
+  flexibility: "Flexibilidad",
   z2: "Z2 · Base",
   hiit_genuino: "HIIT",
   ronnestad_30_15: "Rønnestad 30/15",

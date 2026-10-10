@@ -10,11 +10,15 @@ import { approveWorkout, sendWorkoutToIntervals, regenerateWorkout, alternativeW
 import { VARIANTS, EVIDENCE_LABELS, FAMILY_LABELS } from "@/lib/training-engine/variants";
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
 import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
+import { GymSessionView } from "@/components/GymSessionView";
+import { isOffBike } from "@/lib/training-engine/off-bike";
+import { buildMobilitySet, type GymSession } from "@/lib/training-engine/strength";
 
-type Block = { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number };
+type Block = { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number; gym?: GymSession };
 
 const TYPE_LABELS: Record<string, string> = {
   gym: "Gimnasio",
+  flexibility: "Flexibilidad",
   hiit_genuino: "HIIT genuino",
   ronnestad_30_15: "Rønnestad 30/15",
   z2_sprints: "Z2 con sprints",
@@ -93,9 +97,10 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
-  const [workout, user] = await Promise.all([
+  const [workout, user, thr] = await Promise.all([
     prisma.generatedWorkout.findUnique({ where: { id } }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true, pvo2maxWatts: true } }),
+    prisma.athleteThresholds.findUnique({ where: { athleteId: session.user.id }, select: { flexibilityEnabled: true } }),
   ]);
   if (!workout || workout.athleteId !== session.user.id) notFound();
 
@@ -103,6 +108,10 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   const ftp = user?.ftp ?? null;
   const totalSec = blocks.reduce((s, b) => s + b.durationSec, 0);
   const rows = groupBlocks(blocks);
+  const offBike = isOffBike(workout.workoutLibraryKey);
+  const gymDetail = blocks.find((b) => b.gym)?.gym ?? null;
+  // Flexibilidad sugerida después de rodar (solo se calcula al mostrar; no se guarda)
+  const postRide = !offBike && !!thr?.flexibilityEnabled && totalSec >= 45 * 60 ? buildMobilitySet(8) : [];
   const rationaleItems = (workout.rationale ?? "").split(" · ").filter(Boolean);
   const tips = getExecutionTips(workout.workoutLibraryKey);
   const variant = VARIANTS[workout.workoutLibraryKey];
@@ -143,12 +152,13 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       <div style={card}>
         <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", marginBottom: "18px" }}>
           {stat("Duración", fmt(totalSec))}
-          {stat("TSS", `${Math.round(workout.estimatedTss ?? 0)}`)}
-          {stat("kJ", `${Math.round(workout.estimatedKj ?? 0)}`)}
-          {stat("Carbos", `${Math.round(workout.suggestedCarbsG ?? 0)} g`)}
-          {workout.suggestedCarbsGPerHour ? stat("Carbos/h", `${Math.round(workout.suggestedCarbsGPerHour)} g`) : null}
+          {!offBike && stat("TSS", `${Math.round(workout.estimatedTss ?? 0)}`)}
+          {!offBike && stat("kJ", `${Math.round(workout.estimatedKj ?? 0)}`)}
+          {!offBike && stat("Carbos", `${Math.round(workout.suggestedCarbsG ?? 0)} g`)}
+          {!offBike && workout.suggestedCarbsGPerHour ? stat("Carbos/h", `${Math.round(workout.suggestedCarbsGPerHour)} g`) : null}
         </div>
-        {workout.workoutLibraryKey !== "gym" && <WorkoutDetailChart blocks={blocks} ftp={ftp} />}
+        {!offBike && <WorkoutDetailChart blocks={blocks} ftp={ftp} />}
+        {offBike && !gymDetail && <div style={{ fontSize: "12.5px", color: "var(--text-muted)" }}>Esta sesión se creó antes de que el gimnasio tuviera ejercicios. Regenerá el plan desde Planificación para ver el detalle.</div>}
         {workout.requiresMultipleCarbSources && (
           <div style={{ fontSize: "11.5px", color: "var(--amber)", marginTop: "12px" }}>
             Por encima de 60 g/h conviene combinar glucosa y fructosa (más de una fuente de carbohidratos).
@@ -156,7 +166,9 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         )}
       </div>
 
-      {workout.workoutLibraryKey !== "gym" && (
+      {offBike && gymDetail && <GymSessionView gym={gymDetail} />}
+
+      {!offBike && (
         <div style={card}>
           <div style={h}>Estructura</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "8px 16px", fontSize: "13px" }}>
@@ -211,12 +223,26 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      {postRide.length > 0 && (
+        <div style={card}>
+          <div style={h}>Después de rodar · flexibilidad (8 min)</div>
+          <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6 }}>
+            {postRide.map((m) => <li key={m.name}><b style={{ color: "var(--text)" }}>{m.name}</b> · {m.hold}</li>)}
+          </ul>
+          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "10px" }}>
+            Práctica de comodidad y rango: no previene lesiones [R58] ni mejora el rendimiento. Se hace al terminar, no antes (estirar antes de rendir lo baja [R59]).
+          </div>
+        </div>
+      )}
+
+      {!offBike && (
       <div style={card}>
         <div style={h}>Cómo ejecutarla</div>
         <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6 }}>
           {tips.map((t, i) => <li key={i}>{t}</li>)}
         </ul>
       </div>
+      )}
 
       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
         <PendingLink href={`/chat?workoutId=${workout.id}`} style={{ color: "var(--teal)", fontSize: "13px", textDecoration: "none", marginRight: "8px" }}>
@@ -241,13 +267,13 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
             <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Volver a ruta (regenerar)" : "Regenerar esta sesión"}</SubmitButton>
           </ActionForm>
         )}
-        {workout.status !== "COMPLETED" && workout.workoutLibraryKey !== "gym" && !workout.workoutLibraryKey.startsWith("ftp_test") && (
+        {workout.status !== "COMPLETED" && !offBike && !workout.workoutLibraryKey.startsWith("ftp_test") && (
           <ActionForm action={alternativeWorkout} success="Variante cambiada">
             <input type="hidden" name="workoutId" value={workout.id} />
             <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Otra variante</SubmitButton>
           </ActionForm>
         )}
-        {workout.status !== "COMPLETED" && workout.workoutLibraryKey !== "gym" && workout.environment !== "indoor" && (
+        {workout.status !== "COMPLETED" && !offBike && workout.environment !== "indoor" && (
           <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo">
             <input type="hidden" name="workoutId" value={workout.id} />
             <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Pasar a rodillo</SubmitButton>

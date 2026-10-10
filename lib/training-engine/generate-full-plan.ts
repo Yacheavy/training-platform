@@ -7,6 +7,7 @@ import { loadAutoregulation } from "@/lib/autoregulation-data";
 import { adaptForIndoor } from "./indoor";
 import { calculateTss, calculateKilojoules } from "./tss";
 import { calculateFueling } from "./fueling";
+import { isOffBike } from "./off-bike";
 
 /** Cliente de base de datos; se inyecta en las pruebas con una base en memoria. */
 export type PlanDb = typeof defaultDb;
@@ -32,7 +33,7 @@ export async function generateFullPlan(
   const DAY = 86400000;
   const startMs = block.startDate.getTime();
   const offsetOf = (d: Date) => Math.round((d.getTime() - startMs) / DAY);
-  const isVariantRow = (k: string) => k !== "gym" && !k.startsWith("ftp_test");
+  const isVariantRow = (k: string) => !isOffBike(k) && !k.startsWith("ftp_test");
   const prior = await prisma.generatedWorkout.findMany({
     where: { athleteId: block.athleteId, date: { gte: new Date(startMs - 28 * DAY), lt: block.startDate } },
     select: { date: true, workoutLibraryKey: true },
@@ -65,6 +66,7 @@ export async function generateFullPlan(
       varietyLevel: thresholds?.varietyLevel,
       bannedStimuli: thresholds?.bannedStimuli ?? [],
       periodization: thresholds?.periodization,
+      flexibilityEnabled: thresholds?.flexibilityEnabled ?? false,
     },
     template,
     library,
@@ -102,7 +104,7 @@ export async function generateFullPlan(
         const wasSent = existing.status === "SENT_TO_INTERVALS";
         const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(existing.status);
         // Regenerar el PLAN respeta que el día se pasó a rodillo (una restricción real, p. ej. lluvia); regenerar UNA sesión vuelve a ruta a propósito
-        const keepIndoor = existing.environment === "indoor" && !opts?.replaceDate && day.stimulusType !== "gym";
+        const keepIndoor = existing.environment === "indoor" && !opts?.replaceDate && !isOffBike(day.stimulusType);
         const ind = keepIndoor ? adaptForIndoor(day.blocks, day.stimulusType) : null;
         const outBlocks = ind ? ind.blocks : day.blocks;
         const outFuel = ind ? calculateFueling(ind.blocks, user.ftp) : day.fueling;

@@ -1,6 +1,7 @@
 import type { PlannedDay } from "./plan-builder";
 import { MIN_GAP_DAYS_BETWEEN_VO2MAX, MIN_GAP_DAYS_BETWEEN_HARD } from "./quality-assignment";
 import { VARIANTS, intensityOf, isNeuroKey } from "./variants";
+import { isOffBike } from "./off-bike";
 
 /**
  * Invariantes que TODO plan generado debe cumplir. Devuelve la lista de
@@ -36,7 +37,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     if (ctx.objective === "vo2max" && vo2.length > maxVo2) w.push(`Semana ${wk + 1}: ${vo2.length} sesiones de VO2max (máx. ${maxVo2} por semana)`);
 
     // Tiempo de Z2 mayoritario sobre el tiempo de ciclismo (modelo 80/20)
-    const cyc = days.filter((d) => d.stimulusType !== "gym");
+    const cyc = days.filter((d) => !isOffBike(d.stimulusType));
     const total = cyc.reduce((s, d) => s + d.blocks.reduce((a, b) => a + b.durationSec, 0), 0);
     const hard = cyc
       .filter((d) => HARD_STIMULI.has(d.stimulusType))
@@ -73,7 +74,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     const a = ordered[i - 1];
     const b = ordered[i];
     const gap = Math.round((b.date.getTime() - a.date.getTime()) / DAY_MS);
-    if (gap === 1 && isHardVariant(a.stimulusType) && b.stimulusType !== "gym" && intensityOf(b.stimulusType) > 0) {
+    if (gap === 1 && isHardVariant(a.stimulusType) && !isOffBike(b.stimulusType) && intensityOf(b.stimulusType) > 0) {
       w.push(`${label(a)} → ${label(b)}: sesión con intensidad el día siguiente a una sesión dura`);
     }
   }
@@ -88,7 +89,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
 
   // Por sesión
   for (const d of plan) {
-    if (d.stimulusType === "gym") continue;
+    if (isOffBike(d.stimulusType)) continue;
     const dur = d.blocks.reduce((s, b) => s + b.durationSec, 0);
     if (dur <= 0) { w.push(`${label(d)}: sesión vacía`); continue; }
     if (dur > 6 * 3600 + 1) w.push(`${label(d)}: duración ${Math.round(dur / 60)} min excede 6 h`);

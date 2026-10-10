@@ -471,6 +471,47 @@ export const REFERENCES: Reference[] = [
     level: "Solo se verificó la cita y el título. Ciclistas de élite en transición, muestra pequeña: evidencia PRELIMINAR.",
     checked: "cita",
   },
+  // ── Gimnasio complementario, core, propiocepción y flexibilidad ─────────────────
+  {
+    id: "R57",
+    surnames: ["Rønnestad", "Ronnestad", "Mujika"],
+    cite: "Rønnestad BR, Mujika I. Optimizing strength training for running and cycling endurance performance: a review. Scand J Med Sci Sports. 2014;24(4):603-612. doi:10.1111/sms.12104.",
+    supports: "Añadir fuerza al entrenamiento de resistencia: para ciclistas el entrenamiento de fuerza PESADO (4-10 RM, 2-3 series por ejercicio, 2-3 min de pausa, intención de levantar rápido, técnica primero con cargas livianas) es la opción con efecto aditivo más consistente sobre el rendimiento en ciclismo; 2 sesiones por semana en la preparación y ~1 sesión de alta intensidad y poco volumen por semana en temporada para mantener. No se reportó interferencia negativa sobre el rendimiento ni el VO2max. El entrenamiento explosivo con cargas bajas no mejoró el rendimiento ciclista en un estudio.",
+    level: "Revisión narrativa; la mayoría de los estudios incluidos duran 8-12 semanas, así que el efecto a largo plazo es incierto. Los números de series y repeticiones son recomendaciones de los autores, no un óptimo demostrado.",
+    checked: "fuente",
+  },
+  {
+    id: "R58",
+    surnames: ["Lauersen", "Bertelsen", "Andersen"],
+    cite: "Lauersen JB, Bertelsen DM, Andersen LB. The effectiveness of exercise interventions to prevent sports injuries: a systematic review and meta-analysis of randomised controlled trials. Br J Sports Med. 2014;48(11):871-877.",
+    supports: "25 ECA, 26.610 participantes: entrenamiento de fuerza redujo las lesiones deportivas a menos de un tercio (RR 0,32), propiocepción RR 0,55, programas combinados RR 0,66; el estiramiento NO mostró beneficio (RR 0,96; IC 0,85-1,10).",
+    level: "Metaanálisis de lesiones en deportes en general (mayoría de contacto y de pelota), NO en ciclismo; el resultado global fue heterogéneo. En ciclismo las lesiones por sobreuso y las caídas son otro problema: no extrapoles el número.",
+    checked: "abstract",
+  },
+  {
+    id: "R59",
+    surnames: ["Behm", "Blazevich", "Kay", "McHugh"],
+    cite: "Behm DG, Blazevich AJ, Kay AD, McHugh M. Acute effects of muscle stretching on physical performance, range of motion, and injury incidence in healthy active individuals: a systematic review. Appl Physiol Nutr Metab. 2016;41(1):1-11. doi:10.1139/apnm-2015-0235.",
+    supports: "El estiramiento estático justo antes de rendir baja el rendimiento (≈-3,7%, más con 60 s o más por músculo), mejora el rango de movimiento por poco tiempo (<30 min) y no tiene efecto claro sobre las lesiones. Recomiendan estirar dentro de un calentamiento que siga con actividad dinámica.",
+    level: "Revisión sistemática de efectos AGUDOS en personas activas. No evalúa si la flexibilidad regular mejora o empeora el rendimiento en ciclismo a largo plazo.",
+    checked: "abstract",
+  },
+  {
+    id: "R60",
+    surnames: ["Paton", "Hopkins"],
+    cite: "Paton CD, Hopkins WG. Combining explosive and high-resistance training improves performance in competitive cyclists. J Strength Cond Res. 2005;19(4):826-830. doi:10.1519/R-16334.1.",
+    supports: "Según el título, combinar entrenamiento explosivo y de alta resistencia mejora el rendimiento en ciclistas competitivos. NO se leyó el abstract: no atribuyas cifras ni protocolos.",
+    level: "Solo se verificó la cita (título, autores, revista, volumen y páginas). Contenido no confirmado.",
+    checked: "cita",
+  },
+  {
+    id: "R61",
+    surnames: [],
+    cite: "Revisión sistemática «The effects of isolated and integrated core stability training on athletic performance measures». Sports Med. 2012;42(8):697-706 (autores no verificados: no la cites por apellido).",
+    supports: "24 estudios incluidos: el entrenamiento específico del core aporta beneficios marginales al rendimiento deportivo; los resultados son inconsistentes y los programas que mejoran la fuerza general (sentadilla, salto) lo hacen por el trabajo global, no por el core aislado.",
+    level: "Revisión sistemática leída en resumen; no es específica de ciclismo y los estudios son heterogéneos.",
+    checked: "abstract",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

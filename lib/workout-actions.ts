@@ -9,6 +9,7 @@ import { adaptForIndoor } from "@/lib/training-engine/indoor";
 import { calculateTss, calculateKilojoules, type WorkoutBlock } from "@/lib/training-engine/tss";
 import { calculateFueling } from "@/lib/training-engine/fueling";
 import type { Prisma } from "@/app/generated/prisma";
+import { isOffBike } from "@/lib/training-engine/off-bike";
 
 export async function approveWorkout(formData: FormData) {
   const session = await auth();
@@ -99,7 +100,7 @@ export async function moveWorkoutIndoor(formData: FormData) {
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
   if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
   if (workout.status === "COMPLETED") throw new Error("La sesión ya está completada");
-  if (workout.workoutLibraryKey === "gym") throw new Error("El gimnasio no se pasa a rodillo");
+  if (isOffBike(workout.workoutLibraryKey)) throw new Error("Esta sesión no es en bici: no se pasa a rodillo");
   if (workout.environment === "indoor") throw new Error("La sesión ya está en rodillo");
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } });
   if (!user?.ftp) throw new Error("Falta el FTP");

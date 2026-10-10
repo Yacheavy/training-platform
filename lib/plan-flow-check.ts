@@ -7,6 +7,7 @@ process.env.DATABASE_URL ||= "postgresql://x:x@localhost:5432/x";
 import { applySeasonCore } from "./season-apply";
 import { generateFullPlan, type PlanDb } from "./training-engine/generate-full-plan";
 import { regenerateBlocks } from "./training-engine/regenerate";
+import { isOffBike } from "./training-engine/off-bike";
 import { dayStartLocal, dateKeyLocal } from "./tz";
 
 // ───────────────────────── base en memoria ─────────────────────────
@@ -68,6 +69,7 @@ const FULL: Slot[] = [[0, "cycling", 240, false], [1, "rest", 60, false], [2, "c
 interface Profile { id: string; ftp: number | null; pvo2?: number | null; template: Slot[]; thresholds?: Row | null; goal?: { type: "EVENT" | "PERFORMANCE"; inDays: number } | null; manualWeeks?: number; expect?: "error" | "empty" }
 const PROFILES: Profile[] = [
   { id: "coach-12sem-evento", ftp: 300, pvo2: 370, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 6, ftpTestProtocol: "20min", vo2Stimulus: "ronnestad_30_15", varietyLevel: "balanced", bannedStimuli: ["torque_low_cadence"], periodization: "linear" }, goal: { type: "EVENT", inDays: 84 } },
+  { id: "gym-y-flexibilidad", ftp: 270, pvo2: 340, template: [[0, "cycling", 240, false], [1, "flexibility", 20, false], [2, "cycling", 90, true], [3, "gym", 75, false], [4, "cycling", 90, true], [5, "gym", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 6, flexibilityEnabled: true, periodization: "linear" }, goal: { type: "EVENT", inDays: 70 } },
   { id: "sin-vo2max-rendimiento", ftp: 280, pvo2: null, template: FULL, thresholds: null, goal: { type: "PERFORMANCE", inDays: 70 } },
   { id: "3-dias-30-semanas", ftp: 180, pvo2: 230, template: [[0, "cycling", 150, false], [2, "cycling", 75, true], [4, "cycling", 60, true]], thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 8, ftpTestProtocol: "8min", vo2Stimulus: "hiit_genuino", varietyLevel: "high", bannedStimuli: [], periodization: "block" }, goal: { type: "EVENT", inDays: 210 } },
   { id: "calidad-consecutiva", ftp: 250, pvo2: 320, template: [[0, "cycling", 200, false], [1, "rest", 60, false], [2, "cycling", 90, true], [3, "cycling", 90, true], [4, "rest", 60, false], [5, "cycling", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "2:1", weeksBetweenFtpTest: 5, ftpTestProtocol: "5min", vo2Stimulus: "billat_30_30", varietyLevel: "low", bannedStimuli: ["sprint_neuro", "z2_sprints"], periodization: "linear" }, goal: { type: "EVENT", inDays: 45 } },
@@ -105,7 +107,8 @@ function invariants(db: ReturnType<typeof makeDb>, p: Profile, tag: string) {
       ok(!!got, `${tag}: falta sesión el ${k} (${["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][d.getUTCDay()]}) del bloque ${b.name}`);
       if (!got) continue;
       if (sl.t === "gym") ok(got.workoutLibraryKey === "gym", `${tag}: ${k} debía ser gimnasio y es ${got.workoutLibraryKey}`);
-      else ok(got.workoutLibraryKey !== "gym", `${tag}: ${k} debía ser ciclismo y es gimnasio`);
+      else if (sl.t === "flexibility") ok(got.workoutLibraryKey === "flexibility", `${tag}: ${k} debía ser flexibilidad y es ${got.workoutLibraryKey}`);
+      else ok(!isOffBike(got.workoutLibraryKey), `${tag}: ${k} debía ser ciclismo y es ${got.workoutLibraryKey}`);
     }
   }
   // contenido de cada sesión
@@ -113,7 +116,16 @@ function invariants(db: ReturnType<typeof makeDb>, p: Profile, tag: string) {
     const bl = s.blocksJson as { durationSec: number; targetWatts: number }[];
     const k = keyOf(s.date);
     ok(Array.isArray(bl) && bl.length > 0, `${tag}: ${k} sin bloques`);
-    if (s.workoutLibraryKey === "gym") continue;
+    if (isOffBike(s.workoutLibraryKey)) {
+      const gd = (bl as any[]).find((x) => x.gym)?.gym;
+      ok(!!gd, `${tag}: ${k} (${s.workoutLibraryKey}) sin detalle de ejercicios`);
+      if (gd) {
+        ok(s.workoutLibraryKey === "flexibility" ? gd.mobility.length >= 4 : gd.exercises.length >= 3, `${tag}: ${k} con muy pocos ejercicios`);
+        if (s.workoutLibraryKey === "gym") ok((gd.mobility.length > 0) === !!p.thresholds?.flexibilityEnabled, `${tag}: ${k} flexibilidad al final no coincide con el ajuste`);
+        ok(gd.durationSec / 60 <= (slot.get(dow(s.date))?.min ?? 0) * 1.2 + 4, `${tag}: ${k} gimnasio dura ${Math.round(gd.durationSec / 60)} min`);
+      }
+      continue;
+    }
     ok(bl.every((x) => Number.isFinite(x.durationSec) && x.durationSec > 0 && Number.isFinite(x.targetWatts) && x.targetWatts > 0), `${tag}: ${k} con duración/potencia inválida`);
     ok(Number.isFinite(s.estimatedTss) && s.estimatedTss > 0 && s.estimatedTss < 400, `${tag}: ${k} TSS fuera de rango (${s.estimatedTss})`);
     const slotMin = slot.get(dow(s.date))?.min ?? 0;

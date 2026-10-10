@@ -161,6 +161,8 @@ async function sendChatMessageInner(formData: FormData) {
       if (!workout) notice = "No encontré esa sesión, no apliqué el cambio.";
       else if (workout.status === "COMPLETED")
         notice = "Esta sesión ya se realizó, por eso no apliqué el cambio.";
+      else if (workout.workoutLibraryKey === "gym" || workout.workoutLibraryKey === "flexibility")
+        notice = "Las sesiones de gimnasio y flexibilidad no se editan desde el chat (los ejercicios se arman en el plan). No apliqué el cambio.";
       else if (!me?.ftp) notice = "Cargá tu FTP en Ajustes para poder editar sesiones; no apliqué el cambio.";
       else {
         const original = (workout.blocksJson as unknown as { durationSec: number }[]).reduce((s, b) => s + (b.durationSec ?? 0), 0);

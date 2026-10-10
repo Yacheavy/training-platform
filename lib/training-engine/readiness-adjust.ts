@@ -1,5 +1,6 @@
 import { buildBlocks } from "./block-builder";
 import type { WorkoutBlock } from "./tss";
+import { isOffBike } from "./off-bike";
 
 const QUALITY = new Set(["hiit_genuino", "ronnestad_30_15", "z2_sprints", "billat_30_30", "rst", "sweet_spot", "umbral", "over_under", "vo2_long", "sprint_neuro", "endurance_tempo", "long_durability", "torque_low_cadence", "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
 const FILL = new Set(["z2", "z2_fill"]);
@@ -39,7 +40,7 @@ export function proposeReadinessAdjustment(
   blocks: WorkoutBlock[],
   ftp: number
 ): ReadinessProposal | null {
-  if (status === "GREEN" || stimulusType === "gym") return null;
+  if (status === "GREEN" || isOffBike(stimulusType)) return null;
   const total = minutes(blocks);
 
   if (status === "RED") {

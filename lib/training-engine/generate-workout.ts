@@ -9,6 +9,8 @@ import { primaryStimulusFor, ALTERNATIVE_TO_STIMULUS, MIN_GAP_DAYS_BETWEEN_VO2MA
 import { ronnestadSeriesFor } from "./plan-builder";
 import { isVo2Key } from "./variants";
 import { dayOfWeekLocal, dayStartLocal, dayRangeLocal } from "../tz";
+import { buildGymSession, buildFlexSession, gymBlocks } from "./strength";
+import { isOffBike } from "./off-bike";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -129,6 +131,8 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
 
   if (slot.stimulusType === "gym") {
     effectiveStimulusType = "gym";
+  } else if (slot.stimulusType === "flexibility") {
+    effectiveStimulusType = "flexibility";
   } else if (slot.stimulusType === "cycling") {
     if (slot.isQualityDay) {
       quality = await pickQualityStimulus(athleteId, now, rationale);
@@ -143,7 +147,7 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
 
   const availability = await calculateAvailability(athleteId);
 
-  if (availability.status === "RED" && effectiveStimulusType !== "z2" && effectiveStimulusType !== "gym") {
+  if (availability.status === "RED" && effectiveStimulusType !== "z2" && !isOffBike(effectiveStimulusType)) {
     rationale.push(`⚠ Disponibilidad RED (${availability.reasons.join("; ")}) — bajado a Z2 en vez de ${effectiveStimulusType}`);
     effectiveStimulusType = "z2";
   } else if (availability.status === "AMBER") {
@@ -164,7 +168,16 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
         : ronnestadSeriesFor(quality.weekIndex, quality.cycleLength)
       : undefined;
 
-  const blocks = buildBlocks(
+  // Gimnasio y flexibilidad: sesión con ejercicios (sin el contexto del plan: criterio genérico de fuerza)
+  const thr = await prisma.athleteThresholds.findUnique({ where: { athleteId }, select: { flexibilityEnabled: true } });
+  const offBike =
+    effectiveStimulusType === "gym"
+      ? gymBlocks(buildGymSession({ slotMin: duration, objective: "base", weekIndex: 1, cycleLength: 4, isDeload: false, isTaperWeek: false, gymIndexInWeek: 0, gymCountInWeek: 1, nextDayHard: false, mobilityMin: thr?.flexibilityEnabled ? 8 : 0 }))
+      : effectiveStimulusType === "flexibility"
+        ? gymBlocks(buildFlexSession(duration))
+        : null;
+
+  const blocks = offBike ?? buildBlocks(
     effectiveStimulusType,
     duration,
     user.ftp,
@@ -231,7 +244,7 @@ export async function generateTodayWorkout(athleteId: string, forceDayOfWeek?: n
   let finalBlocks = planned.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
   let wasModifiedToday = false;
 
-  if (availability.status === "RED" && finalStimulusType !== "z2" && finalStimulusType !== "gym") {
+  if (availability.status === "RED" && finalStimulusType !== "z2" && !isOffBike(finalStimulusType)) {
     rationale.push(`⚠ VALIDACIÓN DIARIA: disponibilidad RED (${availability.reasons.join("; ")}) — se ajusta el plan de hoy a Z2 en vez de ${finalStimulusType}`);
     finalStimulusType = "z2";
     wasModifiedToday = true;

@@ -7,6 +7,8 @@ import { pickVariant, normalizeLevel, HistoryEntry, SlotRole } from "./variety";
 import { VARIANTS } from "./variants";
 import { MID_INTENSITY_KEYS, type IntensityGuard } from "./autoregulation";
 import { dayOfWeekLocal, dateKeyLocal } from "../tz";
+import { buildGymSession, buildFlexSession, gymBlocks } from "./strength";
+import { isOffBike } from "./off-bike";
 
 /**
  * Planificador PURO (sin base de datos): dado el bloque, el FTP, los umbrales,
@@ -31,6 +33,8 @@ export interface PlanThresholds {
   bannedStimuli?: string[] | null;
   /** linear (por defecto) | block: semana intensificada al inicio de cada mesociclo (solo VO2max). */
   periodization?: string | null;
+  /** Agrega un set de flexibilidad al final de las sesiones de gimnasio. */
+  flexibilityEnabled?: boolean | null;
 }
 export interface PlanTemplateSlot {
   dayOfWeek: number;
@@ -190,6 +194,15 @@ export function buildPlan(input: {
   };
 
   const days: PlannedDay[] = [];
+  /** Offsets de los días de gimnasio de una semana del bloque (para saber cuál es el 1.º, el 2.º…). */
+  const gymDaysInWeek = (weekIndex: number): number[] => {
+    const out: number[] = [];
+    for (let o = weekIndex * 7; o < Math.min(totalDays, weekIndex * 7 + 7); o++) {
+      const dw = dayOfWeekLocal(new Date(block.startDate.getTime() + o * DAY_MS));
+      if (slotByDay.get(dw)?.stimulusType === "gym") out.push(o);
+    }
+    return out;
+  };
 
   for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
     const date = new Date(block.startDate.getTime() + dayOffset * DAY_MS);
@@ -246,6 +259,8 @@ export function buildPlan(input: {
 
     if (slot.stimulusType === "gym") {
       effectiveStimulusType = "gym";
+    } else if (slot.stimulusType === "flexibility") {
+      effectiveStimulusType = "flexibility";
     } else if (isFtpTestWeek && slot.isQualityDay && isFirstQualityDayOfWeek) {
       effectiveStimulusType = ftpTestStimulusType;
     } else if (isTapering) {
@@ -295,10 +310,10 @@ export function buildPlan(input: {
     }
 
     const fixed = input.fixedKeys?.[dayOffset];
-    if (fixed && !isTapering && effectiveStimulusType !== "gym" && !effectiveStimulusType.startsWith("ftp_test") && VARIANTS[fixed]) {
+    if (fixed && !isTapering && !isOffBike(effectiveStimulusType) && !effectiveStimulusType.startsWith("ftp_test") && VARIANTS[fixed]) {
       effectiveStimulusType = fixed;
     }
-    if (!isTapering && effectiveStimulusType !== "gym" && !effectiveStimulusType.startsWith("ftp_test")) {
+    if (!isTapering && !isOffBike(effectiveStimulusType) && !effectiveStimulusType.startsWith("ftp_test")) {
       ledger.push({ dayOffset, key: effectiveStimulusType });
     }
     keyByOffset.set(dayOffset, effectiveStimulusType);
@@ -313,7 +328,36 @@ export function buildPlan(input: {
     // Series: Rønnestad 30/15, rodaje con sprints y sprints cortos comparten la progresión 1→3 (criterio propio)
     const series = SERIES_KEYS.has(effectiveStimulusType) ? (maintenance ? 1 : Math.min(3, Math.max(1, ronnestadSeriesFor(weekIndex, cycleLength) + adj))) : undefined;
 
-    const blocks = buildBlocks(
+    // Gimnasio y flexibilidad: sesiones fuera de la bici con ejercicios (no llevan vatios)
+    let gymTitle = "";
+    let gymSummary = "";
+    let offBikeBlocks: WorkoutBlock[] | null = null;
+    if (effectiveStimulusType === "gym") {
+      const gymDays = gymDaysInWeek(weekIndex);
+      const nextHard = !!nextSlot && nextSlot.stimulusType === "cycling" && (nextSlot.isQualityDay || (nextSlot.targetDurationMin ?? 0) >= LONG_SLOT_MIN);
+      const g = buildGymSession({
+        slotMin: targetDuration,
+        objective: block.objective,
+        weekIndex,
+        cycleLength,
+        isDeload: mesocycleWeek.isDeload,
+        isTaperWeek: taperWeek(weekIndex),
+        gymIndexInWeek: Math.max(0, gymDays.indexOf(dayOffset)),
+        gymCountInWeek: gymDays.length,
+        nextDayHard: nextHard,
+        mobilityMin: thresholds.flexibilityEnabled ? 8 : 0,
+      });
+      offBikeBlocks = gymBlocks(g);
+      gymTitle = g.title;
+      const gymMin = Math.round(g.durationSec / 60);
+      gymSummary = g.summary + (gymMin < targetDuration * 0.75 ? ` Dura ~${gymMin} min, menos que los ${targetDuration} del día: en esta fase el volumen es bajo a propósito.` : "");
+    } else if (effectiveStimulusType === "flexibility") {
+      const g = buildFlexSession(targetDuration);
+      offBikeBlocks = gymBlocks(g);
+      gymTitle = g.title;
+    }
+
+    const blocks = offBikeBlocks ?? buildBlocks(
       effectiveStimulusType,
       targetDuration,
       ftp,
@@ -332,7 +376,7 @@ export function buildPlan(input: {
       rationaleParts.push(
         `Test de FTP programado (protocolo ${thresholds.ftpTestProtocol ?? "20min"}) — protocolo práctico de la industria, no ensayo controlado`
       );
-    } else if (slot.isQualityDay || (role && effectiveStimulusType !== "gym")) {
+    } else if (slot.isQualityDay || (role && !isOffBike(effectiveStimulusType))) {
       const isPrimary = role ? role === "primary" : effectiveStimulusType === primaryStimulus;
       const detail =
         effectiveStimulusType === "hiit_genuino"
@@ -352,13 +396,15 @@ export function buildPlan(input: {
       if (varietyReason) rationaleParts.push(varietyReason);
       if (exec && adj !== 0 && (PROGRESSION_KEYS.has(effectiveStimulusType) || SERIES_KEYS.has(effectiveStimulusType))) rationaleParts.push(exec.reason);
     } else if (slot.stimulusType === "gym") {
-      rationaleParts.push("Día de gimnasio");
+      rationaleParts.push(`Día de gimnasio → ${gymTitle}${gymSummary ? ` · ${gymSummary}` : ""}`);
+    } else if (slot.stimulusType === "flexibility") {
+      rationaleParts.push(`Día de flexibilidad → ${gymTitle}`);
     } else {
       rationaleParts.push("Día de volumen → z2");
     }
 
     // El protocolo manda sobre el tiempo del slot: si lo supera, se le avisa al alumno en la propia sesión
-    if (effectiveStimulusType !== "gym" && targetDuration > 0) {
+    if (!isOffBike(effectiveStimulusType) && targetDuration > 0) {
       const durMin = Math.round(blocks.reduce((s, b) => s + b.durationSec, 0) / 60);
       if (durMin > targetDuration * 1.1 && durMin - targetDuration >= 5) {
         rationaleParts.push(`Dura ${durMin} min aunque el tiempo previsto para este día es de ${targetDuration}: el protocolo de la sesión necesita ese mínimo para hacerse completo`);

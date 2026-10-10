@@ -4,6 +4,8 @@ export interface WorkoutBlock {
   targetWatts: number;
   /** Cadencia objetivo (rpm), opcional: solo la usan variantes con consigna de cadencia (p. ej. torque a baja cadencia). */
   cadenceRpm?: number;
+  /** Detalle de una sesión de gimnasio o flexibilidad (solo bloques de tipo "gym"). */
+  gym?: import("./strength").GymSession;
 }
 
 /**

@@ -122,7 +122,7 @@ export async function getPlanVsActual(athleteId: string, weeks = 10): Promise<We
 
   const [planned, slots, acts] = await Promise.all([
     prisma.generatedWorkout.findMany({
-      where: { athleteId, date: { gte: from, lt: to }, workoutLibraryKey: { not: "gym" } },
+      where: { athleteId, date: { gte: from, lt: to }, workoutLibraryKey: { notIn: ["gym", "flexibility"] } },
       select: { date: true, estimatedTss: true, blocksJson: true, status: true },
     }),
     prisma.trainingTemplateSlot.findMany({ where: { athleteId }, select: { dayOfWeek: true } }),
@@ -214,7 +214,7 @@ export async function getCoachOverview(coachId: string): Promise<StudentRow[]> {
         calculateAvailability(s.id).catch(() => null),
         prisma.activity.findFirst({ where: { athleteId: s.id }, orderBy: { date: "desc" }, select: { date: true } }),
         prisma.wellness.findFirst({ where: { athleteId: s.id, date: { lte: dayKeyDate(now) }, ctl: { not: null } }, orderBy: { date: "desc" }, select: { ctl: true } }),
-        prisma.generatedWorkout.findMany({ where: { athleteId: s.id, date: { gte: week.start, lt: now }, workoutLibraryKey: { not: "gym" } }, select: { estimatedTss: true } }),
+        prisma.generatedWorkout.findMany({ where: { athleteId: s.id, date: { gte: week.start, lt: now }, workoutLibraryKey: { notIn: ["gym", "flexibility"] } }, select: { estimatedTss: true } }),
         prisma.activity.findMany({ where: { athleteId: s.id, type: { in: RIDE_TYPES }, date: { gte: week.start, lt: week.end } }, select: { tss: true } }),
       ]);
       return {

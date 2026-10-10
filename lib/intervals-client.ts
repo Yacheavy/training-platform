@@ -46,6 +46,8 @@ export interface IntervalsEventInput {
   startDateLocal: string; // "YYYY-MM-DDTHH:mm:ss"
   description: string;
   movingTimeSec: number;
+  /** Tipo de actividad de Intervals (por defecto "Ride"). */
+  type?: string;
 }
 
 /**
@@ -65,7 +67,7 @@ export async function createEvent(athleteId: string, apiKey: string, event: Inte
         category: "WORKOUT",
         start_date_local: event.startDateLocal,
         name: event.name,
-        type: "Ride",
+        type: event.type ?? "Ride",
         moving_time: event.movingTimeSec,
         description: event.description,
       },

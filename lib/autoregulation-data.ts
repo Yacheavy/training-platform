@@ -1,5 +1,6 @@
 import { prisma as defaultDb } from "@/lib/prisma";
 import { progressionAdjustments, intensityGuard, type ExecutionRecord, type ProgressionAdjust, type IntensityGuard, type ZoneHours } from "@/lib/training-engine/autoregulation";
+import { isOffBike } from "@/lib/training-engine/off-bike";
 
 const DAY = 86400000;
 const RIDE = ["Ride", "VirtualRide", "GravelRide", "MountainBikeRide", "EBikeRide"];
@@ -18,7 +19,7 @@ export async function loadAutoregulation(athleteId: string, now = new Date(), pr
     select: { date: true, tss: true, plannedTss: true, deviationFlag: true, decouplingPct: true, generatedWorkout: { select: { workoutLibraryKey: true } } },
   });
   const records: ExecutionRecord[] = executed
-    .filter((a) => a.generatedWorkout && a.generatedWorkout.workoutLibraryKey !== "gym" && !a.generatedWorkout.workoutLibraryKey.startsWith("ftp_test"))
+    .filter((a) => a.generatedWorkout && !isOffBike(a.generatedWorkout.workoutLibraryKey) && !a.generatedWorkout.workoutLibraryKey.startsWith("ftp_test"))
     .map((a) => ({
       key: a.generatedWorkout!.workoutLibraryKey,
       at: a.date.getTime(),

@@ -19,7 +19,7 @@ export async function saveTemplate(formData: FormData) {
 
   const rows = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
     const type = String(formData.get(`type_${dayOfWeek}`) ?? "rest");
-    const stimulusType = ["cycling", "gym", "rest"].includes(type) ? type : "rest";
+    const stimulusType = ["cycling", "gym", "flexibility", "rest"].includes(type) ? type : "rest";
     const isQualityDay = stimulusType === "cycling" && formData.get(`quality_${dayOfWeek}`) === "on";
     const rawMin = Number(formData.get(`min_${dayOfWeek}`));
     const targetDurationMin =
@@ -87,6 +87,7 @@ export async function saveThresholds(formData: FormData) {
     vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate", "rotate"]),
     varietyLevel: str("varietyLevel", ["conservative", "balanced", "varied"]),
     periodization: str("periodization", ["linear", "block"]),
+    flexibilityEnabled: formData.has("_gym") ? formData.get("flexibilityEnabled") === "on" : undefined,
     bannedStimuli: !formData.has("_planner") ? undefined : formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
     deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
       ? String(formData.get("deloadRatio")).trim()

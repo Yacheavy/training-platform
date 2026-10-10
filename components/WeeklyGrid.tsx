@@ -3,6 +3,7 @@ const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   cycling: { bg: "#2A5C56", text: "#4FD1C5", label: "Bici" },
   gym: { bg: "#2A3350", text: "#6FA8DC", label: "Gym" },
+  flexibility: { bg: "#2F2A45", text: "#B79BEF", label: "Flex" },
   rest: { bg: "#242F3B", text: "#5A6673", label: "Descanso" },
 };
 

@@ -8,6 +8,7 @@ const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "
 const TYPES = [
   { value: "cycling", label: "Ciclismo" },
   { value: "gym", label: "Gimnasio" },
+  { value: "flexibility", label: "Flexib." },
   { value: "rest", label: "Descanso" },
 ];
 
@@ -47,7 +48,7 @@ export function TemplateEditor({
         const next = { ...r, ...patch };
         if (next.type !== "cycling") next.quality = false;
         if (next.type === "rest") next.min = "";
-        if (patch.type && patch.type !== "rest" && next.min === "") next.min = patch.type === "gym" ? "60" : "60";
+        if (patch.type && patch.type !== "rest" && next.min === "") next.min = patch.type === "gym" ? "60" : patch.type === "flexibility" ? "20" : "60";
         return next;
       })
     );

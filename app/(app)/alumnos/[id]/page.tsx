@@ -101,7 +101,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 {days.map((w) => (
                   <div key={w.id} style={row}>
                     <span><strong style={{ textTransform: "capitalize" }}>{fmtDay(w.date, false).replace(".", "")}</strong> · {STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}</span>
-                    <span style={{ color: "var(--text-muted)" }}>{w.workoutLibraryKey === "gym" ? "" : `${mins(w.blocksJson)} min · TSS ${Math.round(w.estimatedTss ?? 0)} · `}{STATUS_ES[w.status] ?? w.status}</span>
+                    <span style={{ color: "var(--text-muted)" }}>{(w.workoutLibraryKey === "gym" || w.workoutLibraryKey === "flexibility") ? "" : `${mins(w.blocksJson)} min · TSS ${Math.round(w.estimatedTss ?? 0)} · `}{STATUS_ES[w.status] ?? w.status}</span>
                   </div>
                 ))}
               </div>

@@ -105,7 +105,7 @@ export async function linkActivitiesToPlan(userId: string, sinceDays = 30): Prom
     const key = a.date.toISOString().slice(0, 10);
     const dayMs = Date.parse(`${key}T00:00:00Z`);
     const cands = await prisma.generatedWorkout.findMany({
-      where: { athleteId: userId, date: { gte: new Date(dayMs - DAY_MS), lt: new Date(dayMs + 2 * DAY_MS) }, workoutLibraryKey: { not: "gym" } },
+      where: { athleteId: userId, date: { gte: new Date(dayMs - DAY_MS), lt: new Date(dayMs + 2 * DAY_MS) }, workoutLibraryKey: { notIn: ["gym", "flexibility"] } },
     });
     const w = cands
       .filter((c) => dateKeyLocal(c.date) === key && !used.has(c.id) && c.status !== "COMPLETED")

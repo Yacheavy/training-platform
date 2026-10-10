@@ -6,6 +6,7 @@ const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Vierne
 
 const TYPE_LABELS: Record<string, string> = {
   gym: "Gym",
+  flexibility: "Flexibilidad",
   z2: "Z2",
   hiit_genuino: "HIIT",
   ronnestad_30_15: "Rønnestad 30/15",

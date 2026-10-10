@@ -205,6 +205,28 @@ Z2 / BASE: 56-75% FTP [PRÁCTICA, rango de zonas].
 - En ciclismo, el entrenamiento de fuerza pesada combinado con resistencia fue el de mayor beneficio sobre la
   economía; los efectos sobre el umbral de lactato fueron mixtos; sumar fuerza no perjudica la resistencia
   [R35] (revisión narrativa). La dosis semanal de gimnasio que usa el sistema es [PRÁCTICA].
+- Los días de gimnasio de la plantilla traen ejercicios (no son un bloque vacío). Qué hace el sistema y qué respaldo tiene:
+  · Fuerza pesada (4-10 RM, 2-3 series, 2-3 min de pausa, intención de levantar rápido; 2 sesiones por semana en la
+    base y ~1 de mantenimiento, pesada y de poco volumen, en la fase de intensidad) [R57] (revisión narrativa; la
+    mayoría de los estudios duran 8-12 semanas). La carga se indica por repeticiones en reserva (RIR), no por % de 1RM,
+    porque no hay un 1RM medido; subir 2,5-5 % al completar todas las series en el tope del rango es un criterio
+    práctico [PRÁCTICA]. La primera semana de cada bloque es de reentrada (2 series, RIR 4); la descarga y la puesta a
+    punto bajan las series.
+  · Potencia y pliometría (saltos, swing, slam): evidencia LIMITADA en ciclistas. El trabajo explosivo con cargas bajas
+    no mejoró el rendimiento ciclista en un estudio [R57]; hay un ensayo que combina explosivo y fuerza pesada, pero solo
+    se verificó su cita [R60]. Va en poca cantidad, solo en las fases de umbral y VO2max, nunca en descarga ni
+    puesta a punto. Presentalo como preliminar.
+  · Core: beneficio marginal sobre el rendimiento deportivo según una revisión sistemática [R61]; es un complemento.
+  · Propiocepción/equilibrio: redujo las lesiones deportivas en un metaanálisis de deportes en general (RR 0,55) y la
+    fuerza más (RR 0,32) [R58]; no se midió en ciclismo, no extrapoles el número.
+  · Flexibilidad: el estiramiento NO redujo lesiones (RR 0,96) [R58]; estirar justo antes de rendir baja el rendimiento
+    (≈-3,7 %, más con 60 s o más) y la mejora de rango dura menos de 30 min [R59]. Por eso es opcional (Planificación →
+    Estilo del plan → Gimnasio y flexibilidad), va al FINAL de la sesión y se presenta como comodidad, no como
+    prevención ni rendimiento. También hay un tipo de día «Flexibilidad» en la semana tipo.
+  · Si el día siguiente es de calidad o una salida larga, el gimnasio no se acerca al fallo (RIR ≥3) [PRÁCTICA].
+  · Las sesiones de gimnasio no suman TSS ni se editan desde el chat; se envían a Intervals como entrenamiento de
+    fuerza con los ejercicios en la descripción. Si el alumno tiene dolor o lesión, el sistema no lo sabe: derivá a un
+    profesional.
 
 --- NUTRICIÓN INTRA-ENTRENO ---
 
