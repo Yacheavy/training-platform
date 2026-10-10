@@ -13,6 +13,7 @@ interface Thresholds {
   bannedStimuli?: string[] | null;
   periodization?: string | null;
   flexibilityEnabled?: boolean | null;
+  contrastMode?: string | null;
 }
 
 function Field({ label, hint, why, unit, children }: { label: string; hint: string; why?: string; unit?: string; children: React.ReactNode }) {
@@ -187,6 +188,19 @@ export function PlanStyleCard({
               </span>
             </span>
           </label>
+          <div className="field-grid" style={{ marginTop: "14px" }}>
+            <Field label="Entrenamiento de contraste (avanzado)" hint="Superseries que combinan un ejercicio pesado con saltos. Solo en la sesión de potencia (segundo día de gimnasio de la semana) de las fases de umbral y VO2max; nunca en base, descarga, puesta a punto ni la primera semana de un bloque. Requiere técnica sólida y base de fuerza.">
+              <select name="contrastMode" defaultValue={t.contrastMode ?? "off"}>
+                <option value="off">No (sesión de potencia común)</option>
+                <option value="tradicional">Tradicional (pares: pesado + salto)</option>
+                <option value="frances">Francés (4 ejercicios por ronda, Cometti)</option>
+              </select>
+            </Field>
+          </div>
+          <p className="group-desc" style={{ marginTop: "8px" }}>
+            Honestamente: la evidencia es corta y viene de otros deportes (saltos, bádminton); no encontré estudios en ciclistas y el efecto de potenciación es pequeño y varía mucho entre personas.
+            Es una hipótesis razonable, no una práctica demostrada.
+          </p>
         </div>
 
         <div className="group">

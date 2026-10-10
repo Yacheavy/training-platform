@@ -316,6 +316,20 @@ export const FIGURES: Record<string, FigureDef> = {
     ],
     labels: ["Preparación", "Aterrizaje sobre el cajón"],
   },
+  salto_cargado: {
+    frames: [
+      { t: 155, th: 65, sh: -35, ua: 0, fa: 0, props: [{ k: "db", at: "wrist" }] },
+      { ...STAND, foot: 30, ua: 0, fa: 0, lift: 0.3, props: [{ k: "db", at: "wrist" }] },
+    ],
+    labels: ["Bajada rápida", "Salto con carga"],
+  },
+  salto_asistido: {
+    frames: [
+      { t: 155, th: 65, sh: -35, ua: 30, fa: 30, props: [{ k: "cable", to: "wrist", fromDir: "top" }] },
+      { ...STAND, foot: 30, ua: 30, fa: 30, lift: 0.3, props: [{ k: "cable", to: "wrist", fromDir: "top" }] },
+    ],
+    labels: ["Bajada rápida", "Salto asistido por la banda"],
+  },
   swing_kb: {
     frames: [
       { t: 110, th: 20, sh: -10, ua: -30, fa: -30, props: [{ k: "kb", at: "wrist" }] },

@@ -11,6 +11,9 @@
  *    Por eso va al FINAL de la sesión y se presenta como práctica de comodidad y rango.
  *  - La carga se prescribe por repeticiones en reserva (RIR), no por % de 1RM: el alumno no tiene un 1RM medido.
  *    Subir la carga cuando completa todas las series en el tope del rango es un criterio práctico, no un protocolo validado.
+ *  - Contraste (opcional, apagado por defecto): par pesado + explosivo (tradicional) o los 4 ejercicios de Cometti (francés).
+ *    Evidencia CORTA y de otros deportes (saltos, bádminton), sin estudios en ciclistas [R62][R63]; el efecto de potenciación
+ *    es pequeño y variable entre personas [R64][R65]. Solo en la sesión de potencia de umbral/VO2max.
  *  - Los patrones por fase y la elección de ejercicios son criterio propio sobre esa base.
  */
 import type { WorkoutBlock } from "./tss";
@@ -18,6 +21,17 @@ import type { WorkoutBlock } from "./tss";
 export type ExCategory = "fuerza" | "potencia" | "core" | "propiocepcion";
 export type GymRole = "fuerza" | "mantenimiento" | "potencia" | "estabilidad" | "movilidad";
 
+/** Superserie: los ejercicios de un mismo grupo se hacen seguidos y se repiten por rondas (sets = rondas). */
+export interface ExGroup {
+  id: string;
+  label: string;
+  /** Posición dentro del grupo (1-based) y cantidad de ejercicios del grupo. */
+  step: number;
+  steps: number;
+  /** Pausa entre ejercicios del grupo y pausa al terminar cada ronda, en segundos. */
+  innerRestSec: number;
+  roundRestSec: number;
+}
 export interface GymExercise {
   id: string;
   name: string;
@@ -27,6 +41,7 @@ export interface GymExercise {
   restSec: number;
   load: string;
   cue: string;
+  group?: ExGroup;
 }
 export interface MobilityItem {
   name: string;
@@ -51,7 +66,7 @@ export interface GymSession {
 interface Ex { id: string; name: string; cue: string; perSide?: boolean }
 type Pattern =
   | "squat" | "hinge" | "split" | "hipthrust" | "calf" | "push" | "pull"
-  | "jump" | "ballistic" | "hop"
+  | "jump" | "ballistic" | "hop" | "loadedjump" | "assistedjump"
   | "plank" | "sideplank" | "antirot" | "deadbug"
   | "balance" | "glutestab" | "landing";
 
@@ -91,6 +106,12 @@ export const POOL: Record<Pattern, Ex[]> = {
   ballistic: [
     { id: "swing_kb", name: "Swing con kettlebell", cue: "La potencia viene de la cadera, no de los brazos; brazos como cuerdas." },
     { id: "slam", name: "Lanzamiento de balón medicinal al piso (slam)", cue: "Tronco firme, descargá toda la fuerza en el lanzamiento." },
+  ],
+  loadedjump: [
+    { id: "salto_cargado", name: "Salto vertical con carga liviana", cue: "Mancuernas o chaleco con un 10-30 % de lo que usás en la sentadilla. Salto máximo y aterrizaje suave con las rodillas flexionadas." },
+  ],
+  assistedjump: [
+    { id: "salto_asistido", name: "Salto asistido con banda", cue: "Banda elástica fija arriba que te ayuda a despegar: saltá lo más rápido y alto posible y aterrizá suave." },
   ],
   hop: [
     { id: "patinador", name: "Salto lateral de patinador", cue: "Salto lateral largo y aterrizaje estable sobre una pierna, mantenelo 1-2 s.", perSide: true },
@@ -164,6 +185,73 @@ function timeOf(e: GymExercise, perSide: boolean): number {
   return e.sets * (work + e.restSec);
 }
 
+
+// ───────────────────────── contraste ─────────────────────────
+export type ContrastMode = "tradicional" | "frances";
+const GROUP_WORK_SEC = 20; // 3 repeticiones
+const exById = (id: string): Ex => Object.values(POOL).flat().find((e) => e.id === id)!;
+const HEAVY_SQUAT = ["sentadilla_barra", "prensa"];
+
+interface GroupSpec { id: string; label: string; items: { ex: Ex; cat: ExCategory; reps: string; load: string }[]; innerRestSec: number; roundRestSec: number; rounds: number }
+
+const HEAVY_LOAD = "Carga pesada con 3 repeticiones en reserva (RIR 3): lejos del fallo. Subí lo más rápido que puedas y bajá controlado.";
+const EXPLOSIVE_LOAD = "Máxima velocidad desde la primera repetición. Cortá la ronda si perdés altura o técnica.";
+
+/** Arma un grupo (superserie) como ejercicios con `group`; devuelve el tiempo que lleva en segundos. */
+function groupExercises(g: GroupSpec): { list: GymExercise[]; sec: number } {
+  const list: GymExercise[] = g.items.map((it, n) => ({
+    id: it.ex.id, name: it.ex.name, category: it.cat, sets: g.rounds, reps: it.reps,
+    restSec: n === g.items.length - 1 ? g.roundRestSec : g.innerRestSec,
+    load: it.load, cue: it.ex.cue,
+    group: { id: g.id, label: g.label, step: n + 1, steps: g.items.length, innerRestSec: g.innerRestSec, roundRestSec: g.roundRestSec },
+  }));
+  const roundSec = g.items.length * GROUP_WORK_SEC + (g.items.length - 1) * g.innerRestSec + g.roundRestSec;
+  return { list, sec: g.rounds * roundSec };
+}
+const roundSecOf = (items: number, inner: number, round: number) => items * GROUP_WORK_SEC + (items - 1) * inner + round;
+
+/** Superseries de contraste que entran en el tiempo disponible; vacío si no entra al menos una de 2 rondas. */
+function buildContrast(mode: ContrastMode, seed: number, pos: number, budgetSec: number): { groups: { list: GymExercise[]; sec: number }[]; contacts: number } {
+  const heavySquat = exById(HEAVY_SQUAT[Math.abs(seed) % HEAVY_SQUAT.length]);
+  const jump = pickEx("jump", seed);
+  const out: { list: GymExercise[]; sec: number }[] = [];
+  let left = budgetSec;
+  let contacts = 0;
+  const fit = (target: number, items: number, inner: number, round: number) => Math.min(target, Math.floor(left / roundSecOf(items, inner, round)));
+  if (mode === "frances") {
+    const inner = 20, round = 240;
+    const rounds = fit([3, 4, 4][Math.min(pos, 2)], 4, inner, round);
+    if (rounds >= 2) {
+      const g = groupExercises({
+        id: "A", label: "Contraste francés", innerRestSec: inner, roundRestSec: round, rounds,
+        items: [
+          { ex: heavySquat, cat: "fuerza", reps: "3", load: HEAVY_LOAD },
+          { ex: jump, cat: "potencia", reps: "3", load: EXPLOSIVE_LOAD },
+          { ex: exById("salto_cargado"), cat: "potencia", reps: "3", load: EXPLOSIVE_LOAD },
+          { ex: exById("salto_asistido"), cat: "potencia", reps: "3", load: EXPLOSIVE_LOAD },
+        ],
+      });
+      out.push(g); left -= g.sec; contacts += rounds * 9;
+    }
+  } else {
+    const inner = 20, round = 210;
+    const target = [3, 3, 4][Math.min(pos, 2)];
+    const rA = fit(target, 2, inner, round);
+    if (rA >= 2) {
+      const a = groupExercises({ id: "A", label: "Contraste tradicional (sentadilla + salto)", innerRestSec: inner, roundRestSec: round, rounds: rA,
+        items: [{ ex: heavySquat, cat: "fuerza", reps: "3", load: HEAVY_LOAD }, { ex: jump, cat: "potencia", reps: "3", load: EXPLOSIVE_LOAD }] });
+      out.push(a); left -= a.sec; contacts += rA * 3;
+      const rB = fit(target, 2, inner, round);
+      if (rB >= 2) {
+        const b = groupExercises({ id: "B", label: "Contraste tradicional (bisagra + swing)", innerRestSec: inner, roundRestSec: round, rounds: rB,
+          items: [{ ex: exById("pm_rumano"), cat: "fuerza", reps: "3", load: HEAVY_LOAD }, { ex: exById("swing_kb"), cat: "potencia", reps: "5", load: EXPLOSIVE_LOAD }] });
+        out.push(b); left -= b.sec;
+      }
+    }
+  }
+  return { groups: out, contacts };
+}
+
 // ───────────────────────── movilidad ─────────────────────────
 const MOBILITY: (MobilityItem & { sec: number })[] = [
   { name: "Flexor de cadera en media rodilla", hold: "2 × 30-40 s por lado", cue: "Cadera hacia adelante con el glúteo firme; sin arquear la espalda baja.", sec: 160 },
@@ -216,6 +304,8 @@ export interface GymInput {
   nextDayHard: boolean;
   /** Minutos de flexibilidad al final (0 = desactivada). */
   mobilityMin: number;
+  /** Entrenamiento de contraste: off (por defecto) | tradicional | frances. Solo actúa en la sesión de potencia. */
+  contrast?: string | null;
 }
 
 export function chooseRole(i: GymInput): GymRole {
@@ -305,10 +395,21 @@ export function buildGymSession(i: GymInput): GymSession {
     used += t;
     return true;
   };
-  for (const c of plan) addCand(c);
+  // Contraste (opcional): reemplaza el bloque de saltos de la sesión de potencia cuando hay tiempo y no es la primera semana
+  const mode: ContrastMode | null = i.contrast === "tradicional" || i.contrast === "frances" ? i.contrast : null;
+  let contrastUsed: ContrastMode | null = null;
+  if (mode && role === "potencia" && !reentry && !i.isDeload && !i.isTaperWeek) {
+    const c = buildContrast(mode, seed, pos, budget);
+    if (c.groups.length && c.contacts <= 60) {
+      contrastUsed = mode;
+      for (const g of c.groups) { exercises.push(...g.list); used += g.sec; }
+    }
+  }
+  const finalPlan = contrastUsed ? plan.filter((c) => !["jump", "ballistic", "split", "hop"].includes(c.p)) : plan;
+  for (const c of finalPlan) addCand(c);
   // Piso mínimo: al menos un ejercicio de fuerza y uno de core aunque el slot sea muy corto
-  if (!exercises.some((e) => e.category === "fuerza" || e.category === "potencia") && plan[0]) addCand(plan[0], true);
-  if (!exercises.some((e) => e.category === "core")) { const core = plan.find((c) => c.cat === "core"); if (core) addCand(core, true); }
+  if (!exercises.some((e) => e.category === "fuerza" || e.category === "potencia") && finalPlan[0]) addCand(finalPlan[0], true);
+  if (!exercises.some((e) => e.category === "core")) { const core = finalPlan.find((c) => c.cat === "core"); if (core) addCand(core, true); }
 
   // Si sobra tiempo (≥ 8 min), se completa con trabajo de tronco y control (liviano, sin sumar carga pesada)
   const filler: Cand[] = [
@@ -329,6 +430,14 @@ export function buildGymSession(i: GymInput): GymSession {
   const has = (c: ExCategory) => exercises.some((e) => e.category === c);
   if (has("fuerza")) { refs.add("R57"); refs.add("R58"); evidence.push("Fuerza pesada en ciclistas: respaldada por una revisión (Rønnestad & Mujika 2014) [R57]. En deportes en general, la fuerza redujo las lesiones a menos de un tercio [R58], pero eso no se midió en ciclismo."); }
   if (has("potencia")) { refs.add("R57"); refs.add("R60"); evidence.push("Potencia/pliometría: evidencia LIMITADA en ciclistas; el trabajo explosivo con cargas bajas no mejoró el rendimiento en un estudio [R57] y hay un ensayo que lo combina con fuerza pesada [R60, solo verificada la cita]. Por eso va en poca cantidad."); }
+  if (contrastUsed === "tradicional") {
+    for (const r of ["R63", "R64", "R65"]) refs.add(r);
+    evidence.push("Contraste tradicional (serie pesada y enseguida un salto del mismo patrón): se apoya en la potenciación post-activación, cuyo efecto es pequeño en el metaanálisis disponible (tamaño de efecto 0,31, 6 estudios, solo tren superior) [R64] y muy variable entre personas: en voleibolistas de élite no apareció en 4 sesiones [R65]. Un ensayo en bádminton usó este esquema como comparación [R63]. No encontré estudios en ciclistas: es una hipótesis razonable, no una práctica demostrada.");
+  }
+  if (contrastUsed === "frances") {
+    for (const r of ["R62", "R63", "R64", "R65"]) refs.add(r);
+    evidence.push("Contraste francés (Cometti: pesado, salto, salto con carga liviana y salto asistido): lo describe la NSCA y reconoce que la evidencia es corta (estudios de 6-8 semanas) [R62]. Un ensayo de 8 semanas con 20 bádmintonistas lo halló superior al entrenamiento complejo en salto y agilidad, pero con pocos sujetos y ejercicios distintos entre grupos [R63]. La potenciación en que se apoya es pequeña y variable [R64][R65]. No encontré estudios en ciclistas: es una hipótesis razonable, no una práctica demostrada.");
+  }
   if (has("core")) { refs.add("R61"); evidence.push("Core: aporta beneficios marginales al rendimiento [R61]; es un complemento, no el eje de la sesión."); }
   if (has("propiocepcion")) { refs.add("R58"); evidence.push("Propiocepción: redujo lesiones en deportes en general [R58]; no se midió en ciclismo."); }
   if (mobility.length) { refs.add("R58"); refs.add("R59"); evidence.push("Flexibilidad: práctica de comodidad y rango de movimiento. No previene lesiones [R58] ni mejora el rendimiento, y estirar justo antes de rendir lo baja [R59]; por eso va al final."); }
@@ -341,6 +450,12 @@ export function buildGymSession(i: GymInput): GymSession {
     movilidad: "",
   };
   const notes: string[] = [];
+  if (contrastUsed) {
+    notes.push("El contraste exige técnica sólida en la sentadilla y los saltos y una base de fuerza de varios bloques [R62]. Si no la tenés, pedí que lo desactiven en Ajustes.");
+    notes.push("Respetá las pausas: entre ejercicios son cortas (20 s) y entre rondas largas. Si bajás la altura del salto, terminá la sesión.");
+  } else if (mode && role === "potencia" && reentry) {
+    notes.push("Primera semana del bloque: se hace la sesión de potencia común; el contraste empieza la semana 2.");
+  }
   if (reentry && (role === "fuerza" || role === "mantenimiento")) notes.push("Primera semana del bloque: 2 series y 4 repeticiones en reserva para reentrar con buena técnica.");
   if (i.nextDayHard && (role === "fuerza" || role === "mantenimiento")) notes.push("Mañana tenés una sesión de calidad o larga: hoy no llegues cerca del fallo (criterio práctico).");
   notes.push("Técnica primero. Si nunca levantaste con barra, empezá con cargas muy livianas o pedí que te corrijan el movimiento [R57].");
@@ -350,8 +465,8 @@ export function buildGymSession(i: GymInput): GymSession {
   return {
     role,
     durationSec: totalSec,
-    title: ROLE_TITLE[role],
-    summary: phaseText[role],
+    title: contrastUsed ? (contrastUsed === "frances" ? "Potencia: contraste francés" : "Potencia: contraste tradicional") : ROLE_TITLE[role],
+    summary: contrastUsed ? "Fase de intensidad: superseries de contraste con volumen bajo y pausas largas entre rondas, para llegar fresco a la bici." : phaseText[role],
     warmup: [...warmup],
     exercises,
     mobility,
@@ -391,7 +506,12 @@ export function gymToText(g: GymSession): string {
   const CAT: Record<ExCategory, string> = { fuerza: "Fuerza", potencia: "Potencia", core: "Core", propiocepcion: "Propiocepción" };
   if (g.exercises.length) {
     lines.push("", "Trabajo principal");
-    g.exercises.forEach((e, n) => lines.push(`${n + 1}. ${e.name} — ${e.sets} × ${e.reps} (${CAT[e.category]}, pausa ${Math.round(e.restSec / 15) * 15} s)\n   ${e.cue}\n   ${e.load}`));
+    g.exercises.forEach((e, n) => {
+      if (e.group) {
+        if (e.group.step === 1) lines.push(`Superserie ${e.group.id}: ${e.group.label} — ${e.sets} rondas, ${e.group.innerRestSec} s entre ejercicios y ${Math.round(e.group.roundRestSec / 60 * 2) / 2} min entre rondas`);
+        lines.push(`${e.group.id}${e.group.step}. ${e.name} — ${e.reps} (${CAT[e.category]})\n   ${e.cue}\n   ${e.load}`);
+      } else lines.push(`${n + 1}. ${e.name} — ${e.sets} × ${e.reps} (${CAT[e.category]}, pausa ${Math.round(e.restSec / 15) * 15} s)\n   ${e.cue}\n   ${e.load}`);
+    });
   }
   if (g.mobility.length) {
     lines.push("", "Flexibilidad (al final)", ...g.mobility.map((m) => `- ${m.name}: ${m.hold}. ${m.cue}`));

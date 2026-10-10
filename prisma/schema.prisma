@@ -250,6 +250,8 @@ model AthleteThresholds {
   periodization      String  @default("linear")
   /// Agrega un set de flexibilidad al final de las sesiones de gimnasio
   flexibilityEnabled Boolean @default(false)
+  /// Entrenamiento de contraste en la sesión de potencia: off | tradicional | frances
+  contrastMode       String  @default("off")
 }
 
 model AthleteBaseline {

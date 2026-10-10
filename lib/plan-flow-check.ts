@@ -62,6 +62,7 @@ function makeDb() {
 }
 
 // ───────────────────────── perfiles ─────────────────────────
+const contrastSeen = new Set<string>();
 const NOW = new Date("2026-10-09T15:00:00Z");
 const DAYMS = 86400000;
 type Slot = [dow: number, type: string, min: number, quality: boolean];
@@ -70,6 +71,8 @@ interface Profile { id: string; ftp: number | null; pvo2?: number | null; templa
 const PROFILES: Profile[] = [
   { id: "coach-12sem-evento", ftp: 300, pvo2: 370, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 6, ftpTestProtocol: "20min", vo2Stimulus: "ronnestad_30_15", varietyLevel: "balanced", bannedStimuli: ["torque_low_cadence"], periodization: "linear" }, goal: { type: "EVENT", inDays: 84 } },
   { id: "gym-y-flexibilidad", ftp: 270, pvo2: 340, template: [[0, "cycling", 240, false], [1, "flexibility", 20, false], [2, "cycling", 90, true], [3, "gym", 75, false], [4, "cycling", 90, true], [5, "gym", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 6, flexibilityEnabled: true, periodization: "linear" }, goal: { type: "EVENT", inDays: 70 } },
+  { id: "contraste-frances", ftp: 290, pvo2: 360, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 6, contrastMode: "frances" }, goal: { type: "EVENT", inDays: 120 } },
+  { id: "contraste-tradicional", ftp: 290, pvo2: 360, template: FULL, thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 6, contrastMode: "tradicional", flexibilityEnabled: true }, goal: { type: "EVENT", inDays: 120 } },
   { id: "sin-vo2max-rendimiento", ftp: 280, pvo2: null, template: FULL, thresholds: null, goal: { type: "PERFORMANCE", inDays: 70 } },
   { id: "3-dias-30-semanas", ftp: 180, pvo2: 230, template: [[0, "cycling", 150, false], [2, "cycling", 75, true], [4, "cycling", 60, true]], thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 8, ftpTestProtocol: "8min", vo2Stimulus: "hiit_genuino", varietyLevel: "high", bannedStimuli: [], periodization: "block" }, goal: { type: "EVENT", inDays: 210 } },
   { id: "calidad-consecutiva", ftp: 250, pvo2: 320, template: [[0, "cycling", 200, false], [1, "rest", 60, false], [2, "cycling", 90, true], [3, "cycling", 90, true], [4, "rest", 60, false], [5, "cycling", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "2:1", weeksBetweenFtpTest: 5, ftpTestProtocol: "5min", vo2Stimulus: "billat_30_30", varietyLevel: "low", bannedStimuli: ["sprint_neuro", "z2_sprints"], periodization: "linear" }, goal: { type: "EVENT", inDays: 45 } },
@@ -122,6 +125,9 @@ function invariants(db: ReturnType<typeof makeDb>, p: Profile, tag: string) {
       if (gd) {
         ok(s.workoutLibraryKey === "flexibility" ? gd.mobility.length >= 4 : gd.exercises.length >= 3, `${tag}: ${k} con muy pocos ejercicios`);
         if (s.workoutLibraryKey === "gym") ok((gd.mobility.length > 0) === !!p.thresholds?.flexibilityEnabled, `${tag}: ${k} flexibilidad al final no coincide con el ajuste`);
+        const grouped = (gd.exercises as { group?: unknown }[]).some((e) => e.group);
+        const cm = (p.thresholds as Row | null | undefined)?.contrastMode as string | undefined;
+        if (grouped) { ok(cm === "frances" || cm === "tradicional", `${tag}: ${k} tiene superseries con el contraste apagado`); contrastSeen.add(p.id); }
         ok(gd.durationSec / 60 <= (slot.get(dow(s.date))?.min ?? 0) * 1.2 + 4, `${tag}: ${k} gimnasio dura ${Math.round(gd.durationSec / 60)} min`);
       }
       continue;
@@ -226,6 +232,7 @@ async function run() {
   // aislamiento: lo que hizo un alumno no tocó a los demás
   for (const [id, s] of finalSnaps) ok(JSON.stringify(snap(db, id)) === s, `${id}: sus sesiones cambiaron por operaciones de otros alumnos`);
 
+  for (const id of ["contraste-frances", "contraste-tradicional"]) ok(contrastSeen.has(id), `${id}: el plan no generó ninguna superserie de contraste`);
   console.log(log.join("\n"));
   console.log(`\n${checks} comprobaciones, ${failures} fallas`);
   process.exit(failures ? 1 : 0);

@@ -67,6 +67,7 @@ export async function generateFullPlan(
       bannedStimuli: thresholds?.bannedStimuli ?? [],
       periodization: thresholds?.periodization,
       flexibilityEnabled: thresholds?.flexibilityEnabled ?? false,
+      contrastMode: thresholds?.contrastMode ?? "off",
     },
     template,
     library,

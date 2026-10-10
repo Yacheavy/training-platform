@@ -87,6 +87,7 @@ export async function saveThresholds(formData: FormData) {
     vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate", "rotate"]),
     varietyLevel: str("varietyLevel", ["conservative", "balanced", "varied"]),
     periodization: str("periodization", ["linear", "block"]),
+    contrastMode: formData.has("_gym") ? str("contrastMode", ["off", "tradicional", "frances"]) : undefined,
     flexibilityEnabled: formData.has("_gym") ? formData.get("flexibilityEnabled") === "on" : undefined,
     bannedStimuli: !formData.has("_planner") ? undefined : formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
     deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())

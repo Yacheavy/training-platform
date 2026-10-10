@@ -512,6 +512,38 @@ export const REFERENCES: Reference[] = [
     level: "Revisión sistemática leída en resumen; no es específica de ciclismo y los estudios son heterogéneos.",
     checked: "abstract",
   },
+  {
+    id: "R62",
+    surnames: ["Long", "Fee", "Taber"],
+    cite: "Long M, Fee C, Taber C. The French Contrast Method: Theory and Application. NSCA Coach. 2022;9(4).",
+    supports: "Describe el método francés de contraste (Cometti; reelaborado por Dietz y Peterson): 4 ejercicios por ronda (pesado, pliométrico, liviano o cargado, pliométrico asistido), 10-20 s entre ejercicios y 3-5 min entre rondas, 5-6 rondas, ~30 min; para atletas con experiencia y técnica sólida, hacia la etapa de potencia. Reconoce que la evidencia es limitada (dos estudios de 6-8 semanas).",
+    level: "Artículo divulgativo/práctico de la NSCA, no un estudio. Los esquemas de series y cargas son ejemplos de práctica.",
+    checked: "fuente",
+  },
+  {
+    id: "R63",
+    surnames: ["Huang", "Gao", "Yang", "Mo", "Lu"],
+    cite: "Huang R, Gao Y, Yang K, Mo Y, Lu Y, Gao Z. Comparative effects of French Contrast Method vs. Complex Training on explosive power and its endurance in youth badminton athletes. PLoS ONE. 2025;20(12):e0338383.",
+    supports: "Ensayo aleatorizado de 8 semanas con 20 bádmintonistas juveniles varones con 3 o más años de fuerza: el contraste francés mejoró más que el entrenamiento complejo el salto con contramovimiento, el drop jump y la agilidad (tamaños de efecto ~1); sin diferencia en 1RM de sentadilla ni sprint de 10 m.",
+    level: "Ensayo aleatorizado pequeño (n=20), solo varones, un deporte; los dos grupos hacían ejercicios distintos, así que no separa estructura de elección de ejercicios. No incluye ciclistas.",
+    checked: "fuente",
+  },
+  {
+    id: "R64",
+    surnames: ["Finlay", "Bridge", "Greig", "Page"],
+    cite: "Finlay MJ, Bridge CA, Greig M, Page R. Upper-Body Post-activation Performance Enhancement for Athletic Performance: A Systematic Review with Meta-analysis and Recommendations for Future Research. Sports Med. 2022;52:847-871. doi:10.1007/s40279-021-01598-4.",
+    supports: "Press de banca pesado (≥80% 1RM) mejoró la potencia de lanzamiento (tamaño de efecto 0,31; IC95% 0,03-0,58; 6 estudios). El pico apareció a los 8-12 min y depende de la carga; la mayoría de los estudios eran pre-post sin control y de calidad media (PEDro 5/9).",
+    level: "Revisión sistemática con metaanálisis, pero solo de TREN SUPERIOR y con pocos estudios heterogéneos; no es de piernas ni de ciclismo.",
+    checked: "fuente",
+  },
+  {
+    id: "R65",
+    surnames: ["Masel", "Maciejczyk"],
+    cite: "Masel S, Maciejczyk M. No effects of post-activation performance enhancement in elite male volleyball players under complex training. Sci Rep. 2024;14:13708. doi:10.1038/s41598-024-64604-5.",
+    supports: "12 voleibolistas de élite, 4 sesiones idénticas (3 series de peso muerto con barra hexagonal al 80% 1RM, salto 90 s después): no hubo mejora del salto en ninguna sesión y 7 de 12 fueron no respondedores. Muestra la gran variabilidad individual de la potenciación.",
+    level: "Estudio de fiabilidad con 12 deportistas de un solo equipo y un solo protocolo; no incluye ciclistas.",
+    checked: "fuente",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

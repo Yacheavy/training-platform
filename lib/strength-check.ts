@@ -12,6 +12,7 @@ const refIds = new Set(REFERENCES.map((r) => r.id));
 const objectives = ["base", "umbral", "vo2max", "tapering"];
 const slots = [20, 30, 40, 45, 60, 75, 90, 120, 150];
 let sessions = 0;
+let contrastSessions = 0;
 
 for (const objective of objectives)
   for (const cycleLength of [3, 4, 5])
@@ -21,12 +22,35 @@ for (const objective of objectives)
           for (let gymIndexInWeek = 0; gymIndexInWeek < gymCountInWeek; gymIndexInWeek++)
             for (const nextDayHard of [false, true])
               for (const mobilityMin of [0, 8])
+               for (const contrast of [undefined, "off", "tradicional", "frances"] as const)
                 for (const [isDeload, isTaperWeek] of [[false, false], [true, false], [false, true]] as const) {
-                  const i: GymInput = { slotMin, objective, weekIndex, cycleLength, isDeload, isTaperWeek, gymIndexInWeek, gymCountInWeek, nextDayHard, mobilityMin };
+                  const i: GymInput = { slotMin, objective, weekIndex, cycleLength, isDeload, isTaperWeek, gymIndexInWeek, gymCountInWeek, nextDayHard, mobilityMin, contrast };
                   const g = buildGymSession(i);
                   sessions++;
-                  const tag = `${objective} c${cycleLength} s${weekIndex} ${slotMin}min g${gymIndexInWeek}/${gymCountInWeek} ${isDeload ? "deload" : isTaperWeek ? "taper" : "carga"} next=${nextDayHard}`;
-                  const heavy = g.exercises.filter((e) => e.category === "fuerza" && e.restSec >= 150);
+                  const tag = `${contrast ?? "-"} ${objective} c${cycleLength} s${weekIndex} ${slotMin}min g${gymIndexInWeek}/${gymCountInWeek} ${isDeload ? "deload" : isTaperWeek ? "taper" : "carga"} next=${nextDayHard}`;
+                  const heavy = g.exercises.filter((e) => e.category === "fuerza" && e.restSec >= 150 && !e.group);
+                  // contraste: apagado = sin superseries; encendido = solo en la sesión de potencia de umbral/VO2max, nunca en descarga, puesta a punto ni semana 1
+                  const grouped = g.exercises.filter((e) => e.group);
+                  if (contrast !== "tradicional" && contrast !== "frances") ok(grouped.length === 0, `${tag}: superseries con el contraste apagado`);
+                  const off = buildGymSession({ ...i, contrast: undefined });
+                  const sinAviso = { ...g, notes: g.notes.filter((n) => !/el contraste empieza/.test(n)) };
+                  if (grouped.length === 0) ok(JSON.stringify(off) === JSON.stringify(sinAviso), `${tag}: el ajuste de contraste cambió una sesión sin superseries`);
+                  if (grouped.length) {
+                    ok(g.role === "potencia" && (objective === "umbral" || objective === "vo2max") && !isDeload && !isTaperWeek && weekIndex > 0, `${tag}: contraste fuera de lugar (${g.role})`);
+                    ok(g.title.includes(contrast === "frances" ? "francés" : "tradicional"), `${tag}: título no coincide con el modo`);
+                    const ids = [...new Set(grouped.map((e) => e.group!.id))];
+                    for (const gid of ids) {
+                      const items = grouped.filter((e) => e.group!.id === gid);
+                      ok(items.every((e, n) => e.group!.step === n + 1 && e.group!.steps === items.length), `${tag}: pasos de la superserie ${gid} desordenados`);
+                      ok(items.length === (contrast === "frances" ? 4 : 2), `${tag}: superserie ${gid} con ${items.length} ejercicios`);
+                      ok(items.every((e) => e.sets === items[0].sets) && items[0].sets >= 2 && items[0].sets <= 4, `${tag}: rondas ${items[0].sets} fuera de 2-4 o desiguales`);
+                      ok(items[0].category === "fuerza" && items.slice(1).every((e) => e.category === "potencia"), `${tag}: la superserie ${gid} no es pesado + explosivo`);
+                      ok(items.slice(0, -1).every((e) => e.restSec === 20) && items[items.length - 1].restSec >= 180, `${tag}: pausas de la superserie ${gid}`);
+                    }
+                    ok(g.refs.includes("R64") && g.refs.includes("R65") && (contrast !== "frances" || g.refs.includes("R62")), `${tag}: contraste sin sus fuentes`);
+                    ok(/No encontré estudios en ciclistas/.test(g.evidence.join(" ")), `${tag}: contraste sin la aclaración de evidencia`);
+                    contrastSessions++;
+                  }
                   // contenido mínimo
                   ok(g.exercises.length > 0, `${tag}: sin ejercicios`);
                   ok(g.exercises.some((e) => e.category === "core"), `${tag}: sin core`);
@@ -102,6 +126,7 @@ for (const [id, def] of Object.entries(FIGURES)) {
 const sinFigura = [...catalog].filter((id) => !FIGURES[id]);
 console.log("ejercicios sin figura:", sinFigura.join(", ") || "ninguno");
 
-console.log(JSON.stringify({ sessions, checks, problems: problems.length }));
+ok(contrastSessions > 1000, `pocas sesiones de contraste generadas: ${contrastSessions}`);
+console.log(JSON.stringify({ sessions, contrastSessions, checks, problems: problems.length }));
 if (problems.length) console.log(problems.join("\n"));
 process.exit(problems.length ? 1 : 0);

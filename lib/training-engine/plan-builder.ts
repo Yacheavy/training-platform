@@ -35,6 +35,8 @@ export interface PlanThresholds {
   periodization?: string | null;
   /** Agrega un set de flexibilidad al final de las sesiones de gimnasio. */
   flexibilityEnabled?: boolean | null;
+  /** Contraste en la sesión de potencia: off (por defecto) | tradicional | frances. */
+  contrastMode?: string | null;
 }
 export interface PlanTemplateSlot {
   dayOfWeek: number;
@@ -346,6 +348,7 @@ export function buildPlan(input: {
         gymCountInWeek: gymDays.length,
         nextDayHard: nextHard,
         mobilityMin: thresholds.flexibilityEnabled ? 8 : 0,
+        contrast: thresholds.contrastMode,
       });
       offBikeBlocks = gymBlocks(g);
       gymTitle = g.title;

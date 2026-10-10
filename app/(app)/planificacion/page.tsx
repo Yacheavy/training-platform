@@ -138,7 +138,7 @@ export default async function PlanningPage({ searchParams }: { searchParams: Pro
 
       {/* 4. Estilo del plan */}
       <PlanStyleCard
-        thresholds={thresholds ? { weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio, vo2Stimulus: thresholds.vo2Stimulus, varietyLevel: thresholds.varietyLevel, bannedStimuli: thresholds.bannedStimuli, periodization: thresholds.periodization, flexibilityEnabled: thresholds.flexibilityEnabled } : null}
+        thresholds={thresholds ? { weeksBetweenFtpTest: thresholds.weeksBetweenFtpTest, ftpTestProtocol: thresholds.ftpTestProtocol ?? undefined, deloadRatio: thresholds.deloadRatio, vo2Stimulus: thresholds.vo2Stimulus, varietyLevel: thresholds.varietyLevel, bannedStimuli: thresholds.bannedStimuli, periodization: thresholds.periodization, flexibilityEnabled: thresholds.flexibilityEnabled, contrastMode: thresholds.contrastMode } : null}
         action={saveThresholds}
         activeObjective={activeObjective}
         cardStyle={cardStyle}

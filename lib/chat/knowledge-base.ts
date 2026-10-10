@@ -223,6 +223,11 @@ Z2 / BASE: 56-75% FTP [PRÁCTICA, rango de zonas].
     (≈-3,7 %, más con 60 s o más) y la mejora de rango dura menos de 30 min [R59]. Por eso es opcional (Planificación →
     Estilo del plan → Gimnasio y flexibilidad), va al FINAL de la sesión y se presenta como comodidad, no como
     prevención ni rendimiento. También hay un tipo de día «Flexibilidad» en la semana tipo.
+  · Contraste (opcional, apagado por defecto; Ajustes → Gimnasio y flexibilidad): superseries que combinan un ejercicio pesado con
+    saltos, solo en la sesión de potencia de umbral/VO2max. Tradicional = pares (pesado + salto, 20 s entre ambos, 3-4 min entre
+    rondas); francés (Cometti) = 4 ejercicios por ronda [R62]. La evidencia es corta y de otros deportes (un ensayo de 8 semanas en
+    bádminton lo halló superior al complejo [R63]); la potenciación es pequeña y variable entre personas [R64][R65]. NO hay estudios
+    en ciclistas: presentalo como hipótesis razonable, no como práctica demostrada.
   · Si el día siguiente es de calidad o una salida larga, el gimnasio no se acerca al fallo (RIR ≥3) [PRÁCTICA].
   · Las sesiones de gimnasio no suman TSS ni se editan desde el chat; se envían a Intervals como entrenamiento de
     fuerza con los ejercicios en la descripción. Si el alumno tiene dolor o lesión, el sistema no lo sabe: derivá a un
