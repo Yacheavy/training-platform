@@ -152,6 +152,8 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
     effectiveStimulusType = "z2";
   } else if (availability.status === "AMBER") {
     rationale.push(`Disponibilidad AMBER (${availability.reasons.join("; ")}) — se mantiene el estímulo`);
+  } else if (availability.insufficient) {
+    rationale.push("Sin datos de recuperación hoy (HRV, FC de reposo ni check-in): no se evaluó la disponibilidad, el plan sigue sin ajustes");
   } else {
     rationale.push(`Disponibilidad GREEN (${availability.reasons.join("; ")})`);
   }
@@ -255,6 +257,8 @@ export async function generateTodayWorkout(athleteId: string, forceDayOfWeek?: n
     }
   } else if (availability.status === "AMBER") {
     rationale.push(`Validación diaria: disponibilidad AMBER (${availability.reasons.join("; ")}) — se mantiene el plan tal cual estaba`);
+  } else if (availability.insufficient) {
+    rationale.push("Validación diaria: sin datos de recuperación hoy (HRV, FC de reposo ni check-in), no se evaluó la disponibilidad — plan sin ajustes");
   } else {
     rationale.push(`Validación diaria: disponibilidad GREEN (${availability.reasons.join("; ")}) — plan confirmado tal cual estaba planeado`);
   }

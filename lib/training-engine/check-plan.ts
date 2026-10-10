@@ -1,6 +1,6 @@
 import { buildPlan } from "./plan-builder";
 import { validatePlan } from "./plan-validator";
-import { evaluateAvailability, scoreAvailability, buildAvailabilityHistory, SCORE_BANDS, type CheckinInput } from "./availability-score";
+import { evaluateAvailability, recoverySources, scoreAvailability, buildAvailabilityHistory, SCORE_BANDS, type CheckinInput } from "./availability-score";
 import { hrvSignal, restingHrSignal } from "./recovery-signals";
 import { proposeSeason, pickPrimaryGoal } from "./season-planner";
 import { progressionAdjustments, intensityGuard, type ExecutionRecord } from "./autoregulation";
@@ -145,6 +145,17 @@ for (const [wk,c] of vo2PerWeek) { const exp = bp.some((d)=>d.weekIndex===wk&&d.
   check("rojo no sube de 49", scoreAvailability({status:"RED",hrvDeltaPct:30,restingHrDeltaAbs:-10,tsb:20,checkin:ok1}).score<=49);
   check("mejores señales → mayor puntaje (mismo estado)", scoreAvailability({status:"GREEN",hrvDeltaPct:10,restingHrDeltaAbs:-2,tsb:5,checkin:ok1}).score > scoreAvailability({status:"GREEN",hrvDeltaPct:-2,restingHrDeltaAbs:1,tsb:-10,checkin:ok1}).score);
   check("sin check-in se informa", scoreAvailability({status:"GREEN",hrvDeltaPct:0,restingHrDeltaAbs:0,tsb:0,checkin:null}).missing.includes("check-in"));
+  // Sin datos de recuperación: no se inventa un "verde"
+  {
+    const ins = hrvSignal([], new Date(Date.UTC(2026,5,1)));
+    const rhrIns = restingHrSignal([], new Date(Date.UTC(2026,5,1)));
+    check("sin HRV, FC ni check-in no hay fuentes", recoverySources({hrvSig:ins,rhrSig:rhrIns,checkin:null}).length===0);
+    const none = evaluateAvailability({hrvSig:ins,rhrSig:rhrIns,checkin:null,tsb:null,minTsb:-30});
+    check("sin datos el motivo lo dice", /No hay datos de recuperación/.test(none.reasons[0]));
+    check("el check-in solo cuenta como fuente", recoverySources({hrvSig:ins,rhrSig:rhrIns,checkin:ok1}).join()==="check-in");
+    check("check-in con 4 alertas sin HRV ni FC es rojo", evaluateAvailability({hrvSig:ins,rhrSig:rhrIns,checkin:{fatigue:6,stress:6,muscleSoreness:6,sleepQuality:2},tsb:0,minTsb:-30}).status==="RED");
+    check("check-in con 1 alerta sin HRV ni FC es ámbar", evaluateAvailability({hrvSig:ins,rhrSig:rhrIns,checkin:{fatigue:6,stress:3,muscleSoreness:3,sleepQuality:5},tsb:0,minTsb:-30}).status==="AMBER");
+  }
   // Historial: usa la misma lógica y no mira el futuro
   const day0 = Date.UTC(2026,5,1);
   const mk = (n:number, hrvFn:(i:number)=>number) => Array.from({length:n},(_,i)=>({date:new Date(day0+i*86400000),hrv:hrvFn(i),restingHr:50+(i%3),ctl:50+i*0.1,atl:55+(i%5),checkin:i%4===0?ok1:null}));

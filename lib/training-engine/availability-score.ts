@@ -32,6 +32,15 @@ export interface Evaluation {
   reasons: string[];
 }
 
+/** Qué señales de RECUPERACIÓN hay hoy (HRV, FC de reposo, check-in). Sin ninguna, el semáforo no tiene de dónde decidir. */
+export function recoverySources(i: Pick<EvaluationInput, "hrvSig" | "rhrSig" | "checkin">): string[] {
+  const out: string[] = [];
+  if (i.hrvSig.method !== "insufficient") out.push("HRV");
+  if (i.rhrSig.method !== "insufficient") out.push("FC de reposo");
+  if (i.checkin && [i.checkin.fatigue, i.checkin.stress, i.checkin.muscleSoreness, i.checkin.sleepQuality].some((v) => v != null)) out.push("check-in");
+  return out;
+}
+
 /** Reglas del semáforo (extraídas tal cual de calculateAvailability para poder usarlas también en el historial). */
 export function evaluateAvailability(i: EvaluationInput): Evaluation {
   const signalsTriggered: string[] = [];
@@ -79,7 +88,14 @@ export function evaluateAvailability(i: EvaluationInput): Evaluation {
   if (subjectiveHits === 2) reasons.push("Las respuestas del check-in cuentan como una sola señal (se mueven juntas); con 3 o más en alerta pesan como dos");
   const n = signalsTriggered.length - subjectiveHits + subjectiveWeight;
   const status: AvailabilityStatus = n >= 2 || (tsbAlert && n >= 1) ? "RED" : n === 1 || tsbAlert ? "AMBER" : "GREEN";
-  if (reasons.length === 0) reasons.push("Sin señales de alerta en HRV, FC reposo, check-in o TSB");
+  const noRecovery = recoverySources(i).length === 0;
+  if (noRecovery && status === "GREEN") {
+    // el aviso de "HRV insuficiente" sobra: lo importante es que no hay ninguna señal de recuperación
+    reasons.length = 0;
+    reasons.push("No hay datos de recuperación hoy (HRV, FC de reposo ni check-in): no se puede evaluar la disponibilidad");
+  } else if (reasons.length === 0) {
+    reasons.push("Sin señales de alerta en las señales disponibles");
+  }
   return { status, signalsTriggered, reasons };
 }
 

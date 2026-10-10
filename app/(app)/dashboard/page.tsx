@@ -201,7 +201,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <AvailabilityRing status={availability.status} score={availability.score} reasons={availability.reasons} missing={availability.scoreDetail.missing} />
+      <AvailabilityRing status={availability.status} score={availability.score} reasons={availability.reasons} missing={availability.scoreDetail.missing} insufficient={availability.insufficient} sources={availability.sources} />
 
       <Section title="Cómo estás">
         <div className="metric-strip">

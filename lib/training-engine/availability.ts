@@ -1,7 +1,7 @@
 import { dayKeyDate } from "../tz";
 import { prisma } from "@/lib/prisma";
 import { hrvSignal, restingHrSignal, type SignalMethod } from "./recovery-signals";
-import { evaluateAvailability, scoreAvailability, type ScoreResult } from "./availability-score";
+import { evaluateAvailability, recoverySources, scoreAvailability, type ScoreResult } from "./availability-score";
 
 export interface AvailabilityResult {
   status: "GREEN" | "AMBER" | "RED";
@@ -22,6 +22,10 @@ export interface AvailabilityResult {
   restingHrMethod: SignalMethod;
   /** Días desde el último dato de HRV/FC (0 = hoy). null si no hay datos. */
   wellnessAgeDays: number | null;
+  /** Señales de recuperación con las que se calculó hoy (HRV, FC de reposo, check-in). */
+  sources: string[];
+  /** Sin ninguna señal de recuperación y sin alerta de carga: el semáforo en verde no significa nada y no se muestra como tal. */
+  insufficient: boolean;
 }
 
 /**
@@ -83,6 +87,8 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   if (wellnessAgeDays != null && wellnessAgeDays >= 1) {
     reasons.push(`Último dato de HRV/FC de hace ${wellnessAgeDays} día${wellnessAgeDays === 1 ? "" : "s"} (todavía no sincronizó hoy)`);
   }
+  const sources = recoverySources({ hrvSig, rhrSig, checkin: checkinToday });
+  const insufficient = sources.length === 0 && status === "GREEN";
   const scoreDetail = scoreAvailability({ status, hrvDeltaPct, restingHrDeltaAbs, tsb, checkin: checkinToday });
 
   return {
@@ -102,5 +108,7 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     hrvMethod: hrvSig.method,
     restingHrMethod: rhrSig.method,
     wellnessAgeDays,
+    sources,
+    insufficient,
   };
 }

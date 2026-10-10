@@ -72,7 +72,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
 
   const availability = await calculateAvailability(athleteId);
   parts.push(
-    `DISPONIBILIDAD HOY: ${availability.status} — HRV hoy ${availability.hrvToday ?? "sin dato"}, media 7d ${availability.hrvAvg7d?.toFixed(1) ?? "sin dato"}, TSB ${availability.tsb?.toFixed(1) ?? "sin dato"}. Razones: ${availability.reasons.join("; ")}`
+    `DISPONIBILIDAD HOY: ${availability.insufficient ? "SIN DATOS SUFICIENTES (no hay HRV, FC de reposo ni check-in; no la presentes como verde ni inventes un puntaje)" : availability.status} — HRV hoy ${availability.hrvToday ?? "sin dato"}, media 7d ${availability.hrvAvg7d?.toFixed(1) ?? "sin dato"}, TSB ${availability.tsb?.toFixed(1) ?? "sin dato"}. Razones: ${availability.reasons.join("; ")}`
   );
 
   const latestWellness = await prisma.wellness.findFirst({

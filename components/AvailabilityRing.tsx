@@ -30,12 +30,17 @@ export function AvailabilityRing({
   score,
   reasons,
   missing = [],
+  insufficient = false,
+  sources = [],
 }: {
   status: Status;
   score: number;
   reasons: string[];
   missing?: string[];
+  insufficient?: boolean;
+  sources?: string[];
 }) {
+  if (insufficient) return <InsufficientHero />;
   const m = META[status];
   const end = degAt(score);
   const [kx, ky] = pt(end);
@@ -79,8 +84,34 @@ export function AvailabilityRing({
         <p className="avail-note">
           El estado (alta, moderada, baja) sale de reglas sobre tu HRV, tu FC en reposo, tu forma y tu check-in. El número es una
           referencia dentro de ese estado, no una medida validada.
+          {sources.length > 0 && sources.length < 3 && <> Hoy se calculó solo con: {sources.join(" y ")}.</>}
           {missing.length > 0 && <> Sin dato hoy: {missing.join(", ")}.</>}
         </p>
+      </div>
+    </div>
+  );
+}
+
+/** Estado neutro: sin HRV, FC de reposo ni check-in no hay de dónde decidir, así que no se muestra un verde ni un número. */
+function InsufficientHero() {
+  return (
+    <div className="avail-hero" style={{ ["--c" as string]: "#8A97A6", ["--soft" as string]: "rgba(138,151,166,.12)" }}>
+      <div className="avail-gauge">
+        <svg viewBox="0 0 200 200" role="img" aria-label="Disponibilidad sin datos suficientes">
+          <path d={arc(START, START + SWEEP)} fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="12" strokeLinecap="round" strokeDasharray="2 14" />
+        </svg>
+        <div className="avail-score">
+          <div className="avail-num" style={{ fontSize: "34px" }}>—</div>
+          <div className="avail-of">sin datos</div>
+        </div>
+      </div>
+      <div className="avail-body">
+        <span className="avail-pill">Sin datos suficientes</span>
+        <p className="avail-advice">Hoy no hay datos de recuperación para evaluar tu disponibilidad. La sesión sigue como está planificada.</p>
+        <ul className="avail-reasons">
+          <li>Completá el check-in de hoy (sueño, fatiga, estrés y dolor): es lo único que hace falta si no tenés HRV ni FC de reposo.</li>
+        </ul>
+        <p className="avail-note">No mostramos un número cuando no hay ninguna señal: sería inventarlo.</p>
       </div>
     </div>
   );

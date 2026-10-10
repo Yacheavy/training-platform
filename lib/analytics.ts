@@ -221,7 +221,7 @@ export async function getCoachOverview(coachId: string): Promise<StudentRow[]> {
         id: s.id,
         name: s.name ?? s.email.split("@")[0],
         email: s.email,
-        status: avail?.status ?? null,
+        status: avail && !avail.insufficient ? avail.status : null,
         reasons: avail?.reasons ?? [],
         hrvAgeDays: avail?.wellnessAgeDays ?? null,
         tsb: avail?.tsb != null ? Math.round(avail.tsb * 10) / 10 : null,

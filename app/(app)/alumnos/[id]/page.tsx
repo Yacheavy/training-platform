@@ -71,7 +71,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}
       </div>
 
-      <AvailabilityRing status={availability.status} score={availability.score} reasons={availability.reasons} missing={availability.scoreDetail.missing} />
+      <AvailabilityRing status={availability.status} score={availability.score} reasons={availability.reasons} missing={availability.scoreDetail.missing} insufficient={availability.insufficient} sources={availability.sources} />
 
       <Section title="Cómo está">
         <div className="metric-strip">
