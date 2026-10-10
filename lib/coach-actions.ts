@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCoachId, requireCoachOfStudent } from "@/lib/access";
 import { addGoalCore, deleteGoalCore, saveTemplateCore, saveThresholdsCore } from "@/lib/settings-core";
-import { runRegeneration, regenerationQuery } from "@/lib/plan-core";
+import { runRegeneration, regenerationQuery, deletePlannedSessionsOfBlock } from "@/lib/plan-core";
 import { applySeasonCore } from "@/lib/season-apply";
 import { mailConfigured, sendMail } from "@/lib/email/mailer";
 import { bodyToHtml, layoutEmail } from "@/lib/email/template";
@@ -123,7 +123,7 @@ export async function coachDeleteFutureBlock(athleteId: string, formData: FormDa
     const block = await prisma.trainingBlock.findFirst({ where: { id, athleteId } });
     if (!block) return { error: "Bloque no encontrado" };
     if (block.startDate.getTime() <= Date.now()) return { error: "Solo se pueden eliminar bloques que todavía no empezaron" };
-    await prisma.generatedWorkout.deleteMany({ where: { athleteId, status: { in: ["PLANNED", "SUGGESTED"] }, date: { gte: block.startDate, lt: block.endDate } } });
+    await deletePlannedSessionsOfBlock(athleteId, block);
     await prisma.weeklyReview.deleteMany({ where: { trainingBlockId: id } });
     await prisma.trainingBlock.delete({ where: { id } });
     refresh(athleteId);

@@ -544,6 +544,63 @@ export const REFERENCES: Reference[] = [
     level: "Estudio de fiabilidad con 12 deportistas de un solo equipo y un solo protocolo; no incluye ciclistas.",
     checked: "fuente",
   },
+  // ── Semana de carrera: taper, activación y calentamiento (verificado el 2026-10-10; solo resúmenes) ──────────
+  {
+    id: "R66",
+    surnames: ["Wang", "Gao", "Zhong"],
+    cite: "Wang Z, Wang Y, Gao W, Zhong Y. Effects of tapering on performance in endurance athletes: A systematic review and meta-analysis. PLoS ONE. 2023;18(5):e0282838. doi:10.1371/journal.pone.0282838.",
+    supports: "Metaanálisis de 14 estudios: el taper mejora la contrarreloj (SMD −0,45) y el tiempo hasta el agotamiento; el beneficio en contrarreloj aparece con reducciones de volumen de 41-60 % sin tocar intensidad ni frecuencia, en diseños progresivos o en escalón; el taper con sobrecarga previa rindió más que el convencional. No cambió VO2max ni economía.",
+    level: "Metaanálisis de atletas de resistencia (no se verificó cuántos estudios eran de ciclismo). Leí el resumen a través de registros secundarios; el texto completo no cargó y el umbral exacto de duración salió ilegible, por eso la app no lo usa.",
+    checked: "abstract",
+  },
+  {
+    id: "R67",
+    surnames: ["Rønnestad", "Ronnestad", "Vikmoen"],
+    cite: "Rønnestad BR, Vikmoen O. A 11-day compressed overload and taper induces larger physiological improvements than a normal taper in elite cyclists. Scand J Med Sci Sports. 2019.",
+    supports: "17 ciclistas de élite: 6 días seguidos de HIIT más un taper escalonado de 5 días mejoraron más el VO2pico (4,0 % vs 0,8 %) y la potencia de 1 min (5,0 % vs 0,9 %) que un taper tradicional de 11 días. Se midieron capacidades fisiológicas, no una carrera.",
+    level: "Ensayo pequeño (n=17) en ciclistas de élite con una intervención agresiva; no es extrapolable a ciclistas recreativos. La app NO lo usa como regla.",
+    checked: "abstract",
+  },
+  {
+    id: "R68",
+    surnames: ["Garvick"],
+    cite: "Garvick A. Effect of high intensity intervals 24 hr prior to a simulated 40 km time trial. Tesis de maestría, Appalachian State University; 2017.",
+    supports: "8 ciclistas entrenados, diseño cruzado: intervalos de alta intensidad de bajo volumen 24 h antes de una contrarreloj de 40 km no cambiaron el tiempo, la potencia media, el pacing ni la percepción de esfuerzo frente a una sesión suave. Es la única evidencia directa que encontré sobre una sesión de activación la víspera: ni ayuda ni perjudica.",
+    level: "Tesis de maestría, NO revisada por pares, n=8; no se conoce la estructura exacta de los intervalos. Sirve para decir que no hay evidencia de beneficio, no para afirmar que no existe.",
+    checked: "abstract",
+  },
+  {
+    id: "R69",
+    surnames: [],
+    cite: "Effects of warming-up on physical performance: a systematic review with meta-analysis. J Strength Cond Res. 2010;24(1):140-148. doi:10.1519/JSC.0b013e3181c643a0 (autores no confirmados en la fuente consultada: no la cites por apellido).",
+    supports: "32 estudios de calidad alta: el calentamiento mejoró el rendimiento en el 79 % de los criterios examinados y hay poca evidencia de que perjudique. Los autores señalan que faltan ensayos aleatorizados bien hechos.",
+    level: "Revisión sistemática con metaanálisis de deportes en general (no específica de ciclismo ni de esfuerzos largos).",
+    checked: "abstract",
+  },
+  {
+    id: "R70",
+    surnames: ["Barranco-Gil", "Barranco", "Lucía", "Lucia"],
+    cite: "Barranco-Gil D, Alejo LB, Valenzuela PL, Gil Cabrera J, Montalvo Pérez A, Talavera E, Moral González S, Clemente Suárez VJ, Lucía A. Warming up before a 20-minute endurance effort: is it really worth it? Int J Sports Physiol Perform. 2020.",
+    supports: "15 ciclistas, contrarreloj de 20 min con tres condiciones (sin calentamiento, estándar, con sprints cortos de potenciación): calentar mejoró el salto y la modulación simpática, y los sprints dieron más potencia y VO2 en los primeros 3 minutos; no hubo diferencia en el rendimiento global de la prueba.",
+    level: "Ensayo cruzado pequeño (n=15, hombres); un solo esfuerzo de 20 min.",
+    checked: "abstract",
+  },
+  {
+    id: "R71",
+    surnames: ["Brock", "Antonellis", "Black", "DiMenna", "Vanhatalo", "Jones", "Bailey"],
+    cite: "Brock K, Antonellis P, Black MI, DiMenna FJ, Vanhatalo A, Jones AM, Bailey SJ. Improvement of oxygen-uptake kinetics and cycling performance with combined prior exercise and fast start. Int J Sports Physiol Perform. 2018;13(3):305-312.",
+    supports: "9 hombres, contrarreloj simulada de 4 km (~6,7 min): un ejercicio severo previo más una salida a fondo de 12 s aceleró la cinética del VO2 y mejoró el tiempo (402 s vs 408-411 s) más que cada estrategia por separado.",
+    level: "Estudio de laboratorio pequeño (n=9) en un esfuerzo corto; no se verificó el tiempo de descanso entre el ejercicio previo y la prueba. No es extrapolable a pruebas de varias horas.",
+    checked: "abstract",
+  },
+  {
+    id: "R72",
+    surnames: ["Boullosa", "Gil-Calvo", "Xenofondos", "Pyne"],
+    cite: "Boullosa D, Gil-Calvo M, Xenofondos A, et al. International expert consensus on warm-up protocols for athletes: a Delphi study. Int J Sports Physiol Perform. 2026 (publicación anticipada, 20 jul 2026).",
+    supports: "Consenso de 23 expertos (3 rondas, 80 % de acuerdo): el calentamiento general debe ser mayormente aeróbico; su duración depende de las exigencias del deporte; bloques cortos de muy alta intensidad (~30 s) pueden acelerar la cinética del oxígeno. No trae afirmaciones específicas de ciclismo ni sobre cuánto antes de la largada debe terminar el calentamiento.",
+    level: "Consenso de expertos (nivel bajo de evidencia): refleja opinión informada, no ensayos. Lo leí a través de una extracción automática del PDF, no página por página.",
+    checked: "abstract",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

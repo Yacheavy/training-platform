@@ -8,6 +8,7 @@ import { adaptForIndoor } from "./indoor";
 import { calculateTss, calculateKilojoules } from "./tss";
 import { calculateFueling } from "./fueling";
 import { isOffBike } from "./off-bike";
+import type { RaceEvent } from "./race-week";
 
 /** Cliente de base de datos; se inyecta en las pruebas con una base en memoria. */
 export type PlanDb = typeof defaultDb;
@@ -54,7 +55,15 @@ export async function generateFullPlan(
   const now = opts?.now ?? new Date();
   const { execution, guard } = await loadAutoregulation(block.athleteId, now, prisma);
 
+  // Carreras A y B con fecha: mini-taper, activación de la víspera y calentamiento del día
+  const goalRows = await prisma.athleteGoal.findMany({ where: { athleteId: block.athleteId, goalType: "EVENT", eventDate: { not: null }, priority: { in: ["A", "B"] } } });
+  const events: RaceEvent[] = goalRows.filter((g) => g.eventDate).map((g) => ({ dateKey: g.eventDate!.toISOString().slice(0, 10), priority: String(g.priority), name: g.name }));
+  // Una puesta a punto termina el día del evento: cuenta como carrera A aunque el objetivo se haya borrado
+  const endKey = dateKeyLocal(block.endDate);
+  if (block.objective === "tapering" && !events.some((e) => e.dateKey === endKey)) events.push({ dateKey: endKey, priority: "A" });
+
   const plan = buildPlan({
+    events,
     block: { name: block.name, objective: block.objective, startDate: block.startDate, endDate: block.endDate },
     ftp: user.ftp,
     pvo2maxWatts: user.pvo2maxWatts,
@@ -80,7 +89,7 @@ export async function generateFullPlan(
   });
 
   // Red de seguridad: si el plan viola una regla del protocolo se avisa en la respuesta.
-  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts, banned: thresholds?.bannedStimuli ?? [] });
+  const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts, banned: thresholds?.bannedStimuli ?? [], events });
 
   const withNote = (r: string) => (opts?.coachNote ? `${r} · ${opts.coachNote}` : r);
   const created: string[] = [];

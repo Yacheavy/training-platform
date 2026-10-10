@@ -15,6 +15,8 @@ const TYPE_LABELS: Record<string, string> = {
   rst: "RST",
   sweet_spot: "Sweet spot",
   z2_progressive: "Z2 progresivo",
+  activacion: "Activación",
+  calentamiento_carrera: "Calentamiento de carrera",
   endurance_tempo: "Tempo",
   long_durability: "Largo + final",
   torque_low_cadence: "Torque",

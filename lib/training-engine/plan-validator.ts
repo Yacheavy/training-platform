@@ -2,6 +2,8 @@ import type { PlannedDay } from "./plan-builder";
 import { MIN_GAP_DAYS_BETWEEN_VO2MAX, MIN_GAP_DAYS_BETWEEN_HARD } from "./quality-assignment";
 import { VARIANTS, intensityOf, isNeuroKey } from "./variants";
 import { isOffBike } from "./off-bike";
+import { dateKeyLocal } from "../tz";
+import { ACTIVATION_KEY, RACE_WARMUP_KEY, NO_QUALITY_DAYS, RACE_EASY_MAX_MIN, gymFreeDays, raceContext, type RaceEvent } from "./race-week";
 
 /**
  * Invariantes que TODO plan generado debe cumplir. Devuelve la lista de
@@ -15,7 +17,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const isCoolType = (t: string) => t.startsWith("cooldown");
 const isWarmType = (t: string) => t.startsWith("warmup");
 
-export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: number; pvo2maxWatts?: number | null; banned?: string[] }): string[] {
+export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: number; pvo2maxWatts?: number | null; banned?: string[]; events?: RaceEvent[] }): string[] {
   const w: string[] = [];
   const label = (d: PlannedDay) => `${d.date.toISOString().slice(0, 10)} (${d.stimulusType})`;
 
@@ -42,7 +44,9 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     const hard = cyc
       .filter((d) => HARD_STIMULI.has(d.stimulusType))
       .reduce((s, d) => s + d.blocks.filter((b) => b.type === "interval" || b.type.startsWith("test")).reduce((a, b) => a + b.durationSec, 0), 0);
-    if (total > 0 && hard / total > 0.2) w.push(`Semana ${wk + 1}: ${Math.round((hard / total) * 100)}% del tiempo en intensidad alta (>20%)`);
+    // En la semana de una carrera el volumen baja y la intensidad se conserva a propósito (taper): la proporción sube y está bien
+    const raceWeek = days.some((d) => d.rationale.includes("MINI-TAPER") || d.stimulusType === ACTIVATION_KEY || d.stimulusType === RACE_WARMUP_KEY);
+    if (!raceWeek && total > 0 && hard / total > 0.2) w.push(`Semana ${wk + 1}: ${Math.round((hard / total) * 100)}% del tiempo en intensidad alta (>20%)`);
   }
 
   // Separación entre sesiones duras (circular no aplica entre semanas: usa fechas reales)
@@ -182,6 +186,36 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       if (main.length && Math.max(...main.map((b) => b.targetWatts)) > ctx.ftp * 0.76) w.push(`${label(d)}: Z2 progresivo supera el 76% FTP`);
     }
     if (!Number.isFinite(d.tss) || d.tss < 0 || d.tss > 400) w.push(`${label(d)}: TSS fuera de rango (${d.tss})`);
+  }
+
+  // Semana de carrera (A/B): víspera con activación, día con calentamiento, últimos días sin gimnasio ni calidad
+  for (const d of plan) {
+    if (d.stimulusType === ACTIVATION_KEY) {
+      const ivs = d.blocks.filter((b) => b.type === "interval");
+      const total = d.blocks.reduce((s, b) => s + b.durationSec, 0);
+      if (ivs.length < 2 || ivs.length > 3) w.push(`${label(d)}: la activación lleva ${ivs.length} aperturas (esperado 2 o 3)`);
+      if (ivs.some((b) => b.durationSec > 60)) w.push(`${label(d)}: apertura de más de 60 s en la activación`);
+      if (ivs.reduce((s, b) => s + b.durationSec, 0) > total * 0.05) w.push(`${label(d)}: demasiado tiempo de apertura en la activación`);
+      if (total < 30 * 60 || total > 50 * 60) w.push(`${label(d)}: la activación dura ${Math.round(total / 60)} min (esperado 30–50)`);
+    }
+    if (d.stimulusType === RACE_WARMUP_KEY) {
+      const total = d.blocks.reduce((s, b) => s + b.durationSec, 0);
+      if (d.blocks.some((b) => !isWarmType(b.type))) w.push(`${label(d)}: el calentamiento de carrera tiene bloques que no son de calentamiento`);
+      if (total < 15 * 60 || total > 25 * 60) w.push(`${label(d)}: el calentamiento de carrera dura ${Math.round(total / 60)} min (esperado 15–25)`);
+    }
+    const r = ctx.events ? raceContext(dateKeyLocal(d.date), ctx.events) : null;
+    if (!r) continue;
+    if (r.daysTo === 1 && d.stimulusType !== ACTIVATION_KEY) w.push(`${label(d)}: la víspera de la carrera debe ser la activación`);
+    if (r.daysTo === 0 && d.stimulusType !== RACE_WARMUP_KEY) w.push(`${label(d)}: el día de la carrera debe llevar el calentamiento`);
+    if (r.daysTo >= 1 && d.stimulusType === "gym" && r.daysTo <= gymFreeDays(r.priority)) w.push(`${label(d)}: gimnasio a ${r.daysTo} día(s) de la carrera`);
+    if (r.daysTo >= 2 && r.daysTo <= NO_QUALITY_DAYS) {
+      if (isOffBike(d.stimulusType) ? false : isHardVariant(d.stimulusType) || intensityOf(d.stimulusType) > 0 || d.stimulusType === "z2_sprints" || d.blocks.some((b) => b.type === "interval")) {
+        w.push(`${label(d)}: sesión con intensidad a ${r.daysTo} días de la carrera`);
+      }
+      const durMin = d.blocks.reduce((s, b) => s + b.durationSec, 0) / 60;
+      if (!isOffBike(d.stimulusType) && durMin > RACE_EASY_MAX_MIN + 1) w.push(`${label(d)}: rodaje de ${Math.round(durMin)} min a ${r.daysTo} días de la carrera (máx. ${RACE_EASY_MAX_MIN})`);
+    }
+    if (d.stimulusType.startsWith("ftp_test")) w.push(`${label(d)}: test de FTP en la semana de una carrera`);
   }
 
   // Informativo: velocidad de subida de la carga semanal (TSS) entre semanas de carga consecutivas.

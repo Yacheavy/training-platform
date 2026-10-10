@@ -7,6 +7,8 @@ export const STIMULUS_LABELS: Record<string, string> = {
   ronnestad_30_15: "Rønnestad 30/15",
   z2_sprints: "Z2 + sprints",
   z2_progressive: "Z2 progresivo",
+  activacion: "Activación pre-carrera",
+  calentamiento_carrera: "Calentamiento de carrera",
   endurance_tempo: "Tempo en bloques",
   long_durability: "Salida larga + esfuerzo final",
   torque_low_cadence: "Torque a cadencia baja",

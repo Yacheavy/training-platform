@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { applySeasonCore } from "@/lib/season-apply";
+import { deletePlannedSessionsOfBlock } from "@/lib/plan-core";
 
 async function requireUserId() {
   const session = await auth();
@@ -36,7 +37,7 @@ export async function deleteFutureBlock(formData: FormData) {
   const block = await prisma.trainingBlock.findFirst({ where: { id, athleteId } });
   if (!block) throw new Error("Bloque no encontrado");
   if (block.startDate.getTime() <= Date.now()) throw new Error("Solo se pueden eliminar bloques que todavía no empezaron");
-  await prisma.generatedWorkout.deleteMany({ where: { athleteId, status: { in: ["PLANNED", "SUGGESTED"] }, date: { gte: block.startDate, lt: block.endDate } } });
+  await deletePlannedSessionsOfBlock(athleteId, block);
   await prisma.weeklyReview.deleteMany({ where: { trainingBlockId: id } });
   await prisma.trainingBlock.delete({ where: { id } });
   revalidatePath("/settings");

@@ -77,7 +77,7 @@ export function GoalsCard({
         <div>
           <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Objetivos</h2>
           <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: 0 }}>
-            Carreras y metas que orientan tu plan. La prioridad indica cuánto se organiza el entrenamiento alrededor de cada una.
+            Carreras y metas que orientan tu plan. La prioridad indica cuánto se organiza el entrenamiento alrededor de cada una. En las A y B el plan arma la semana previa: una activación la víspera y un calentamiento el día de la carrera.
           </p>
         </div>
         {!open && (

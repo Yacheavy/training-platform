@@ -9,6 +9,7 @@ import { generateFullPlan, type PlanDb } from "./training-engine/generate-full-p
 import { regenerateBlocks } from "./training-engine/regenerate";
 import { isOffBike } from "./training-engine/off-bike";
 import { dayStartLocal, dateKeyLocal } from "./tz";
+import { ACTIVATION_KEY, RACE_WARMUP_KEY, gymFreeDays, raceContext } from "./training-engine/race-week";
 
 // ───────────────────────── base en memoria ─────────────────────────
 type Row = Record<string, any>;
@@ -67,15 +68,15 @@ const NOW = new Date("2026-10-09T15:00:00Z");
 const DAYMS = 86400000;
 type Slot = [dow: number, type: string, min: number, quality: boolean];
 const FULL: Slot[] = [[0, "cycling", 240, false], [1, "rest", 60, false], [2, "cycling", 120, true], [3, "gym", 90, false], [4, "cycling", 120, true], [5, "gym", 90, false], [6, "cycling", 180, false]];
-interface Profile { id: string; ftp: number | null; pvo2?: number | null; template: Slot[]; thresholds?: Row | null; goal?: { type: "EVENT" | "PERFORMANCE"; inDays: number } | null; manualWeeks?: number; expect?: "error" | "empty" }
+interface Profile { id: string; ftp: number | null; pvo2?: number | null; template: Slot[]; thresholds?: Row | null; goal?: { type: "EVENT" | "PERFORMANCE"; inDays: number } | null; /** carrera B además del objetivo */ bGoalInDays?: number; manualWeeks?: number; expect?: "error" | "empty" }
 const PROFILES: Profile[] = [
-  { id: "coach-12sem-evento", ftp: 300, pvo2: 370, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 6, ftpTestProtocol: "20min", vo2Stimulus: "ronnestad_30_15", varietyLevel: "balanced", bannedStimuli: ["torque_low_cadence"], periodization: "linear" }, goal: { type: "EVENT", inDays: 84 } },
+  { id: "coach-12sem-evento", ftp: 300, pvo2: 370, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 6, ftpTestProtocol: "20min", vo2Stimulus: "ronnestad_30_15", varietyLevel: "balanced", bannedStimuli: ["torque_low_cadence"], periodization: "linear" }, goal: { type: "EVENT", inDays: 84 }, bGoalInDays: 40 },
   { id: "gym-y-flexibilidad", ftp: 270, pvo2: 340, template: [[0, "cycling", 240, false], [1, "flexibility", 20, false], [2, "cycling", 90, true], [3, "gym", 75, false], [4, "cycling", 90, true], [5, "gym", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 6, flexibilityEnabled: true, periodization: "linear" }, goal: { type: "EVENT", inDays: 70 } },
   { id: "contraste-frances", ftp: 290, pvo2: 360, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 6, contrastMode: "frances" }, goal: { type: "EVENT", inDays: 120 } },
   { id: "contraste-tradicional", ftp: 290, pvo2: 360, template: FULL, thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 6, contrastMode: "tradicional", flexibilityEnabled: true }, goal: { type: "EVENT", inDays: 120 } },
   { id: "sin-vo2max-rendimiento", ftp: 280, pvo2: null, template: FULL, thresholds: null, goal: { type: "PERFORMANCE", inDays: 70 } },
   { id: "3-dias-30-semanas", ftp: 180, pvo2: 230, template: [[0, "cycling", 150, false], [2, "cycling", 75, true], [4, "cycling", 60, true]], thresholds: { deloadRatio: "3:1", weeksBetweenFtpTest: 8, ftpTestProtocol: "8min", vo2Stimulus: "hiit_genuino", varietyLevel: "high", bannedStimuli: [], periodization: "block" }, goal: { type: "EVENT", inDays: 210 } },
-  { id: "calidad-consecutiva", ftp: 250, pvo2: 320, template: [[0, "cycling", 200, false], [1, "rest", 60, false], [2, "cycling", 90, true], [3, "cycling", 90, true], [4, "rest", 60, false], [5, "cycling", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "2:1", weeksBetweenFtpTest: 5, ftpTestProtocol: "5min", vo2Stimulus: "billat_30_30", varietyLevel: "low", bannedStimuli: ["sprint_neuro", "z2_sprints"], periodization: "linear" }, goal: { type: "EVENT", inDays: 45 } },
+  { id: "calidad-consecutiva", bGoalInDays: 24, ftp: 250, pvo2: 320, template: [[0, "cycling", 200, false], [1, "rest", 60, false], [2, "cycling", 90, true], [3, "cycling", 90, true], [4, "rest", 60, false], [5, "cycling", 60, false], [6, "cycling", 150, false]], thresholds: { deloadRatio: "2:1", weeksBetweenFtpTest: 5, ftpTestProtocol: "5min", vo2Stimulus: "billat_30_30", varietyLevel: "low", bannedStimuli: ["sprint_neuro", "z2_sprints"], periodization: "linear" }, goal: { type: "EVENT", inDays: 45 } },
   { id: "objetivo-en-20-dias", ftp: 260, pvo2: 330, template: FULL, thresholds: null, goal: { type: "EVENT", inDays: 20 } },
   { id: "sin-objetivo-bloque-manual", ftp: 220, pvo2: 280, template: FULL, thresholds: { deloadRatio: "4:1", weeksBetweenFtpTest: 4, periodization: "block" }, goal: null, manualWeeks: 6 },
   { id: "sin-plantilla", ftp: 250, pvo2: 300, template: [], thresholds: null, goal: { type: "EVENT", inDays: 84 }, expect: "error" },
@@ -101,11 +102,26 @@ function invariants(db: ReturnType<typeof makeDb>, p: Profile, tag: string) {
   for (let i = 1; i < blocks.length; i++) ok(dateKeyLocal(blocks[i].startDate) === dateKeyLocal(blocks[i - 1].endDate), `${tag}: hueco o solape entre bloques ${i - 1} y ${i}`);
   // cobertura por plantilla
   const slot = new Map(p.template.map(([d, t, min, q]) => [d, { t, min, q }]));
+  // Carreras A/B del perfil: la víspera lleva la activación, sin gimnasio en los últimos días y el día de la carrera el calentamiento
+  const events: { dateKey: string; priority: string }[] = [];
+  if (p.goal?.type === "EVENT") events.push({ dateKey: keyOf(new Date(NOW.getTime() + p.goal.inDays * DAYMS)), priority: "A" });
+  if (p.bGoalInDays) events.push({ dateKey: keyOf(new Date(NOW.getTime() + p.bGoalInDays * DAYMS)), priority: "B" });
+  for (const e of events) {
+    const eveKey = keyOf(new Date(new Date(e.dateKey + "T00:00:00Z").getTime() - DAYMS));
+    const lastEnd = blocks.length ? dateKeyLocal(blocks[blocks.length - 1].endDate) : "";
+    const covered = blocks.some((b) => dateKeyLocal(b.startDate) <= e.dateKey && e.dateKey <= dateKeyLocal(b.endDate));
+    if (!covered) continue;
+    ok(byDate.get(eveKey)?.[0]?.workoutLibraryKey === ACTIVATION_KEY, `${tag}: la víspera de la carrera ${e.priority} (${eveKey}) no es la activación (${byDate.get(eveKey)?.[0]?.workoutLibraryKey})`);
+    ok(byDate.get(e.dateKey)?.[0]?.workoutLibraryKey === RACE_WARMUP_KEY, `${tag}: el día de la carrera ${e.priority} (${e.dateKey}) no tiene calentamiento (${byDate.get(e.dateKey)?.[0]?.workoutLibraryKey}); último bloque hasta ${lastEnd}`);
+  }
   for (const b of blocks) {
     const startMs = new Date(keyOf(b.startDate) + "T00:00:00Z").getTime();
     const endMs = new Date(dateKeyLocal(b.endDate) + "T00:00:00Z").getTime();
     for (let ms = startMs; ms < endMs; ms += DAYMS) {
       const d = new Date(ms), k = keyOf(d), sl = slot.get(d.getUTCDay()), got = byDate.get(k)?.[0];
+      const rc = raceContext(k, events);
+      if (rc && rc.daysTo <= 1) continue; // víspera y día de carrera: verificados arriba
+      if (rc && sl?.t === "gym" && rc.daysTo <= gymFreeDays(rc.priority)) { ok(!got, `${tag}: ${k} tiene gimnasio a ${rc.daysTo} días de la carrera ${rc.priority}`); continue; }
       if (!sl || sl.t === "rest") { ok(!got, `${tag}: ${k} es descanso y tiene sesión (${got?.workoutLibraryKey})`); continue; }
       ok(!!got, `${tag}: falta sesión el ${k} (${["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][d.getUTCDay()]}) del bloque ${b.name}`);
       if (!got) continue;
@@ -133,6 +149,11 @@ function invariants(db: ReturnType<typeof makeDb>, p: Profile, tag: string) {
       continue;
     }
     ok(bl.every((x) => Number.isFinite(x.durationSec) && x.durationSec > 0 && Number.isFinite(x.targetWatts) && x.targetWatts > 0), `${tag}: ${k} con duración/potencia inválida`);
+    if (s.workoutLibraryKey === ACTIVATION_KEY || s.workoutLibraryKey === RACE_WARMUP_KEY) {
+      ok(Number.isFinite(s.estimatedTss) && s.estimatedTss > 0 && s.estimatedTss < 60, `${tag}: ${k} TSS de ${s.workoutLibraryKey} fuera de rango (${s.estimatedTss})`);
+      ok(String(s.rationale ?? "").length > 40, `${tag}: ${k} sin explicación`);
+      continue;
+    }
     ok(Number.isFinite(s.estimatedTss) && s.estimatedTss > 0 && s.estimatedTss < 400, `${tag}: ${k} TSS fuera de rango (${s.estimatedTss})`);
     const slotMin = slot.get(dow(s.date))?.min ?? 0;
     const mins = bl.reduce((a, x) => a + x.durationSec, 0) / 60;
@@ -157,6 +178,8 @@ async function run() {
     if (p.thresholds) db.athleteThresholds.rows.push({ id: "t" + p.id, athleteId: p.id, ...p.thresholds });
     for (const [d, t, min, q] of p.template) db.trainingTemplateSlot.rows.push({ id: `s${++seq}`, athleteId: p.id, dayOfWeek: d, stimulusType: t, targetDurationMin: min, appliesInPhases: [], isQualityDay: q });
     if (p.goal) db.athleteGoal.rows.push({ id: "g" + p.id, athleteId: p.id, goalType: p.goal.type, name: "Objetivo", eventDate: new Date(new Date(NOW.getTime() + p.goal.inDays * DAYMS).toISOString().slice(0, 10) + "T00:00:00Z"), priority: "A", metric: null });
+
+    if (p.bGoalInDays) db.athleteGoal.rows.push({ id: "gb" + p.id, athleteId: p.id, goalType: "EVENT", name: "Carrera B", eventDate: new Date(new Date(NOW.getTime() + p.bGoalInDays * DAYMS).toISOString().slice(0, 10) + "T00:00:00Z"), priority: "B", metric: null });
 
     // 1) crear
     let r: any;
@@ -244,6 +267,9 @@ async function run() {
   for (const [id, s] of finalSnaps) ok(JSON.stringify(snap(db, id)) === s, `${id}: sus sesiones cambiaron por operaciones de otros alumnos`);
 
   for (const id of ["contraste-frances", "contraste-tradicional"]) ok(contrastSeen.has(id), `${id}: el plan no generó ninguna superserie de contraste`);
+  const raceRows = db.generatedWorkout.rows.filter((r: Row) => r.workoutLibraryKey === ACTIVATION_KEY || r.workoutLibraryKey === RACE_WARMUP_KEY);
+  ok(raceRows.length >= 12, `solo ${raceRows.length} sesiones de carrera en todos los perfiles`);
+  log.push(`\nsesiones de carrera generadas: ${raceRows.filter((r: Row) => r.workoutLibraryKey === ACTIVATION_KEY).length} activaciones, ${raceRows.filter((r: Row) => r.workoutLibraryKey === RACE_WARMUP_KEY).length} calentamientos`);
   console.log(log.join("\n"));
   console.log(`\n${checks} comprobaciones, ${failures} fallas`);
   process.exit(failures ? 1 : 0);

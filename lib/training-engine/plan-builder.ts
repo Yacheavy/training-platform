@@ -9,6 +9,11 @@ import { MID_INTENSITY_KEYS, type IntensityGuard } from "./autoregulation";
 import { dayOfWeekLocal, dateKeyLocal } from "../tz";
 import { buildGymSession, buildFlexSession, gymBlocks } from "./strength";
 import { isOffBike } from "./off-bike";
+import {
+  ACTIVATION_KEY, RACE_WARMUP_KEY, MINI_TAPER_DAYS, MINI_TAPER_MULT, NO_QUALITY_DAYS, RACE_EASY_MAX_MIN, gymFreeDays, raceContext,
+  buildActivationBlocks, buildRaceWarmupBlocks, activationRationale, raceWarmupRationale, miniTaperRationale,
+  type RaceEvent,
+} from "./race-week";
 
 /**
  * Planificador PURO (sin base de datos): dado el bloque, el FTP, los umbrales,
@@ -140,6 +145,8 @@ export function buildPlan(input: {
   /** Protección de distribución de intensidad (aplica hasta `guardUntilOffset`, inclusive). */
   guard?: IntensityGuard | null;
   guardUntilOffset?: number;
+  /** Eventos con fecha (carreras A/B): activan el mini-taper, la activación de la víspera y el calentamiento del día. */
+  events?: RaceEvent[];
 }): PlannedDay[] {
   const { block, ftp, pvo2maxWatts, thresholds, template, library } = input;
   const level = normalizeLevel(thresholds.varietyLevel);
@@ -180,6 +187,27 @@ export function buildPlan(input: {
       })
     : buildMesocycleWeeks(totalWeeks, thresholds.deloadRatio);
   const taperWeek = (i: number) => isTapering && totalWeeks - 1 - i <= 1;
+
+  // Carreras A/B: un bloque de puesta a punto termina en la fecha del evento (la propone la temporada), así que cuenta como una A
+  // aunque el objetivo ya no exista.
+  const blockEndKey = dateKeyLocal(block.endDate);
+  const raceEvents: RaceEvent[] = [...(input.events ?? [])];
+  if (isTapering && !raceEvents.some((e) => e.dateKey === blockEndKey && (e.priority === "A" || e.priority === "B"))) {
+    raceEvents.push({ dateKey: blockEndKey, priority: "A" });
+  }
+  // El día de la carrera es el primer día después del bloque que termina ese día (si otro bloque empieza ahí, ese plan lo repite igual y no se duplica)
+  const loopDays = totalDays + (raceEvents.some((e) => e.dateKey === blockEndKey && (e.priority === "A" || e.priority === "B")) ? 1 : 0);
+  const keyOfOffset = (o: number) => dateKeyLocal(new Date(block.startDate.getTime() + o * DAY_MS));
+  /** En la última semana de puesta a punto, la sesión de calidad que se conserva es la primera que queda a 4 días o más de la carrera. */
+  const taperKeepOffset = (weekIndex: number): number => {
+    for (let o = weekIndex * 7; o < Math.min(totalDays, weekIndex * 7 + 7); o++) {
+      const s = slotByDay.get(dayOfWeekLocal(new Date(block.startDate.getTime() + o * DAY_MS)));
+      if (!(s && s.stimulusType === "cycling" && s.isQualityDay)) continue;
+      const r = raceContext(keyOfOffset(o), raceEvents);
+      if (!r || r.daysTo >= MINI_TAPER_DAYS) return o;
+    }
+    return -1;
+  };
   const cycleLength = (parseInt(thresholds.deloadRatio.split(":")[0], 10) || 3) + 1;
   const ftpTestWeekIndices = computeFtpTestWeekIndices(totalWeeks, thresholds.weeksBetweenFtpTest, mesocycleWeeks);
   const ftpTestStimulusType = getFtpTestStimulusType(thresholds.ftpTestProtocol);
@@ -206,15 +234,47 @@ export function buildPlan(input: {
     return out;
   };
 
-  for (let dayOffset = 0; dayOffset < totalDays; dayOffset++) {
+  for (let dayOffset = 0; dayOffset < loopDays; dayOffset++) {
     const date = new Date(block.startDate.getTime() + dayOffset * DAY_MS);
     const dayOfWeek = dayOfWeekLocal(date);
+    const race = raceContext(dateKeyLocal(date), raceEvents);
+
+    // Día de la carrera y víspera: sesiones propias que pisan la semana tipo (calentamiento / activación)
+    if (race && race.daysTo <= 1) {
+      const raceDay = race.daysTo === 0;
+      const sl = slotByDay.get(dayOfWeek);
+      const actMin = sl && sl.stimulusType === "cycling" && sl.targetDurationMin ? Math.max(30, Math.min(45, sl.targetDurationMin)) : 40;
+      const rBlocks = raceDay ? buildRaceWarmupBlocks(ftp) : buildActivationBlocks(ftp, race.priority, actMin);
+      const rKey = raceDay ? RACE_WARMUP_KEY : ACTIVATION_KEY;
+      keyByOffset.set(dayOffset, rKey);
+      const optional = !raceDay && (!sl || sl.stimulusType === "rest") ? " · Es opcional: en tu semana tipo este día era de descanso." : "";
+      days.push({
+        date,
+        dayOffset,
+        weekIndex: Math.floor(dayOffset / 7),
+        dayOfWeek,
+        isDeload: false,
+        isQualityDay: false,
+        stimulusType: rKey,
+        blocks: rBlocks,
+        tss: calculateTss(rBlocks, ftp),
+        fueling: calculateFueling(rBlocks, ftp),
+        rationale: `Plan del bloque "${block.name}" — ${raceDay ? raceWarmupRationale(race) : activationRationale(race)}${optional}`,
+        slotTargetMin: Math.round(rBlocks.reduce((s, b) => s + b.durationSec, 0) / 60),
+      });
+      continue;
+    }
 
     const slot = slotByDay.get(dayOfWeek);
     if (!slot || slot.stimulusType === "rest") continue;
+    // Gimnasio fuera de los últimos días antes de la carrera (A: 4, B: 3)
+    if (race && slot.stimulusType === "gym" && race.daysTo <= gymFreeDays(race.priority)) continue;
 
     const weekIndex = Math.floor(dayOffset / 7);
     const mesocycleWeek = mesocycleWeeks[weekIndex] ?? mesocycleWeeks[mesocycleWeeks.length - 1];
+    const miniTaper = !!race && race.daysTo <= MINI_TAPER_DAYS;
+    const raceEasy = !!race && race.daysTo >= 2 && race.daysTo <= NO_QUALITY_DAYS;
+    const loadMult = miniTaper ? Math.min(mesocycleWeek.loadMultiplier, MINI_TAPER_MULT) : mesocycleWeek.loadMultiplier;
     const isFtpTestWeek = ftpTestWeekIndices.has(weekIndex);
     // Periodización por bloques (adaptación propia inspirada en Rønnestad 2014): la primera semana de carga de cada
     // mesociclo concentra 2 sesiones principales de VO2max (el estudio usó 5); el resto de las semanas, 1.
@@ -250,7 +310,7 @@ export function buildPlan(input: {
         weekIndex,
         dayOffset,
         allowRepeat: intensifiedWeek && r === "primary",
-        slotMin: fullSlot ? (slot.targetDurationMin ?? 60) : Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier),
+        slotMin: fullSlot ? (slot.targetDurationMin ?? 60) : Math.round((slot.targetDurationMin ?? 60) * loadMult),
         isDeload: deload,
         history: ledger,
         banned,
@@ -263,13 +323,17 @@ export function buildPlan(input: {
       effectiveStimulusType = "gym";
     } else if (slot.stimulusType === "flexibility") {
       effectiveStimulusType = "flexibility";
-    } else if (isFtpTestWeek && slot.isQualityDay && isFirstQualityDayOfWeek) {
+    } else if (raceEasy) {
+      // A 2–3 días de la carrera: sin calidad ni salidas largas, solo rodaje suave y corto
+      effectiveStimulusType = "z2";
+      role = "volume";
+    } else if (isFtpTestWeek && slot.isQualityDay && isFirstQualityDayOfWeek && !race) {
       effectiveStimulusType = ftpTestStimulusType;
     } else if (isTapering) {
       // Taper: lógica original (sin selector de variantes)
       if (slot.isQualityDay) {
         if (taperWeek(weekIndex)) {
-          const keep = isFirstQualityDayOfWeek;
+          const keep = dayOffset === taperKeepOffset(weekIndex);
           const keepSprints = !keep && baseStimuliForWeek[qualityPos] === "z2_sprints";
           effectiveStimulusType = keep ? "hiit_genuino" : keepSprints ? "z2_sprints" : "z2";
           maintenance = keep || keepSprints;
@@ -312,7 +376,7 @@ export function buildPlan(input: {
     }
 
     const fixed = input.fixedKeys?.[dayOffset];
-    if (fixed && !isTapering && !isOffBike(effectiveStimulusType) && !effectiveStimulusType.startsWith("ftp_test") && VARIANTS[fixed]) {
+    if (fixed && !isTapering && !raceEasy && !isOffBike(effectiveStimulusType) && !effectiveStimulusType.startsWith("ftp_test") && VARIANTS[fixed]) {
       effectiveStimulusType = fixed;
     }
     if (!isTapering && !isOffBike(effectiveStimulusType) && !effectiveStimulusType.startsWith("ftp_test")) {
@@ -321,7 +385,7 @@ export function buildPlan(input: {
     keyByOffset.set(dayOffset, effectiveStimulusType);
 
     const lib = library[effectiveStimulusType];
-    const targetDuration = Math.round((slot.targetDurationMin ?? 60) * mesocycleWeek.loadMultiplier);
+    const targetDuration = Math.min(raceEasy ? RACE_EASY_MAX_MIN : Infinity, Math.round((slot.targetDurationMin ?? 60) * loadMult));
 
     // Un escalón de progresión por mesociclo (cada 4-6 semanas según la base de conocimiento).
     const exec = input.execution?.[effectiveStimulusType];
@@ -343,7 +407,7 @@ export function buildPlan(input: {
         weekIndex,
         cycleLength,
         isDeload: mesocycleWeek.isDeload,
-        isTaperWeek: taperWeek(weekIndex),
+        isTaperWeek: taperWeek(weekIndex) || miniTaper,
         gymIndexInWeek: Math.max(0, gymDays.indexOf(dayOffset)),
         gymCountInWeek: gymDays.length,
         nextDayHard: nextHard,
@@ -404,6 +468,11 @@ export function buildPlan(input: {
       rationaleParts.push(`Día de flexibilidad → ${gymTitle}`);
     } else {
       rationaleParts.push("Día de volumen → z2");
+    }
+
+    if (race && miniTaper) {
+      if (raceEasy) rationaleParts.push(`A ${race.daysTo} días de la carrera no hay calidad: rodaje suave y corto (máx. ${RACE_EASY_MAX_MIN} min, criterio de práctica)`);
+      rationaleParts.push(miniTaperRationale(race));
     }
 
     // El protocolo manda sobre el tiempo del slot: si lo supera, se le avisa al alumno en la propia sesión

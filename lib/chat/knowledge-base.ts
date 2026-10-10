@@ -199,6 +199,28 @@ Z2 / BASE: 56-75% FTP [PRÁCTICA, rango de zonas].
 - Taper pre-competencia: ~2 semanas, reducción exponencial del volumen 41-60% SIN tocar intensidad ni frecuencia
   [R12] (metaanálisis en deportes de resistencia en general). Distinto de deload por fatiga acumulada, que no tiene
   calendario fijo: se dispara por evidencia de marcadores. La estructura de deload 3:1 o 4:1 es [PRÁCTICA].
+  Un metaanálisis posterior de 14 estudios coincide: el beneficio en contrarreloj aparece con reducciones de 41-60% sin
+  tocar intensidad ni frecuencia, en diseño progresivo o en escalón, y el taper con sobrecarga previa rindió más [R66]
+  (resumen leído; el umbral de duración no se pudo leer y no se usa). Un ensayo pequeño en ciclistas de élite (n=17)
+  encontró que 6 días de HIIT diario más 5 de taper superaron a un taper tradicional de 11 días en VO2pico y potencia de
+  1 min, sin medir una carrera [R67]: no es una regla de la app.
+- Semana de carrera (A y B). Qué hace el sistema y qué respaldo tiene:
+  · Carrera A con margen: puesta a punto de ~2 semanas (60 % y 45 % del volumen), con una sesión de calidad conservada
+    que queda a 4 días o más de la carrera [R12][R66]. Carrera B: mini-taper de 4 días con ~30 % menos de volumen; es
+    criterio de práctica, SIN estudio propio.
+  · Últimos días [PRÁCTICA, sin estudio]: sin gimnasio desde 4 días antes (A) o 3 días (B), sin calidad a 2-3 días
+    (rodaje suave de hasta 75 min) y sin test de FTP en la semana de la carrera.
+  · Activación la víspera [PRÁCTICA]: ~40 min con 3 aperturas (A) o 2 (B) de 40 s a ritmo de carrera. La única
+    evidencia directa que encontré es una tesis (n=8, no revisada por pares): intervalos 24 h antes de una contrarreloj de
+    40 km no cambiaron el resultado [R68]. Hay que decir que no se demostró beneficio, tampoco perjuicio.
+  · Calentamiento del día [PRÁCTICA con respaldo parcial]: ~20 min con dos activaciones de 45 s, para terminar 10-15 min
+    antes de la largada (ese tiempo no tiene estudio). Calentar ayuda en general [R69], sobre todo al arranque del esfuerzo:
+    en una contrarreloj de 20 min mejoró el salto y dio más potencia en los primeros 3 min, pero no el resultado global
+    [R70]; en 4 km un esfuerzo previo más una salida a fondo ayudó [R71]. El consenso de expertos (nivel bajo) pide
+    calentamiento aeróbico y dice que su duración depende del deporte [R72]. En pruebas largas (más de 2 h) se aconseja
+    recortarlo.
+  · Nutrición de la víspera y del día: la app NO da cifras de carga de carbohidratos porque no hay una fuente verificada
+    en la bibliografía; derivar al entrenador o a un nutricionista deportivo.
 
 --- FUERZA ---
 

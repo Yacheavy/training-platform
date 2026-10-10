@@ -9,6 +9,8 @@ const PREFIX: Record<string, string> = {
   ronnestad_30_15: "30/15",
   z2_sprints: "Z2+SPR",
   z2_progressive: "Z2+PROG",
+  activacion: "ACTIV",
+  calentamiento_carrera: "CALENT",
   endurance_tempo: "TEMPO",
   long_durability: "LARGO+",
   torque_low_cadence: "TORQUE",

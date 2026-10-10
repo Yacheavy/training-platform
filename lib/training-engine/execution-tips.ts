@@ -7,6 +7,16 @@
  */
 export function getExecutionTips(stimulusType: string): string[] {
   const tips: Record<string, string[]> = {
+    activacion: [
+      "Las aperturas son cortas y de ritmo de carrera, no de esfuerzo máximo: terminá cada una con la sensación de que podías hacer otra.",
+      "Recuperá por completo entre aperturas (2′30″ suaves). Si las piernas están pesadas, salteá las aperturas y hacé solo el rodaje.",
+      "No es una sesión para sumar forma: la forma que hay es la de las últimas semanas. Hidratate bien y comé normal, sin probar comidas nuevas.",
+    ],
+    calentamiento_carrera: [
+      "Empezá unos 30 min antes de la largada para terminar 10–15 min antes. Después quedate suave y tomá agua; evitá enfriarte parado.",
+      "Si la prueba es larga (más de 2 h), hacé solo hasta la primera activación: no gastes piernas en el calentamiento.",
+      "Si la prueba arranca fuerte (criterium, contrarreloj corta, ruta con subida al inicio), hacé las dos activaciones completas.",
+    ],
     hiit_genuino: [
       "No salgas fuerte en el primer intervalo — el objetivo es sostener la potencia target en los 7, no quemarte en el primero.",
       "Si en el intervalo 4-5 no llegás al watt objetivo, priorizá terminar la cantidad de repeticiones antes que la potencia exacta.",
