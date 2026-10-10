@@ -219,6 +219,15 @@ Z2 / BASE: 56-75% FTP [PRÁCTICA, rango de zonas].
     [R70]; en 4 km un esfuerzo previo más una salida a fondo ayudó [R71]. El consenso de expertos (nivel bajo) pide
     calentamiento aeróbico y dice que su duración depende del deporte [R72]. En pruebas largas (más de 2 h) se aconseja
     recortarlo.
+  · Perfil de la prueba (campo "Perfil de la prueba" del objetivo: llano, ondulado, montaña, fondo, contrarreloj,
+    criterium; sin perfil = genérico). El perfil cambia la FORMA de la activación y del calentamiento [PRÁCTICA, criterio
+    propio]: NO hay estudios que comparen protocolos por perfil. Lo que sí se sabe: el calentamiento importa sobre todo
+    para los primeros minutos del esfuerzo [R73][R70] y la duración del calentamiento no cambió el resultado en
+    contrarrelojes de 5 km [R74]; en esfuerzos cortos y explosivos el calentamiento activo con algún sprint ayudó a la
+    potencia media [R75][R76]. Por eso: criterium y ondulado llevan activaciones cortas y fuertes y el criterium un sprint
+    de 8 s; montaña y contrarreloj, bloques más largos al ritmo de la prueba; fondo, un calentamiento corto y sin
+    activaciones fuertes; llano es el genérico. Decir siempre que es criterio, no evidencia por perfil. Si cambia el perfil
+    de un objetivo hay que regenerar el plan para que se aplique.
   · Nutrición de la víspera y del día: la app NO da cifras de carga de carbohidratos porque no hay una fuente verificada
     en la bibliografía; derivar al entrenador o a un nutricionista deportivo.
 

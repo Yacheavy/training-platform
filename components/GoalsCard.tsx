@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ActionForm } from "./ActionForm";
 import { SubmitButton } from "./SubmitButton";
+import { COURSE_PROFILES, courseProfileLabel } from "@/lib/training-engine/race-week";
 
 export interface GoalRow {
   id: string;
@@ -15,6 +16,8 @@ export interface GoalRow {
   targetValue: number | null;
   /** Lo cargó el entrenador */
   createdByCoach?: boolean;
+  /** Perfil de la prueba (adapta la activación y el calentamiento) */
+  courseProfile?: string | null;
 }
 
 const PRIORITY: Record<string, { label: string; desc: string; color: string }> = {
@@ -44,6 +47,7 @@ export function GoalsCard({
   currentFtp,
   addAction,
   deleteAction,
+  updateProfileAction,
   cardStyle,
   coachMode = false,
 }: {
@@ -52,6 +56,7 @@ export function GoalsCard({
   currentFtp: number | null;
   addAction: (formData: FormData) => Promise<unknown>;
   deleteAction: (formData: FormData) => Promise<unknown>;
+  updateProfileAction: (formData: FormData) => Promise<unknown>;
   cardStyle: React.CSSProperties;
   /** Lo ve el entrenador en la cuenta de un alumno (cambia el texto de la etiqueta). */
   coachMode?: boolean;
@@ -119,7 +124,28 @@ export function GoalsCard({
                     <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                       <span style={{ color: p.color, fontWeight: 600 }}>{p.label}</span>
                       {n != null && <span>{countdown(n)}</span>}
+                      {g.priority !== "C" && <span>· {courseProfileLabel(g.courseProfile) ?? "Perfil sin definir"}</span>}
                     </div>
+                    {g.priority !== "C" && (n == null || n >= 0) && (
+                      <details style={{ marginTop: "8px" }}>
+                        <summary style={{ fontSize: "11.5px", color: "var(--teal)", cursor: "pointer" }}>Perfil de la prueba</summary>
+                        <ActionForm action={updateProfileAction} success="Perfil guardado. Regenerá el plan para aplicarlo">
+                          <input type="hidden" name="id" value={g.id} />
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginTop: "8px" }}>
+                            <select name="courseProfile" defaultValue={g.courseProfile ?? ""} aria-label="Perfil de la prueba" style={{ background: "var(--surface-3)", color: "var(--text)", border: "1px solid var(--border-strong)", borderRadius: "8px", padding: "6px 8px", fontSize: "12px", maxWidth: "100%" }}>
+                              <option value="">Sin definir (genérico)</option>
+                              {COURSE_PROFILES.map((c) => (
+                                <option key={c.key} value={c.key}>{c.label}</option>
+                              ))}
+                            </select>
+                            <SubmitButton pendingText="Guardando…" style={{ background: "transparent", color: "var(--teal)", border: "1px solid var(--teal-dim)", borderRadius: "8px", padding: "5px 10px", fontSize: "12px" }}>
+                              Guardar
+                            </SubmitButton>
+                          </div>
+                          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "6px", lineHeight: 1.5 }}>Cambia la forma de la activación de la víspera y del calentamiento. Para que se aplique, regenerá el plan.</div>
+                        </ActionForm>
+                      </details>
+                    )}
                   </div>
                   <DeleteButton id={g.id} />
                 </div>
@@ -209,6 +235,23 @@ export function GoalsCard({
                   <input name="eventDate" type="date" required={type === "EVENT"} />
                 </div>
               </div>
+
+              {type === "EVENT" && (
+                <div className="field" style={{ gridColumn: "1 / -1" }}>
+                  <label>Perfil de la prueba (opcional)</label>
+                  <div className="control">
+                    <select name="courseProfile" defaultValue="">
+                      <option value="">Sin definir (genérico)</option>
+                      {COURSE_PROFILES.map((c) => (
+                        <option key={c.key} value={c.key}>{c.label} — {c.desc}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "6px", lineHeight: 1.5 }}>
+                    En las carreras A y B adapta la activación de la víspera y el calentamiento del día a cómo arranca la prueba.
+                  </div>
+                </div>
+              )}
 
               {type === "PERFORMANCE" && (
                 <>

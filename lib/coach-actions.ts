@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCoachId, requireCoachOfStudent } from "@/lib/access";
-import { addGoalCore, deleteGoalCore, saveTemplateCore, saveThresholdsCore } from "@/lib/settings-core";
+import { addGoalCore, deleteGoalCore, saveTemplateCore, saveThresholdsCore, updateGoalProfileCore } from "@/lib/settings-core";
 import { runRegeneration, regenerationQuery, deletePlannedSessionsOfBlock } from "@/lib/plan-core";
 import { applySeasonCore } from "@/lib/season-apply";
 import { mailConfigured, sendMail } from "@/lib/email/mailer";
@@ -68,6 +68,16 @@ export async function coachDeleteGoal(athleteId: string, formData: FormData): Pr
     refresh(athleteId);
   } catch (e) {
     return { error: e instanceof Error && e.message ? e.message : "No se pudo quitar el objetivo." };
+  }
+}
+
+export async function coachUpdateGoalProfile(athleteId: string, formData: FormData): Promise<{ error: string } | void> {
+  try {
+    await authorize(athleteId);
+    await updateGoalProfileCore(athleteId, formData);
+    refresh(athleteId);
+  } catch (e) {
+    return { error: e instanceof Error && e.message ? e.message : "No se pudo guardar el perfil de la prueba." };
   }
 }
 

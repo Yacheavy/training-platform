@@ -3,7 +3,7 @@ import { MIN_GAP_DAYS_BETWEEN_VO2MAX, MIN_GAP_DAYS_BETWEEN_HARD } from "./qualit
 import { VARIANTS, intensityOf, isNeuroKey } from "./variants";
 import { isOffBike } from "./off-bike";
 import { dateKeyLocal } from "../tz";
-import { ACTIVATION_KEY, RACE_WARMUP_KEY, NO_QUALITY_DAYS, RACE_EASY_MAX_MIN, gymFreeDays, raceContext, type RaceEvent } from "./race-week";
+import { ACTIVATION_KEY, RACE_WARMUP_KEY, NO_QUALITY_DAYS, RACE_EASY_MAX_MIN, activationSpec, gymFreeDays, raceContext, type RaceEvent } from "./race-week";
 
 /**
  * Invariantes que TODO plan generado debe cumplir. Devuelve la lista de
@@ -190,20 +190,30 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
 
   // Semana de carrera (A/B): víspera con activación, día con calentamiento, últimos días sin gimnasio ni calidad
   for (const d of plan) {
+    const r = ctx.events ? raceContext(dateKeyLocal(d.date), ctx.events) : null;
     if (d.stimulusType === ACTIVATION_KEY) {
       const ivs = d.blocks.filter((b) => b.type === "interval");
       const total = d.blocks.reduce((s, b) => s + b.durationSec, 0);
       if (ivs.length < 2 || ivs.length > 3) w.push(`${label(d)}: la activación lleva ${ivs.length} aperturas (esperado 2 o 3)`);
       if (ivs.some((b) => b.durationSec > 60)) w.push(`${label(d)}: apertura de más de 60 s en la activación`);
-      if (ivs.reduce((s, b) => s + b.durationSec, 0) > total * 0.05) w.push(`${label(d)}: demasiado tiempo de apertura en la activación`);
+      if (ivs.reduce((s, b) => s + b.durationSec, 0) > total * 0.07) w.push(`${label(d)}: demasiado tiempo de apertura en la activación`);
       if (total < 30 * 60 || total > 50 * 60) w.push(`${label(d)}: la activación dura ${Math.round(total / 60)} min (esperado 30–50)`);
+      if (r) {
+        const sp = activationSpec(r.profile);
+        if (ivs.length !== sp.reps[r.priority]) w.push(`${label(d)}: ${ivs.length} aperturas y el perfil ${r.profile ?? "genérico"} pide ${sp.reps[r.priority]}`);
+        if (ivs.some((b) => b.durationSec !== sp.sec || Math.abs(b.targetWatts - ctx.ftp * sp.pct) > 1)) w.push(`${label(d)}: las aperturas no coinciden con el perfil ${r.profile ?? "genérico"}`);
+      }
     }
     if (d.stimulusType === RACE_WARMUP_KEY) {
       const total = d.blocks.reduce((s, b) => s + b.durationSec, 0);
       if (d.blocks.some((b) => !isWarmType(b.type))) w.push(`${label(d)}: el calentamiento de carrera tiene bloques que no son de calentamiento`);
       if (total < 15 * 60 || total > 25 * 60) w.push(`${label(d)}: el calentamiento de carrera dura ${Math.round(total / 60)} min (esperado 15–25)`);
+      const acts = d.blocks.filter((b) => b.type === "warmup_activation");
+      if (acts.length < 1 || acts.length > 4) w.push(`${label(d)}: ${acts.length} activaciones en el calentamiento de carrera`);
+      // Lo último del calentamiento es recuperación: nunca se larga recién salido de un esfuerzo
+      if (d.blocks[d.blocks.length - 1]?.type !== "warmup_recovery") w.push(`${label(d)}: el calentamiento de carrera no termina en recuperación`);
+      if (r?.profile === "fondo" && total > 18 * 60) w.push(`${label(d)}: calentamiento de ${Math.round(total / 60)} min para un fondo largo (máx. 18)`);
     }
-    const r = ctx.events ? raceContext(dateKeyLocal(d.date), ctx.events) : null;
     if (!r) continue;
     if (r.daysTo === 1 && d.stimulusType !== ACTIVATION_KEY) w.push(`${label(d)}: la víspera de la carrera debe ser la activación`);
     if (r.daysTo === 0 && d.stimulusType !== RACE_WARMUP_KEY) w.push(`${label(d)}: el día de la carrera debe llevar el calentamiento`);

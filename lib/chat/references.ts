@@ -601,6 +601,38 @@ export const REFERENCES: Reference[] = [
     level: "Consenso de expertos (nivel bajo de evidencia): refleja opinión informada, no ensayos. Lo leí a través de una extracción automática del PDF, no página por página.",
     checked: "abstract",
   },
+  {
+    id: "R73",
+    surnames: ["Hajoglou", "Foster", "De Koning", "Lucía", "Kernozek", "Porcari"],
+    cite: "Hajoglou A, Foster C, De Koning JJ, Lucía A, Kernozek TW, Porcari JP. Effect of warm-up on cycle time trial performance. Med Sci Sports Exerc. 2005;37(9):1608-1614.",
+    supports: "8 ciclistas, contrarreloj de 3 km: tras calentar el rendimiento fue ~2,6-2,8 % mejor que sin calentar, sin importar la intensidad del calentamiento, y la mejora se concentró en los primeros ~1000 m.",
+    level: "Ensayo cruzado pequeño (n=8) en un esfuerzo corto; no se puede extrapolar a pruebas largas.",
+    checked: "abstract",
+  },
+  {
+    id: "R74",
+    surnames: [],
+    cite: "Estudio sobre la duración del calentamiento y una contrarreloj de 5 km en ciclistas (n=16). Central European Journal of Sport Sciences and Medicine. 2017;17(1):5-13 (autores no confirmados en la fuente consultada: no lo cites por apellido).",
+    supports: "La duración del calentamiento no cambió el rendimiento en la contrarreloj de 5 km.",
+    level: "Ensayo pequeño en un esfuerzo corto; sin datos de pruebas largas.",
+    checked: "abstract",
+  },
+  {
+    id: "R75",
+    surnames: [],
+    cite: "Resumen de congreso ECSS 2014: tres calentamientos antes de un Wingate de 30 s (n=9; autores no confirmados: no lo cites por apellido).",
+    supports: "Un calentamiento activo (8 o 17 min, con un sprint de 6 s) dio mayor potencia media que uno pasivo; la potencia pico no difirió.",
+    level: "Resumen de congreso con muestra muy chica; sirve solo como indicio para esfuerzos cortos y explosivos.",
+    checked: "abstract",
+  },
+  {
+    id: "R76",
+    surnames: ["Bishop"],
+    cite: "Bishop D. Warm up II: performance changes following active warm up and how to structure the warm up. Sports Med. 2003;33(7):483.",
+    supports: "Revisión: el calentamiento activo suele mejorar el rendimiento, sobre todo en esfuerzos de alta intensidad y corta duración. Solo verifiqué la cita y el comienzo del abstract: no atribuyas protocolos concretos a esta fuente.",
+    level: "Revisión narrativa (nivel moderado-bajo).",
+    checked: "abstract",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

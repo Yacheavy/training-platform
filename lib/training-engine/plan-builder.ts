@@ -244,7 +244,7 @@ export function buildPlan(input: {
       const raceDay = race.daysTo === 0;
       const sl = slotByDay.get(dayOfWeek);
       const actMin = sl && sl.stimulusType === "cycling" && sl.targetDurationMin ? Math.max(30, Math.min(45, sl.targetDurationMin)) : 40;
-      const rBlocks = raceDay ? buildRaceWarmupBlocks(ftp) : buildActivationBlocks(ftp, race.priority, actMin);
+      const rBlocks = raceDay ? buildRaceWarmupBlocks(ftp, race.profile) : buildActivationBlocks(ftp, race.priority, actMin, race.profile);
       const rKey = raceDay ? RACE_WARMUP_KEY : ACTIVATION_KEY;
       keyByOffset.set(dayOffset, rKey);
       const optional = !raceDay && (!sl || sl.stimulusType === "rest") ? " · Es opcional: en tu semana tipo este día era de descanso." : "";

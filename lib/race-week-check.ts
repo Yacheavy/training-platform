@@ -7,7 +7,7 @@ import { validatePlan } from "./training-engine/plan-validator";
 import { dateKeyLocal, dayOfWeekLocal } from "./tz";
 import {
   ACTIVATION_KEY, RACE_WARMUP_KEY, RACE_EASY_MAX_MIN, NO_QUALITY_DAYS, MINI_TAPER_DAYS, gymFreeDays, raceContext, daysBetween,
-  buildActivationBlocks, buildRaceWarmupBlocks, type RaceEvent,
+  buildActivationBlocks, buildRaceWarmupBlocks, activationSpec, COURSE_PROFILES, type RaceEvent, type CourseProfile,
 } from "./training-engine/race-week";
 import { isOffBike } from "./training-engine/off-bike";
 
@@ -45,7 +45,10 @@ for (const [tn, tpl] of Object.entries(templates))
 for (const weeks of [2, 3, 5, 8])
 for (const startDow of [0, 3, 6])
 for (const priority of ["A", "B"])
+for (const profile of [null, ...COURSE_PROFILES.map((p) => p.key)] as (CourseProfile | null)[])
 for (const evBack of [0, 1, 3, 6, 9]) {
+  // Para no multiplicar de más, los perfiles se barren solo con 3 semanas y 2 tipos de semana
+  if (profile && (weeks !== 3 || !(tn === "user" || tn === "twoQ"))) continue;
   // El evento cae dentro del bloque (evBack días antes del último día) o, en un taper, justo al terminar
   const start = new Date(Date.UTC(2026, 9, 3 + ((startDow - 6 + 7) % 7), 20, 12, 10));
   const totalDays = weeks * 7;
@@ -53,10 +56,10 @@ for (const evBack of [0, 1, 3, 6, 9]) {
   if (objective === "tapering" && evBack > 0) continue;
   if (evOffset < 0) continue;
   const evKey = dateKeyLocal(new Date(start.getTime() + evOffset * DAY));
-  const events: RaceEvent[] = [{ dateKey: evKey, priority, name: "Carrera" }];
+  const events: RaceEvent[] = [{ dateKey: evKey, priority, name: "Carrera", profile }];
   const { plan } = run(objective, tpl, weeks, startDow, events);
   scenarios++;
-  const tag = `${objective} ${tn} ${weeks}s dow${startDow} ${priority} atrás${evBack}`;
+  const tag = `${objective} ${tn} ${weeks}s dow${startDow} ${priority} atrás${evBack} ${profile ?? "sin perfil"}`;
 
   const w = validatePlan(plan, { objective, ftp: 300, events }).filter((x) => !x.startsWith("INFO"));
   ok(w.length === 0, `${tag}: ${[...new Set(w)].slice(0, 3).join(" | ")}`);
@@ -68,8 +71,9 @@ for (const evBack of [0, 1, 3, 6, 9]) {
   ok(!!raceDay && raceDay.stimulusType === RACE_WARMUP_KEY, `${tag}: el día de la carrera no tiene calentamiento (${raceDay?.stimulusType})`);
   if (eve) {
     const n = eve.blocks.filter((b) => b.type === "interval").length;
-    ok(n === (priority === "A" ? 3 : 2), `${tag}: ${n} aperturas`);
-    ok(eve.blocks.every((b) => b.targetWatts <= 300 * 1.1 + 1), `${tag}: apertura demasiado fuerte`);
+    const sp = activationSpec(profile);
+    ok(n === sp.reps[priority as "A" | "B"], `${tag}: ${n} aperturas`);
+    ok(eve.blocks.filter((b) => b.type === "interval").every((b) => b.durationSec === sp.sec && Math.abs(b.targetWatts - 300 * sp.pct) <= 1), `${tag}: apertura distinta de la receta del perfil`);
   }
   // Ningún día de la ventana tiene gimnasio, calidad ni rodajes largos
   for (const d of plan) {
@@ -133,17 +137,33 @@ for (const tn of Object.keys(templates)) {
   }
 }
 
-// Las sesiones especiales: estructura y tiempos
-for (const ftp of [150, 220, 300, 400]) for (const pr of ["A", "B"] as const) {
-  const a = buildActivationBlocks(ftp, pr);
+// Las sesiones especiales: estructura y tiempos, para cada perfil (y sin perfil)
+const WARMUP_MIN: Record<string, [number, number, number, number]> = {
+  generic: [18, 21, 2, 2], llano: [18, 21, 2, 2], fondo: [14, 18, 1, 1], montana: [18, 22, 2, 2], ondulado: [18, 22, 3, 3], contrarreloj: [21, 25, 2, 2], criterium: [19, 23, 4, 4],
+};
+for (const ftp of [150, 220, 300, 400]) for (const pr of ["A", "B"] as const) for (const profile of [null, ...COURSE_PROFILES.map((p) => p.key)] as (CourseProfile | null)[]) {
+  const sp = activationSpec(profile);
+  const a = buildActivationBlocks(ftp, pr, 40, profile);
   const total = a.reduce((s, b) => s + b.durationSec, 0);
-  ok(total >= 38 * 60 && total <= 42 * 60, `activación dura ${total / 60}′`);
-  ok(a.filter((b) => b.type === "interval").length === (pr === "A" ? 3 : 2), "n aperturas");
-  const wu = buildRaceWarmupBlocks(ftp);
+  ok(total >= 38 * 60 && total <= 42 * 60, `activación ${profile} dura ${total / 60}′`);
+  const iv = a.filter((b) => b.type === "interval");
+  ok(iv.length === sp.reps[pr], `n aperturas ${profile}`);
+  ok(iv.every((b) => b.durationSec === sp.sec && Math.abs(b.targetWatts - ftp * sp.pct) <= 1), `watts/duración de aperturas ${profile}`);
+  ok(iv.reduce((s, b) => s + b.durationSec, 0) <= total * 0.07, `aperturas ${profile} pasan del 7 %`);
+  const wu = buildRaceWarmupBlocks(ftp, profile);
   const wt = wu.reduce((s, b) => s + b.durationSec, 0);
-  ok(wt >= 18 * 60 && wt <= 21 * 60 && wu.every((b) => b.type.startsWith("warmup")), `calentamiento dura ${wt / 60}′`);
-  ok(wu.filter((b) => b.type === "warmup_activation").length === 2, "2 activaciones");
+  const [lo, hi, nlo, nhi] = WARMUP_MIN[profile ?? "generic"];
+  const na = wu.filter((b) => b.type === "warmup_activation").length;
+  ok(wt >= lo * 60 && wt <= hi * 60 && wu.every((b) => b.type.startsWith("warmup")), `calentamiento ${profile} dura ${wt / 60}′`);
+  ok(na >= nlo && na <= nhi, `calentamiento ${profile}: ${na} activaciones`);
+  ok(wu[wu.length - 1].type === "warmup_recovery", `calentamiento ${profile} no termina en recuperación`);
 }
+
+// Entrada de perfil: valores raros se normalizan a "sin perfil"
+import { normalizeCourseProfile } from "./training-engine/race-week";
+for (const v of [null, undefined, "", "xxx", 5, "LLANO", " montana"]) ok(normalizeCourseProfile(v) === null || COURSE_PROFILES.some((p) => p.key === normalizeCourseProfile(v)), `normalizeCourseProfile(${String(v)})`);
+ok(normalizeCourseProfile("montana") === "montana", "normalize montana");
+ok(normalizeCourseProfile("xxx") === null, "normalize xxx");
 
 console.log({ checks, problems: bad });
 process.exit(bad ? 1 : 0);

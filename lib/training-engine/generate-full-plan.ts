@@ -57,7 +57,7 @@ export async function generateFullPlan(
 
   // Carreras A y B con fecha: mini-taper, activación de la víspera y calentamiento del día
   const goalRows = await prisma.athleteGoal.findMany({ where: { athleteId: block.athleteId, goalType: "EVENT", eventDate: { not: null }, priority: { in: ["A", "B"] } } });
-  const events: RaceEvent[] = goalRows.filter((g) => g.eventDate).map((g) => ({ dateKey: g.eventDate!.toISOString().slice(0, 10), priority: String(g.priority), name: g.name }));
+  const events: RaceEvent[] = goalRows.filter((g) => g.eventDate).map((g) => ({ dateKey: g.eventDate!.toISOString().slice(0, 10), priority: String(g.priority), name: g.name, profile: g.courseProfile }));
   // Una puesta a punto termina el día del evento: cuenta como carrera A aunque el objetivo se haya borrado
   const endKey = dateKeyLocal(block.endDate);
   if (block.objective === "tapering" && !events.some((e) => e.dateKey === endKey)) events.push({ dateKey: endKey, priority: "A" });

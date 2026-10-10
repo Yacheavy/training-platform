@@ -219,6 +219,8 @@ model AthleteGoal {
   notes        String?
   /// Lo cargó el entrenador (se muestra como «Cargado por tu coach»)
   createdByCoach Boolean @default(false)
+  /// Perfil de la prueba (llano, ondulado, montana, fondo, contrarreloj, criterium): adapta la activación y el calentamiento. null = genérico
+  courseProfile String?
 }
 
 enum GoalType {

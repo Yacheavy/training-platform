@@ -1,6 +1,6 @@
 "use server";
 
-import { saveTemplateCore, saveThresholdsCore, addGoalCore, deleteGoalCore } from "@/lib/settings-core";
+import { saveTemplateCore, saveThresholdsCore, addGoalCore, deleteGoalCore, updateGoalProfileCore } from "@/lib/settings-core";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -54,6 +54,12 @@ export async function addGoal(formData: FormData) {
 export async function deleteGoal(formData: FormData) {
   const athleteId = await requireUserId();
   await deleteGoalCore(athleteId, formData);
+  revalidatePath("/settings");
+  revalidatePath("/planificacion");
+}
+export async function updateGoalProfile(formData: FormData) {
+  const athleteId = await requireUserId();
+  await updateGoalProfileCore(athleteId, formData);
   revalidatePath("/settings");
   revalidatePath("/planificacion");
 }

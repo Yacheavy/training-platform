@@ -10,8 +10,8 @@ import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import { regeneratePlan } from "@/lib/plan-actions";
 import { getSettingsData } from "@/lib/settings-data";
-import { saveTemplate, saveThresholds, addGoal, deleteGoal } from "@/lib/settings-actions";
-import { coachAddGoal, coachDeleteGoal, coachSaveTemplate, coachSaveThresholds, coachRegeneratePlan, coachApplySeason, coachDeleteFutureBlock } from "@/lib/coach-actions";
+import { saveTemplate, saveThresholds, addGoal, deleteGoal, updateGoalProfile } from "@/lib/settings-actions";
+import { coachAddGoal, coachDeleteGoal, coachUpdateGoalProfile, coachSaveTemplate, coachSaveThresholds, coachRegeneratePlan, coachApplySeason, coachDeleteFutureBlock } from "@/lib/coach-actions";
 
 const OBJ_LABEL: Record<string, string> = { base: "Base", umbral: "Umbral", vo2max: "VO2max", tapering: "Puesta a punto" };
 const DAY = 86400000;
@@ -47,13 +47,14 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
     ? {
         addGoal: coachAddGoal.bind(null, athleteId),
         deleteGoal: coachDeleteGoal.bind(null, athleteId),
+        updateProfile: coachUpdateGoalProfile.bind(null, athleteId),
         applySeason: coachApplySeason.bind(null, athleteId),
         deleteBlock: coachDeleteFutureBlock.bind(null, athleteId),
         saveTemplate: coachSaveTemplate.bind(null, athleteId),
         saveThresholds: coachSaveThresholds.bind(null, athleteId),
         regenerate: coachRegeneratePlan.bind(null, athleteId),
       }
-    : { addGoal, deleteGoal, applySeason, deleteBlock: deleteFutureBlock, saveTemplate, saveThresholds, regenerate: regeneratePlan };
+    : { addGoal, deleteGoal, updateProfile: updateGoalProfile, applySeason, deleteBlock: deleteFutureBlock, saveTemplate, saveThresholds, regenerate: regeneratePlan };
   const coachUpdated = !coach && user?.coachPlanUpdatedAt && Date.now() - user.coachPlanUpdatedAt.getTime() < 14 * DAY ? user.coachPlanUpdatedAt : null;
 
   return (
@@ -139,11 +140,13 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
           baselineValue: g.baselineValue,
           targetValue: g.targetValue,
           createdByCoach: g.createdByCoach,
+          courseProfile: g.courseProfile,
         }))}
         todayKey={dateKeyLocal(new Date())}
         currentFtp={user?.ftp ?? null}
         addAction={act.addGoal}
         deleteAction={act.deleteGoal}
+        updateProfileAction={act.updateProfile}
         coachMode={!!coach}
         cardStyle={cardStyle}
       />

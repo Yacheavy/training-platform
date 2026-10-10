@@ -1,5 +1,6 @@
 import { BANNABLE_KEYS } from "@/lib/training-engine/variants";
 import { prisma } from "@/lib/prisma";
+import { normalizeCourseProfile } from "@/lib/training-engine/race-week";
 
 /**
  * Núcleos de los ajustes de planificación. NO son acciones de servidor: reciben el id del alumno ya autorizado
@@ -88,6 +89,7 @@ export async function addGoalCore(athleteId: string, formData: FormData, byCoach
       name,
       eventDate: /^\d{4}-\d{2}-\d{2}$/.test(eventDateStr) ? new Date(eventDateStr) : null,
       priority,
+      courseProfile: goalType === "EVENT" ? normalizeCourseProfile(formData.get("courseProfile")) : null,
       metric: goalType === "PERFORMANCE" ? String(formData.get("metric") || "") || null : null,
       baselineValue: goalType === "PERFORMANCE" && formData.get("baselineValue") ? Number(formData.get("baselineValue")) : null,
       targetValue: goalType === "PERFORMANCE" && formData.get("targetValue") ? Number(formData.get("targetValue")) : null,
@@ -99,4 +101,13 @@ export async function deleteGoalCore(athleteId: string, formData: FormData) {
   const id = String(formData.get("id"));
   // Solo se puede borrar un objetivo propio
   await prisma.athleteGoal.deleteMany({ where: { id, athleteId } });
+}
+
+/** Cambia el perfil de la prueba de un evento propio (vacío = genérico). Solo aplica a eventos; se nota al regenerar el plan. */
+export async function updateGoalProfileCore(athleteId: string, formData: FormData) {
+  const id = String(formData.get("id"));
+  const raw = String(formData.get("courseProfile") ?? "");
+  const courseProfile = normalizeCourseProfile(raw);
+  if (raw !== "" && !courseProfile) throw new Error("Perfil de prueba no válido");
+  await prisma.athleteGoal.updateMany({ where: { id, athleteId, goalType: "EVENT" }, data: { courseProfile } });
 }
