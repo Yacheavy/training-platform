@@ -1,6 +1,8 @@
 /** Invariantes del motor de gimnasio y flexibilidad. Corre con: npx tsx lib/strength-check.ts */
 import { buildGymSession, buildFlexSession, chooseRole, buildMobilitySet, gymToText, type GymInput, type GymSession } from "./training-engine/strength";
 import { REFERENCES } from "./chat/references";
+import { FIGURES, figureSvg } from "./exercise-figures";
+import { POOL } from "./training-engine/strength";
 
 let checks = 0;
 const problems: string[] = [];
@@ -86,6 +88,19 @@ for (const m of [10, 15, 20, 30, 45]) {
   ok(/no previene lesiones/i.test(f.evidence.join(" ")), "flex sin el aviso de evidencia");
 }
 ok(buildMobilitySet(8).length >= 3 && buildMobilitySet(0).length === 0, "set de movilidad de 8 min");
+
+// figuras de los ejercicios
+const catalog = new Set(Object.values(POOL).flat().map((e) => e.id));
+for (const [id, def] of Object.entries(FIGURES)) {
+  ok(catalog.has(id), `figura de un ejercicio que no existe: ${id}`);
+  const svg = figureSvg(def, id);
+  ok(!/NaN|undefined|Infinity/.test(svg), `figura ${id}: valores inválidos`);
+  ok(def.frames.length >= 1 && def.frames.length <= 3, `figura ${id}: cantidad de cuadros`);
+  ok(def.labels === undefined || def.labels.length === def.frames.length, `figura ${id}: etiquetas`);
+  ok(svg.startsWith("<svg") && svg.endsWith("</svg>"), `figura ${id}: SVG incompleto`);
+}
+const sinFigura = [...catalog].filter((id) => !FIGURES[id]);
+console.log("ejercicios sin figura:", sinFigura.join(", ") || "ninguno");
 
 console.log(JSON.stringify({ sessions, checks, problems: problems.length }));
 if (problems.length) console.log(problems.join("\n"));

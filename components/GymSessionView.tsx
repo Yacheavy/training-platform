@@ -1,5 +1,6 @@
 import type { GymSession, ExCategory } from "@/lib/training-engine/strength";
 import { REFERENCES } from "@/lib/chat/references";
+import { FIGURES, figureSvg } from "@/lib/exercise-figures";
 
 const CAT: Record<ExCategory, { label: string; color: string }> = {
   fuerza: { label: "Fuerza", color: "#B79BEF" },
@@ -50,6 +51,16 @@ export function GymSessionView({ gym }: { gym: GymSession }) {
                 </div>
                 <div style={small}>{e.cue}</div>
                 <div style={{ ...small, color: "var(--text-dim)" }}>{e.load}</div>
+                {FIGURES[e.id] && (
+                  <div style={{ marginTop: "10px" }}>
+                    {/* SVG propio y estático generado en código (no hay contenido de usuarios) */}
+                    <div style={{ background: "#12181F", border: "1px solid var(--border)", borderRadius: "10px", padding: "8px 10px", display: "inline-block", maxWidth: "100%" }}
+                      dangerouslySetInnerHTML={{ __html: figureSvg(FIGURES[e.id], e.name) }} />
+                    <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "4px" }}>
+                      Esquema de referencia, no reemplaza la técnica que te corrija un profesional.{FIGURES[e.id].note ? ` ${FIGURES[e.id].note}` : ""}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

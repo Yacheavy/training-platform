@@ -55,7 +55,7 @@ type Pattern =
   | "plank" | "sideplank" | "antirot" | "deadbug"
   | "balance" | "glutestab" | "landing";
 
-const POOL: Record<Pattern, Ex[]> = {
+export const POOL: Record<Pattern, Ex[]> = {
   squat: [
     { id: "goblet", name: "Sentadilla goblet con mancuerna o kettlebell", cue: "Pecho alto, rodillas siguiendo la línea de los pies, bajá hasta donde mantengas la espalda neutra." },
     { id: "sentadilla_barra", name: "Sentadilla con barra", cue: "Barra estable, tronco firme, subí empujando el piso. Técnica primero; si es nueva, empezá liviano." },
