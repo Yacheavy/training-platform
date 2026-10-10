@@ -357,6 +357,14 @@ export function buildPlan(input: {
       rationaleParts.push("Día de volumen → z2");
     }
 
+    // El protocolo manda sobre el tiempo del slot: si lo supera, se le avisa al alumno en la propia sesión
+    if (effectiveStimulusType !== "gym" && targetDuration > 0) {
+      const durMin = Math.round(blocks.reduce((s, b) => s + b.durationSec, 0) / 60);
+      if (durMin > targetDuration * 1.1 && durMin - targetDuration >= 5) {
+        rationaleParts.push(`Dura ${durMin} min aunque el tiempo previsto para este día es de ${targetDuration}: el protocolo de la sesión necesita ese mínimo para hacerse completo`);
+      }
+    }
+
     days.push({
       date,
       dayOffset,

@@ -150,10 +150,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       const maxW = Math.max(0, ...d.blocks.filter((b) => b.type === "interval").map((b) => b.targetWatts));
       if (maxW && maxW < ctx.ftp) w.push(`${label(d)}: intervalos por debajo del FTP (${maxW} W)`);
     }
-    // Informativo: el protocolo manda sobre el tiempo del slot, pero conviene avisarlo
-    if (d.slotTargetMin && VO2_STIMULI.has(d.stimulusType) && dur / 60 > d.slotTargetMin * 1.25) {
-      w.push(`INFO: ${label(d)}: el protocolo dura ${Math.round(dur / 60)} min vs ${d.slotTargetMin} min del slot (+${Math.round((dur / 60 / d.slotTargetMin - 1) * 100)}%)`);
-    }
+    // (La duración mayor al slot ya no es una advertencia: se avisa al alumno en el motivo de la sesión, ver plan-builder)
     // Chequeos estructurales de las variantes nuevas
     const ivBlocks = d.blocks.filter((b) => b.type === "interval");
     if (d.stimulusType === "over_under") {
