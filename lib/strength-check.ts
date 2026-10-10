@@ -95,7 +95,7 @@ for (const [id, def] of Object.entries(FIGURES)) {
   ok(catalog.has(id), `figura de un ejercicio que no existe: ${id}`);
   const svg = figureSvg(def, id);
   ok(!/NaN|undefined|Infinity/.test(svg), `figura ${id}: valores inválidos`);
-  ok(def.frames.length >= 1 && def.frames.length <= 3, `figura ${id}: cantidad de cuadros`);
+  ok(def.frames.length >= 1 && def.frames.length <= 2, `figura ${id}: cantidad de cuadros`);
   ok(def.labels === undefined || def.labels.length === def.frames.length, `figura ${id}: etiquetas`);
   ok(svg.startsWith("<svg") && svg.endsWith("</svg>"), `figura ${id}: SVG incompleto`);
 }

@@ -75,7 +75,7 @@ let U = 44; // px por unidad (se ajusta por figura para que entre completa)
 const W = 200;
 const H = 178;
 const GROUND = 150;
-let TOP = 0; // borde superior visible (se recalcula por figura)
+let TOP = 0;
 
 const COL = { near: "#E7ECF2", far: "#6B7A8C", accent: "#4FD1C5", prop: "#B79BEF", floor: "#3A4656", bg: "#171E27", propFill: "#232B3D" };
 
@@ -132,7 +132,7 @@ function frameSvg(p: Pose, ox: number): string {
       propSvg.push(line(from, to, COL.prop, 2.5) + `<circle cx="${from.x.toFixed(1)}" cy="${from.y.toFixed(1)}" r="4" fill="${COL.prop}"/>`);
     } else if (pr.k === "cable") {
       const w = g.wrist;
-      const from = pr.fromDir === "top" ? { x: w.x + 0.1 * U, y: TOP + 4 } : { x: w.x + 1.5 * U, y: w.y };
+      const from = pr.fromDir === "top" ? { x: w.x + 0.1 * U, y: 10 } : { x: w.x + 1.5 * U, y: w.y };
       propSvg.push(line(from, w, COL.prop, 2) + `<circle cx="${from.x.toFixed(1)}" cy="${from.y.toFixed(1)}" r="4" fill="${COL.prop}"/>`);
     }
   }
@@ -190,30 +190,24 @@ export interface FigureDef {
   note?: string;
 }
 
-/** SVG completo con 1 o 2 cuadros. Los colores son fijos (oscuro) porque la app es de tema oscuro. */
+/** SVG completo con 1 o 2 cuadros (siempre el mismo tamaño). Los colores son fijos (oscuro) porque la app es de tema oscuro. */
 export function figureSvg(def: FigureDef, title: string): string {
   const n = def.frames.length;
-  // escala común a todos los cuadros: la figura más alta (con salto o cajón) tiene que entrar completa
-  let maxH = 0;
-  for (const f of def.frames) {
-    const pts = Object.values(solve(f));
-    const lowest = Math.max(...pts.map((q) => q.y));
-    const top = Math.min(...pts.map((q) => q.y)) - L.head;
-    maxH = Math.max(maxH, lowest - top + (f.lift ?? 0) + 0.25);
-  }
-  U = Math.max(22, Math.min(46, (GROUND - 8) / maxH));
-  const hasCable = def.frames.some((f) => f.props?.some((pr) => pr.k === "cable"));
-  TOP = Math.max(0, Math.floor(GROUND - maxH * U - (hasCable ? 28 : 6)));
+  // Todas las figuras comparten escala y lienzo (2 cuadros de ancho), así las tarjetas miden lo mismo
+  // tengan una o dos posiciones.
+  U = 34;
+  TOP = 0;
+  const x0 = n === 1 ? W / 2 : 0;
   const labels = def.labels ?? (n === 1 ? ["Posición"] : ["Inicio", "Final"]);
-  const body = def.frames.map((f, i) => frameSvg(f, i * W)).join("");
+  const body = def.frames.map((f, i) => `<g transform="translate(${x0 + i * W} 0)">${frameSvg(f, 0)}</g>`).join("");
   const texts = labels.map((t, i) => {
-    const cx = i * W + W / 2, tw = t.length * 5.7, ly = H - 9;
+    const cx = x0 + i * W + W / 2, tw = t.length * 5.7, ly = H - 9;
     const badge = n > 1 ? `<circle cx="${(cx - tw / 2 - 11).toFixed(1)}" cy="${ly - 3.5}" r="7.5" fill="#2A5C56"/><text x="${(cx - tw / 2 - 11).toFixed(1)}" y="${ly - 0.2}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#4FD1C5" font-family="system-ui,sans-serif">${i + 1}</text>` : "";
     return `${badge}<text x="${(n > 1 ? cx + 4 : cx).toFixed(1)}" y="${ly}" text-anchor="middle" font-size="11" fill="#8A97A6" font-family="system-ui,sans-serif">${t}</text>`;
   }).join("");
   const arrow = Array.from({ length: n - 1 }, (_, i) => `<circle cx="${(i + 1) * W}" cy="${GROUND - 46}" r="11" fill="#1E2733" stroke="#2A3441"/><path d="M ${(i + 1) * W - 3} ${GROUND - 51} l 5 5 l -5 5" fill="none" stroke="#4FD1C5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`).join("");
   const defs = `<defs><linearGradient id="gfloor" x1="0" x2="1"><stop offset="0" stop-color="#3A4656" stop-opacity="0"/><stop offset=".2" stop-color="#3A4656"/><stop offset=".8" stop-color="#3A4656"/><stop offset="1" stop-color="#3A4656" stop-opacity="0"/></linearGradient></defs>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${TOP} ${W * n} ${H - TOP}" role="img" aria-label="${title.replace(/"/g, "'")}" style="width:100%;max-width:${n === 1 ? 240 : n === 2 ? 440 : 620}px;height:auto;display:block">${defs}${body}${arrow}${texts}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W * 2} ${H}" role="img" aria-label="${title.replace(/"/g, "'")}" style="width:100%;max-width:440px;height:auto;display:block">${defs}${body}${arrow}${texts}</svg>`;
 }
 
 const STAND: Pose = { t: 180, th: 0, sh: 0 };
@@ -311,10 +305,9 @@ export const FIGURES: Record<string, FigureDef> = {
   cmj: {
     frames: [
       { t: 155, th: 65, sh: -35, ua: -60, fa: -60 },
-      { ...STAND, foot: 30, ua: 150, fa: 160, lift: 0.4 },
-      { t: 160, th: 60, sh: -30, ua: 60, fa: 70 },
+      { ...STAND, foot: 30, ua: 135, fa: 150, lift: 0.3 },
     ],
-    labels: ["Bajada rápida", "Salto", "Aterrizaje suave"],
+    labels: ["Bajada rápida", "Salto (aterrizá suave)"],
   },
   salto_cajon: {
     frames: [
