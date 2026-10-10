@@ -7,7 +7,7 @@ import { dateKeyLocal } from "../tz";
  * Cada bloque borra SOLO su propia ventana de fechas (el día de fin pertenece al bloque siguiente si empieza ese día):
  * así procesar un bloque nunca pisa lo recién creado del anterior.
  */
-export async function regenerateBlocks(db: PlanDb, athleteId: string, from: Date, now = new Date()) {
+export async function regenerateBlocks(db: PlanDb, athleteId: string, from: Date, now = new Date(), coachNote?: string) {
   const blocks = await db.trainingBlock.findMany({ where: { athleteId, endDate: { gte: from } }, orderBy: { startDate: "asc" } });
   let created = 0;
   let skipped = 0;
@@ -21,7 +21,7 @@ export async function regenerateBlocks(db: PlanDb, athleteId: string, from: Date
     const hi = new Date(dayUtc(b.endDate).getTime() + (startKeys.has(dateKeyLocal(b.endDate)) ? 0 : 24 * 60 * 60 * 1000));
     try {
       await db.generatedWorkout.deleteMany({ where: { athleteId, status: { in: ["PLANNED", "SUGGESTED"] }, environment: { not: "indoor" }, date: { gte: lo, lt: hi } } });
-      const r = await generateFullPlan(b.id, { fromDate: from, athleteId, replaceAll: true, now }, db);
+      const r = await generateFullPlan(b.id, { fromDate: from, athleteId, replaceAll: true, now, coachNote }, db);
       created += r.created;
       skipped += r.skipped;
       resend.push(...r.resendIds);

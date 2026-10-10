@@ -65,7 +65,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="page-container">
-      <Link href="/settings?tab=alumnos" style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>← Alumnos</Link>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+        <Link href="/settings?tab=alumnos" style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>← Alumnos</Link>
+        <Link href={`/alumnos/${id}/planificacion`} style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", borderRadius: "12px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Planificación del alumno →</Link>
+      </div>
       <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: "12px 0 4px" }}>{student.name ?? student.email}</h1>
       <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px" }}>
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}
@@ -153,7 +156,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           </Card>
         </div>
       </Section>
-      <p style={{ fontSize: "11.5px", color: "var(--text-dim)", lineHeight: 1.5 }}>Vista de solo lectura. Los ajustes de sesiones los hace cada alumno desde su cuenta.</p>
+      <p style={{ fontSize: "11.5px", color: "var(--text-dim)", lineHeight: 1.5 }}>Desde «Planificación del alumno» podés manejar sus objetivos, la temporada, su semana tipo y su estilo de plan. El FTP y las sesiones sueltas los ajusta cada alumno desde su cuenta.</p>
     </div>
   );
 }

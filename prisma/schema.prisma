@@ -49,6 +49,8 @@ model User {
   currentStateNote    String? @db.Text
   currentStateUpdatedAt DateTime?
   preferences          String? @db.Text
+  /// Última vez que el entrenador cambió su planificación (para avisarle en la app)
+  coachPlanUpdatedAt   DateTime?
 
   activities        Activity[]
   wellnessRecords   Wellness[]
@@ -215,6 +217,8 @@ model AthleteGoal {
   targetValue  Float?
 
   notes        String?
+  /// Lo cargó el entrenador (se muestra como «Cargado por tu coach»)
+  createdByCoach Boolean @default(false)
 }
 
 enum GoalType {

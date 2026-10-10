@@ -13,6 +13,8 @@ export interface GoalRow {
   metric: string | null;
   baselineValue: number | null;
   targetValue: number | null;
+  /** Lo cargó el entrenador */
+  createdByCoach?: boolean;
 }
 
 const PRIORITY: Record<string, { label: string; desc: string; color: string }> = {
@@ -43,6 +45,7 @@ export function GoalsCard({
   addAction,
   deleteAction,
   cardStyle,
+  coachMode = false,
 }: {
   goals: GoalRow[];
   todayKey: string;
@@ -50,6 +53,8 @@ export function GoalsCard({
   addAction: (formData: FormData) => Promise<unknown>;
   deleteAction: (formData: FormData) => Promise<unknown>;
   cardStyle: React.CSSProperties;
+  /** Lo ve el entrenador en la cuenta de un alumno (cambia el texto de la etiqueta). */
+  coachMode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"EVENT" | "PERFORMANCE">("EVENT");
@@ -110,7 +115,7 @@ export function GoalsCard({
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "14px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}</div>
+                    <div style={{ fontSize: "14px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.name}{g.createdByCoach && <span style={{ fontSize: "10.5px", color: "var(--teal)", border: "1px solid var(--teal-dim)", borderRadius: "999px", padding: "1px 8px", marginLeft: "8px", fontWeight: 500 }}>{coachMode ? "Cargado por vos" : "Cargado por tu coach"}</span>}</div>
                     <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                       <span style={{ color: p.color, fontWeight: 600 }}>{p.label}</span>
                       {n != null && <span>{countdown(n)}</span>}
@@ -140,7 +145,7 @@ export function GoalsCard({
                 <div key={g.id} style={{ padding: "12px 14px", border: "1px solid var(--border)", borderRadius: "12px", background: "var(--surface-2)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "14px", fontWeight: 600 }}>{g.name}</div>
+                      <div style={{ fontSize: "14px", fontWeight: 600 }}>{g.name}{g.createdByCoach && <span style={{ fontSize: "10.5px", color: "var(--teal)", border: "1px solid var(--teal-dim)", borderRadius: "999px", padding: "1px 8px", marginLeft: "8px", fontWeight: 500 }}>{coachMode ? "Cargado por vos" : "Cargado por tu coach"}</span>}</div>
                       <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px" }}>
                         <span style={{ color: p.color, fontWeight: 600 }}>{p.label}</span>
                         {g.eventDate ? ` · para el ${Number(g.eventDate.slice(8))} ${MONTHS[Number(g.eventDate.slice(5, 7)) - 1]} (${countdown(daysUntil(g.eventDate, todayKey))})` : ""}

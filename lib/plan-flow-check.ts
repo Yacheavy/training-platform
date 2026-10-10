@@ -226,6 +226,17 @@ async function run() {
       ok(snap(db, p.id).filter((s) => keyOf(s.date) === keyOf(target.date)).length === 1, `${p.id}: regenerar una sesión duplicó el día`);
       ok(snap(db, p.id).filter((s) => s.id !== target.id).map((s) => JSON.stringify(s)).join("|") === others, `${p.id}: regenerar una sesión tocó otras sesiones`);
     }
+    // 7) regenerar como coach: marca las sesiones regeneradas una sola vez; sin coach la marca desaparece
+    {
+      const NOTE = "Armado por tu coach";
+      const fromNow = dayStartLocal(NOW);
+      await regenerateBlocks(db, p.id, fromNow, NOW, NOTE);
+      const rows = () => db.generatedWorkout.rows.filter((r: Row) => r.athleteId === p.id && r.date >= fromNow && ["PLANNED", "APPROVED"].includes(r.status));
+      ok(rows().filter((r: Row) => String(r.rationale ?? "").includes(NOTE)).length > 0, `${p.id}: regenerar como coach no marcó ninguna sesión`);
+      ok(rows().every((r: Row) => String(r.rationale ?? "").split(NOTE).length - 1 <= 1), `${p.id}: la marca del coach se repite`);
+      await regenerateBlocks(db, p.id, fromNow, NOW);
+      ok(!rows().some((r: Row) => String(r.rationale ?? "").includes(NOTE)), `${p.id}: sin coach, quedó la marca`);
+    }
     invariants(db, p, `${p.id}/final`);
     finalSnaps.set(p.id, JSON.stringify(snap(db, p.id)));
   }

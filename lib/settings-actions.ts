@@ -1,7 +1,6 @@
 "use server";
 
-import { BANNABLE_KEYS } from "@/lib/training-engine/variants";
-
+import { saveTemplateCore, saveThresholdsCore, addGoalCore, deleteGoalCore } from "@/lib/settings-core";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -16,30 +15,7 @@ async function requireUserId() {
 /** Guarda los 7 días de la plantilla semanal en un solo paso (todo o nada). */
 export async function saveTemplate(formData: FormData) {
   const athleteId = await requireUserId();
-
-  const rows = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
-    const type = String(formData.get(`type_${dayOfWeek}`) ?? "rest");
-    const stimulusType = ["cycling", "gym", "flexibility", "rest"].includes(type) ? type : "rest";
-    const isQualityDay = stimulusType === "cycling" && formData.get(`quality_${dayOfWeek}`) === "on";
-    const rawMin = Number(formData.get(`min_${dayOfWeek}`));
-    const targetDurationMin =
-      stimulusType === "rest" ? null : Number.isFinite(rawMin) && rawMin >= 15 && rawMin <= 600 ? Math.round(rawMin) : null;
-    if (stimulusType === "cycling" && targetDurationMin == null) {
-      throw new Error("Cada día de ciclismo necesita una duración entre 15 y 600 minutos");
-    }
-    return { dayOfWeek, stimulusType, isQualityDay, targetDurationMin };
-  });
-
-  await prisma.$transaction(
-    rows.map((r) =>
-      prisma.trainingTemplateSlot.upsert({
-        where: { athleteId_dayOfWeek: { athleteId, dayOfWeek: r.dayOfWeek } },
-        update: { stimulusType: r.stimulusType, isQualityDay: r.isQualityDay, targetDurationMin: r.targetDurationMin },
-        create: { athleteId, ...r, appliesInPhases: [] },
-      })
-    )
-  );
-
+  await saveTemplateCore(athleteId, formData);
   revalidatePath("/settings");
   revalidatePath("/planificacion");
 }
@@ -63,79 +39,21 @@ export async function saveTemplateSlot(formData: FormData) {
 
 export async function saveThresholds(formData: FormData) {
   const athleteId = await requireUserId();
-
-  // Un campo vacío NO debe guardarse como 0 (Number("") === 0): se ignora y queda el valor actual
-  const num = (name: string, min: number, max: number): number | undefined => {
-    const raw = formData.get(name);
-    if (raw == null || String(raw).trim() === "") return undefined;
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n < min || n > max) return undefined;
-    return n;
-  };
-  const str = (name: string, allowed: string[]): string | undefined => {
-    const v = String(formData.get(name) ?? "");
-    return allowed.includes(v) ? v : undefined;
-  };
-
-  const data = {
-    maxCtlRampPerWeek: num("maxCtlRampPerWeek", 1, 20),
-    hrvDropAlertPct: num("hrvDropAlertPct", 1, 50),
-    minTsb: num("minTsb", -60, 0),
-    maxConsecutiveBadSleepDays: num("maxConsecutiveBadSleepDays", 1, 14),
-    weeksBetweenFtpTest: num("weeksBetweenFtpTest", 0, 26),
-    ftpTestProtocol: str("ftpTestProtocol", ["20min", "8min", "5min"]),
-    vo2Stimulus: str("vo2Stimulus", ["hiit_genuino", "ronnestad_30_15", "alternate", "rotate"]),
-    varietyLevel: str("varietyLevel", ["conservative", "balanced", "varied"]),
-    periodization: str("periodization", ["linear", "block"]),
-    contrastMode: formData.has("_gym") ? str("contrastMode", ["off", "tradicional", "frances"]) : undefined,
-    flexibilityEnabled: formData.has("_gym") ? formData.get("flexibilityEnabled") === "on" : undefined,
-    bannedStimuli: !formData.has("_planner") ? undefined : formData.getAll("banned").map(String).filter((k) => BANNABLE_KEYS.includes(k)),
-    deloadRatio: /^[2-6]:1$/.test(String(formData.get("deloadRatio") ?? "").trim())
-      ? String(formData.get("deloadRatio")).trim()
-      : undefined,
-  };
-
-  await prisma.athleteThresholds.upsert({
-    where: { athleteId },
-    update: data,
-    create: { athleteId, ...data },
-  });
-
+  await saveThresholdsCore(athleteId, formData);
   revalidatePath("/settings");
   revalidatePath("/planificacion");
 }
 
 export async function addGoal(formData: FormData) {
   const athleteId = await requireUserId();
-  const eventDateStr = String(formData.get("eventDate") ?? "");
-  const goalType = String(formData.get("goalType")) === "PERFORMANCE" ? "PERFORMANCE" : "EVENT";
-  const name = String(formData.get("name") ?? "").trim().slice(0, 120);
-  if (!name) throw new Error("Poné un nombre para el objetivo");
-  if (goalType === "EVENT" && !/^\d{4}-\d{2}-\d{2}$/.test(eventDateStr)) throw new Error("Elegí la fecha del evento");
-  const priority = ["A", "B", "C"].includes(String(formData.get("priority"))) ? (String(formData.get("priority")) as "A" | "B" | "C") : "B";
-
-  await prisma.athleteGoal.create({
-    data: {
-      athleteId,
-      goalType,
-      name,
-      eventDate: /^\d{4}-\d{2}-\d{2}$/.test(eventDateStr) ? new Date(eventDateStr) : null,
-      priority,
-      metric: goalType === "PERFORMANCE" ? String(formData.get("metric") || "") || null : null,
-      baselineValue: goalType === "PERFORMANCE" && formData.get("baselineValue") ? Number(formData.get("baselineValue")) : null,
-      targetValue: goalType === "PERFORMANCE" && formData.get("targetValue") ? Number(formData.get("targetValue")) : null,
-    },
-  });
-
+  await addGoalCore(athleteId, formData);
   revalidatePath("/settings");
   revalidatePath("/planificacion");
 }
 
 export async function deleteGoal(formData: FormData) {
   const athleteId = await requireUserId();
-  const id = String(formData.get("id"));
-  // Solo se puede borrar un objetivo propio
-  await prisma.athleteGoal.deleteMany({ where: { id, athleteId } });
+  await deleteGoalCore(athleteId, formData);
   revalidatePath("/settings");
   revalidatePath("/planificacion");
 }

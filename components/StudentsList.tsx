@@ -81,6 +81,7 @@ export async function StudentsList({ coachId }: { coachId: string }) {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", alignItems: "baseline" }}>
                     <div>
                       <Link href={`/alumnos/${s.id}`} style={{ fontSize: "15px", fontWeight: 600, color: "inherit", textDecoration: "none" }}>{s.name} →</Link>
+                      <Link href={`/alumnos/${s.id}/planificacion`} style={{ fontSize: "12px", color: "var(--teal)", textDecoration: "none", marginLeft: "12px" }}>Planificación</Link>
                       <span style={{ fontSize: "12px", color: "var(--text-dim)", marginLeft: "8px" }}>{s.email}</span>
                     </div>
                     <div style={{ fontSize: "13px", fontWeight: 600, color: st?.color ?? "var(--text-dim)" }}>

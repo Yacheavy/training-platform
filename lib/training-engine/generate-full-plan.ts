@@ -14,7 +14,7 @@ export type PlanDb = typeof defaultDb;
 
 export async function generateFullPlan(
   trainingBlockId: string,
-  opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[]; now?: Date },
+  opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[]; now?: Date; coachNote?: string },
   prisma: PlanDb = defaultDb,
 ) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
@@ -82,6 +82,7 @@ export async function generateFullPlan(
   // Red de seguridad: si el plan viola una regla del protocolo se avisa en la respuesta.
   const warnings = validatePlan(plan, { objective: block.objective, ftp: user.ftp, pvo2maxWatts: user.pvo2maxWatts, banned: thresholds?.bannedStimuli ?? [] });
 
+  const withNote = (r: string) => (opts?.coachNote ? `${r} · ${opts.coachNote}` : r);
   const created: string[] = [];
   const skipped: string[] = []; // solo errores al guardar
   const kept: string[] = []; // días con una sesión protegida (completada, editada a mano) que no se pisa
@@ -122,7 +123,7 @@ export async function generateFullPlan(
             suggestedCarbsG: outFuel.suggestedCarbsG,
             suggestedCarbsGPerHour: outFuel.suggestedCarbsGPerHour,
             requiresMultipleCarbSources: outFuel.requiresMultipleCarbSources,
-            rationale: ind ? `${day.rationale} · ${ind.note}` : day.rationale,
+            rationale: withNote(ind ? `${day.rationale} · ${ind.note}` : day.rationale),
             environment: ind ? "indoor" : "road",
           },
         });
@@ -147,7 +148,7 @@ export async function generateFullPlan(
           suggestedCarbsG: day.fueling.suggestedCarbsG,
           suggestedCarbsGPerHour: day.fueling.suggestedCarbsGPerHour,
           requiresMultipleCarbSources: day.fueling.requiresMultipleCarbSources,
-          rationale: day.rationale,
+          rationale: withNote(day.rationale),
         },
       });
       created.push(key);
