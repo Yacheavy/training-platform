@@ -1,6 +1,7 @@
 import { CREATOR, APP_NAME, CONSENT_VERSION } from "@/lib/brand";
 import { setEmailAnalysis, sendTestEmail } from "@/lib/email-actions";
 import { StudentsList } from "@/components/StudentsList";
+import { AiUsageCard } from "@/components/AiUsageCard";
 import { RecoveryRulesCard } from "@/components/ThresholdsCard";
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
@@ -89,6 +90,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </div>
           ))}
         </div>
+          <AiUsageCard />
           <StudentsList coachId={session.user.id} />
         </>
       )}

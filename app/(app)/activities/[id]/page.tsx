@@ -142,8 +142,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           </div>
           {a.deviationNotes && <div style={{ fontSize: "12px", color: "var(--amber)" }}>{a.deviationNotes}</div>}
           {planned && (
-            <Link href={`/workouts/${planned.id}`} style={{ color: "var(--teal)", fontSize: "12px", textDecoration: "none", display: "inline-block", marginTop: "8px" }}>
-              Ver la sesión planificada →
+            <Link href={`/workouts/${planned.id}`} className="btn btn-outline btn-sm" style={{ marginTop: "10px" }}>
+              Ver la sesión planificada
             </Link>
           )}
         </div>
@@ -186,9 +186,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
       )}
 
-      <PendingLink href={`/chat?activityId=${a.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>
-        Preguntarle algo más al chat sobre esta sesión →
-      </PendingLink>
+      <div>
+        <PendingLink href={`/chat?activityId=${a.id}`} className="btn btn-outline accent">
+          Preguntarle algo más al chat sobre esta sesión
+        </PendingLink>
+      </div>
     </div>
   );
 }

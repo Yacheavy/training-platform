@@ -232,6 +232,11 @@ button:disabled { cursor: not-allowed; }
   padding: 9px 16px; font-size: 13px; font-weight: 600;
 }
 .btn-solid:disabled { box-shadow: none; filter: grayscale(0.35); }
+/* Links que son acciones: se ven como botón (también los <a>) */
+a.btn { text-decoration: none; }
+.btn-outline.accent { color: var(--teal); border-color: rgba(79, 209, 197, 0.55); background: rgba(79, 209, 197, 0.06); }
+.btn-sm { padding: 7px 12px; font-size: 12px; border-radius: 9px; }
+a.btn-outline:hover { background: rgba(79, 209, 197, 0.1); }
 input[type="checkbox"], input[type="range"] { accent-color: var(--teal); }
 input[type="radio"] {
   appearance: none; -webkit-appearance: none; flex-shrink: 0; margin: 0; width: 18px; height: 18px;
@@ -538,7 +543,7 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .chat-focus-title { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-focus-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-focus-meta::first-letter { text-transform: uppercase; }
-.chat-focus-link { color: var(--teal); font-size: 12px; text-decoration: none; white-space: nowrap; flex-shrink: 0; }
+.chat-focus-link { white-space: nowrap; flex-shrink: 0; }
 .chat-chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .chat-chips::-webkit-scrollbar { display: none; }
 .chat-chips .chip { white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 12px; }

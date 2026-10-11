@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ATHLETE_TZ } from "@/lib/tz";
 import { splitOptions } from "@/lib/chat/parse-response";
 import type { ChatUsageSummary } from "@/lib/chat/usage";
+import { ChatQuota } from "@/components/ChatQuota";
 import { parseAnalysis } from "@/lib/analysis-format";
 import { AnalysisView } from "./AnalysisView";
 import { ActionForm } from "./ActionForm";
@@ -143,7 +144,7 @@ export function ChatView({
 
   const send = async (formData: FormData) => {
     const value = String(formData.get("message") ?? "").trim();
-    if (!value || pending) return;
+    if (!value || pending || outOfMessages) return;
     setError(null);
     setPending(value);
     setText("");
@@ -157,6 +158,7 @@ export function ChatView({
     }
   };
 
+  const outOfMessages = usage?.remaining != null && usage.remaining - (pending ? 1 : 0) <= 0;
   const empty = messages.length === 0 && !pending;
 
   // Una sugerencia se envía directo (un toque), con el foco de la sesión incluido
@@ -202,19 +204,13 @@ export function ChatView({
       </header>
 
       {usage && (
-        <div className="chat-usage" style={{ fontSize: "11.5px", color: "var(--text-muted)", padding: "6px 4px 10px", lineHeight: 1.5 }}>
-          {usage.remaining != null && (
-            <span style={{ color: usage.remaining <= 5 ? "var(--amber)" : "var(--text-muted)", fontWeight: 600 }}>
-              Te quedan {usage.remaining} de {usage.limit} mensajes hoy ·{" "}
-            </span>
-          )}
-          Hoy: {usage.todayTokens.toLocaleString("es-AR")} tokens ≈ {usd(usage.todayCostUsd)} · Este mes: {usd(usage.monthCostUsd)} en {usage.monthMessages} respuestas
-          {usage.avgCostPerMessageUsd != null && ` (≈ ${usd(usage.avgCostPerMessageUsd)} por respuesta)`}
-          {!usage.isCoach && (
-            <div style={{ color: "var(--text-dim)" }}>
-              El asistente usa una API de IA que tiene costo. Si querés colaborar con ese gasto, hablalo con tu entrenador.
-            </div>
-          )}
+        <div style={{ padding: "8px 0 4px" }}>
+          {usage.remaining != null ? <ChatQuota used={usage.sentToday + (pending ? 1 : 0)} limit={usage.limit} /> : null}
+          <div className="chat-usage" style={{ fontSize: "11px", color: "var(--text-dim)", padding: "6px 4px 2px", lineHeight: 1.5 }}>
+            {usage.isCoach
+              ? `Hoy: ${usage.todayTokens.toLocaleString("es-AR")} tokens ≈ ${usd(usage.todayCostUsd)} · Este mes: ${usd(usage.monthCostUsd)} en ${usage.monthMessages} respuestas`
+              : "El asistente usa una API de IA que tiene costo. Si querés colaborar con ese gasto, hablalo con tu entrenador."}
+          </div>
         </div>
       )}
 
@@ -227,8 +223,8 @@ export function ChatView({
             </div>
             <div className="chat-focus-meta">{focus.meta}</div>
           </div>
-          <Link href={focus.href} className="chat-focus-link">
-            {focus.linkLabel} →
+          <Link href={focus.href} className="btn btn-outline btn-sm chat-focus-link">
+            {focus.linkLabel}
           </Link>
         </div>
       )}
@@ -356,7 +352,7 @@ export function ChatView({
             }}
             aria-label="Mensaje"
           />
-          <button type="submit" className="btn send-btn" disabled={!text.trim() || !!pending} aria-label="Enviar mensaje">
+          <button type="submit" className="btn send-btn" disabled={!text.trim() || !!pending || outOfMessages} aria-label="Enviar mensaje">
             {pending ? (
               <span className="spinner" aria-hidden />
             ) : (

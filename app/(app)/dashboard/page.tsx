@@ -19,6 +19,8 @@ import {
   getUpcomingBlocks,
 } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
+import { ChatQuota } from "@/components/ChatQuota";
+import { getChatUsage } from "@/lib/chat/usage";
 import { Sparkline } from "@/components/Sparkline";
 import { ConnectIntervalsModal } from "@/components/ConnectIntervalsModal";
 import { getAccessData } from "@/lib/access-data";
@@ -68,6 +70,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const loadHistory = await getLoadHistory(session.user.id);
   const planWorkouts = await getPlanWorkouts(session.user.id);
   const availability = await calculateAvailability(session.user.id);
+  const chatUsage = await getChatUsage(session.user.id);
   const todayStart = dayKeyDate(new Date());
   const existingCheckin = await prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: session.user.id, date: todayStart } } });
   const [hrvBand, intensity, planVsActual] = await Promise.all([
@@ -354,10 +357,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "14px" }}>
-                <Link href={`/workouts/${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Ver detalle completo →</Link>
-                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>Pedir ajustes en el chat →</PendingLink>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
+                <Link href={`/workouts/${todayWorkout.id}`} className="btn btn-outline">Ver detalle completo</Link>
+                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} className="btn btn-outline accent">Pedir ajustes en el chat</PendingLink>
               </div>
+              {!chatUsage.isCoach && (
+                <div style={{ marginBottom: "14px" }}>
+                  <ChatQuota used={chatUsage.sentToday} limit={chatUsage.limit} compact />
+                </div>
+              )}
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 {(todayWorkout.status === "SUGGESTED" || todayWorkout.status === "PLANNED") && (
                   <ActionForm action={approveWorkout} success="Sesión aprobada">

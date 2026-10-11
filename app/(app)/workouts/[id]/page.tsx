@@ -245,8 +245,8 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       )}
 
       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-        <PendingLink href={`/chat?workoutId=${workout.id}`} style={{ color: "var(--teal)", fontSize: "13px", textDecoration: "none", marginRight: "8px" }}>
-          Pedir ajustes en el chat →
+        <PendingLink href={`/chat?workoutId=${workout.id}`} className="btn btn-outline accent">
+          Pedir ajustes en el chat
         </PendingLink>
         {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
           <ActionForm action={approveWorkout} success="Sesión aprobada">
