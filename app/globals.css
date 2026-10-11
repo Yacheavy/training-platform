@@ -638,3 +638,13 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .feel-btn:hover { border-color: var(--teal); }
 .feel-btn.on { background: var(--teal); border-color: var(--teal); color: #08201C; font-weight: 600; }
 @media (max-width: 420px) { .feel-btn { font-size: 11.5px; } .rpe-btn { height: 36px; } }
+
+/* Pantalla de carga (app/loading.tsx): el isologo respira suave; sin movimiento si el sistema lo pide */
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.92; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+.splash-pulse { animation: splash-pulse 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .splash-pulse { animation: none; }
+}
