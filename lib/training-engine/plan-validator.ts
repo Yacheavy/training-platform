@@ -10,7 +10,7 @@ import { ACTIVATION_KEY, RACE_WARMUP_KEY, NO_QUALITY_DAYS, RACE_EASY_MAX_MIN, ac
  * advertencias (vacía = plan consistente). No lanza: el generador las
  * devuelve al usuario y los chequeos automáticos fallan si hay alguna.
  */
-const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst", "vo2_long"]);
+const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "vo2_piramide"]);
 const HARD_STIMULI = new Set([...VO2_STIMULI, "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,7 +46,9 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       .reduce((s, d) => s + d.blocks.filter((b) => b.type === "interval" || b.type.startsWith("test")).reduce((a, b) => a + b.durationSec, 0), 0);
     // En la semana de una carrera el volumen baja y la intensidad se conserva a propósito (taper): la proporción sube y está bien
     const raceWeek = days.some((d) => d.rationale.includes("MINI-TAPER") || d.stimulusType === ACTIVATION_KEY || d.stimulusType === RACE_WARMUP_KEY);
-    if (!raceWeek && total > 0 && hard / total > 0.2) w.push(`Semana ${wk + 1}: ${Math.round((hard / total) * 100)}% del tiempo en intensidad alta (>20%)`);
+    // La semana intensificada (periodización por bloques) concentra a propósito 2 sesiones de VO2max: el tope sube al 30%
+    const hardLimit = inten ? 0.3 : 0.2;
+    if (!raceWeek && total > 0 && hard / total > hardLimit) w.push(`Semana ${wk + 1}: ${Math.round((hard / total) * 100)}% del tiempo en intensidad alta (>${Math.round(hardLimit * 100)}%)`);
   }
 
   // Separación entre sesiones duras (circular no aplica entre semanas: usa fechas reales)
@@ -125,7 +127,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       if (wu.filter((b) => b.type === "warmup_activation").length !== 2) w.push(`${label(d)}: el calentamiento debe llevar 2 activaciones de 1 min`);
       const ivs = d.blocks.filter((b) => b.type === "interval");
       const recs = d.blocks.filter((b) => b.type === "recovery" && b.targetWatts < ivs[0]?.targetWatts);
-      if (ctx.pvo2maxWatts && d.stimulusType !== "rst" && d.stimulusType !== "vo2_long") {
+      if (ctx.pvo2maxWatts && d.stimulusType !== "rst" && d.stimulusType !== "vo2_long" && d.stimulusType !== "vo2_supra_30") {
         const ratio = recs.length && ivs.length ? recs[0].targetWatts / ivs[0].targetWatts : 0.5;
         if (Math.abs(ratio - 0.5) > 0.02 && d.stimulusType !== "billat_30_30") w.push(`${label(d)}: recuperación al ${Math.round(ratio * 100)}% del intervalo (esperado ~50%)`);
       }
@@ -171,6 +173,34 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
       const minR = d.isDeload ? 2 : 4;
       if (ivBlocks.length < minR || ivBlocks.length > 5) w.push(`${label(d)}: ${ivBlocks.length} repeticiones (esperado ${minR}–5)`);
       if (ivBlocks.some((b) => b.durationSec !== 300)) w.push(`${label(d)}: VO2max largo con intervalos distintos de 5 min`);
+    }
+    if (d.stimulusType === "vo2_pmax") {
+      if (ivBlocks.length < 3 || ivBlocks.length > 8) w.push(`${label(d)}: ${ivBlocks.length} repeticiones de 2′40″ (esperado 3–8)`);
+      if (ivBlocks.some((b) => b.durationSec !== 160)) w.push(`${label(d)}: VO2max 2′40″ con intervalos distintos de 2′40″`);
+      const recs = d.blocks.filter((b) => b.type === "recovery");
+      if (recs.some((b) => b.durationSec !== 320)) w.push(`${label(d)}: recuperación distinta de 5′20″ (1:2)`);
+    }
+    if (d.stimulusType === "vo2_supra_30") {
+      if (ivBlocks.length < 4 || ivBlocks.length > 12) w.push(`${label(d)}: ${ivBlocks.length} esfuerzos supramáximos (esperado 4–12)`);
+      if (ivBlocks.some((b) => b.durationSec !== 30)) w.push(`${label(d)}: los esfuerzos supramáximos deben durar 30 s`);
+      if (d.blocks.filter((b) => b.type === "recovery").some((b) => b.durationSec !== 270)) w.push(`${label(d)}: recuperación distinta de 4′30″`);
+      if (ivBlocks.some((b) => b.targetWatts > ctx.ftp * 2.6 + 1)) w.push(`${label(d)}: supramáximo por encima de 260% FTP`);
+    }
+    if (d.stimulusType === "vo2_corto_15_15") {
+      if (ivBlocks.length === 0 || ivBlocks.length % 20 !== 0 || ivBlocks.length > 60) w.push(`${label(d)}: ${ivBlocks.length} intervalos (debe ser 20×series, máx. 60)`);
+      if (ivBlocks.some((b) => b.durationSec !== 15)) w.push(`${label(d)}: los intervalos del 15/15 deben durar 15 s`);
+    }
+    if (d.stimulusType === "billat_30_30") {
+      if (ivBlocks.length < 10 || ivBlocks.length > 30) w.push(`${label(d)}: ${ivBlocks.length} intervalos de 30/30 (esperado 10–30)`);
+      if (ivBlocks.some((b) => b.durationSec !== 30)) w.push(`${label(d)}: los intervalos del 30/30 deben durar 30 s`);
+    }
+    if (d.stimulusType === "vo2_piramide") {
+      const mins = ivBlocks.map((b) => b.durationSec / 60);
+      if (mins.length < 5 || mins.length > 9 || mins.some((m) => !Number.isInteger(m) || m < 1 || m > 5)) w.push(`${label(d)}: pirámide con intervalos fuera de 1–5 min (${mins.join("-")})`);
+      const peak = mins.indexOf(Math.max(...mins));
+      const up = mins.slice(0, peak + 1).every((m, i, a) => i === 0 || m >= a[i - 1]);
+      const down = mins.slice(peak).every((m, i, a) => i === 0 || m <= a[i - 1]);
+      if (!up || !down) w.push(`${label(d)}: la pirámide no sube y baja (${mins.join("-")})`);
     }
     if (d.stimulusType === "endurance_tempo") {
       if (ivBlocks.length === 0 || ivBlocks.length > 3) w.push(`${label(d)}: tempo con ${ivBlocks.length} bloques (1–3)`);

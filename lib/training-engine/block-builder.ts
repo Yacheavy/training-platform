@@ -276,6 +276,80 @@ export function buildBlocks(
   }
 
   /**
+   * VO2max con la potencia estimada: la PAM medida o, sin ella, ~112% FTP (misma referencia que el HIIT genuino).
+   * Las variantes siguientes no dependen de la librería de la base de datos.
+   */
+  const pamW = pvo2maxWatts ? Math.round(pvo2maxWatts) : Math.round(ftp * 1.12);
+  const vo2Fixed = (...parts: WorkoutBlock[][]) => parts.flat().reduce((s, b) => s + b.durationSec, 0);
+
+  /**
+   * VO2max 8 × 2′40″ (ensayo en ciclistas muy entrenados, Med Sci Sports Exerc 2002): intervalos a la potencia pico durante
+   * el 60% del tiempo máximo, con recuperación 1:2. La duración fija (2′40″) es criterio propio; 6 → 7 → 8 repeticiones por mesociclo.
+   * Recuperación activa al 50% de la potencia del intervalo. Si el tiempo del día no alcanza se recortan repeticiones (mín. 3).
+   */
+  if (stimulusType === "vo2_pmax") {
+    const intSec = 160;
+    const recSec = 320;
+    const wu = buildWarmupVo2(ftp);
+    const cd = buildCooldownVo2(ftp);
+    const reps0 = [6, 7, 8][pstep];
+    const fit = Math.floor((totalSec - vo2Fixed(wu, cd) + recSec) / (intSec + recSec));
+    const reps = Math.max(3, Math.min(maintenance ? Math.max(3, Math.ceil(reps0 / 2)) : reps0, fit));
+    const blocks: WorkoutBlock[] = [...wu];
+    for (let i = 0; i < reps; i++) {
+      blocks.push({ type: "interval", durationSec: intSec, targetWatts: pamW });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: Math.round(pamW * 0.5) });
+    }
+    const fill = totalSec - vo2Fixed(blocks, cd);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cd];
+  }
+
+  /**
+   * Supramáximo 12 × 30″ (mismo ensayo): 30 s al 175% de la potencia pico con 4′30″ de recuperación. Se traduce a ~175% de
+   * la PAM (criterio propio; tope 260% FTP). El esfuerzo es casi máximo: el número es una referencia. 8 → 10 → 12 repeticiones.
+   */
+  if (stimulusType === "vo2_supra_30") {
+    const intSec = 30;
+    const recSec = 270;
+    const wu = buildWarmupVo2(ftp);
+    const cd = buildCooldownVo2(ftp);
+    const reps0 = [8, 10, 12][pstep];
+    const watts = Math.min(Math.round(ftp * 2.6), Math.round(pvo2maxWatts ? pvo2maxWatts * 1.75 : ftp * 2.1));
+    const fit = Math.floor((totalSec - vo2Fixed(wu, cd) + recSec) / (intSec + recSec));
+    const reps = Math.max(4, Math.min(maintenance ? Math.max(4, Math.ceil(reps0 / 2)) : reps0, fit));
+    const blocks: WorkoutBlock[] = [...wu];
+    for (let i = 0; i < reps; i++) {
+      blocks.push({ type: "interval", durationSec: intSec, targetWatts: watts });
+      if (i < reps - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: Math.round(ftp * 0.4) });
+    }
+    const fill = totalSec - vo2Fixed(blocks, cd);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cd];
+  }
+
+  /**
+   * Pirámide: intervalos de 1 a 5 min que suben y bajan (1-2-3-4-3-2-1′ → 2-3-4-5-4-3-2′ → 1-2-3-4-5-4-3-2-1′), con 2′ de
+   * recuperación al 50% de la PAM. Práctica de entrenadores sin ensayos: la potencia baja con la duración
+   * (~99% a 1′ hasta ~90% a 5′ de la PAM, nunca menos de 102% FTP) es criterio propio.
+   */
+  if (stimulusType === "vo2_piramide") {
+    const patterns = [[1, 2, 3, 4, 3, 2, 1], [2, 3, 4, 5, 4, 3, 2], [1, 2, 3, 4, 5, 4, 3, 2, 1]];
+    const pattern = maintenance ? [1, 2, 3, 2, 1] : patterns[pstep];
+    const recSec = 120;
+    const wu = buildWarmupVo2(ftp);
+    const cd = buildCooldownVo2(ftp);
+    const blocks: WorkoutBlock[] = [...wu];
+    pattern.forEach((m, i) => {
+      blocks.push({ type: "interval", durationSec: m * 60, targetWatts: Math.round(Math.max(pamW * (1.02 - 0.025 * m), ftp * 1.02)) });
+      if (i < pattern.length - 1) blocks.push({ type: "recovery", durationSec: recSec, targetWatts: Math.round(pamW * 0.5) });
+    });
+    const fill = totalSec - vo2Fixed(blocks, cd);
+    if (fill > 60) blocks.push({ type: "z2_fill", durationSec: fill, targetWatts: z2Watts });
+    return [...blocks, ...cd];
+  }
+
+  /**
    * Sprints cortos neuromusculares (Kristoffersen 2019): series de 4 sprints de ~6 s sentado, salida desde parado,
    * resistencia alta (110-120 rpm al final), 2 min de recuperación entre sprints y 5 min entre series.
    * El estudio hizo 3 series, 2 veces por semana, 6 semanas, en ciclistas competitivos: mejoró la potencia pico
@@ -419,14 +493,18 @@ export function buildBlocks(
    * ANTES de este fix, esta rama llenaba TODO el tiempo disponible sin
    * límite, generando 80+ repeticiones irreales para sesiones largas.
    */
-  if (stimulusType === "ronnestad_30_15" || stimulusType === "billat_30_30" || stimulusType === "rst") {
-    const shortInterval = stimulusType === "rst" ? 6 : 30;
-    const shortRecovery = stimulusType === "rst" ? 24 : stimulusType === "billat_30_30" ? 30 : 15;
-    const repsPerSeries = stimulusType === "rst" ? 6 : stimulusType === "billat_30_30" ? 15 : 13;
-    const defaultSeries = stimulusType === "rst" ? 4 : stimulusType === "billat_30_30" ? 1 : 3;
+  if (stimulusType === "ronnestad_30_15" || stimulusType === "billat_30_30" || stimulusType === "rst" || stimulusType === "vo2_corto_15_15") {
+    const is1515 = stimulusType === "vo2_corto_15_15";
+    const isBillat = stimulusType === "billat_30_30";
+    const shortInterval = stimulusType === "rst" ? 6 : is1515 ? 15 : 30;
+    const shortRecovery = stimulusType === "rst" ? 24 : is1515 ? 15 : isBillat ? 30 : 15;
+    // Billat 30/30: 2 series y la dosis sube por repeticiones (10 → 12 → 15) con el mismo paso 1→3 que las series (criterio propio)
+    const billatStep = Math.min(3, Math.max(1, seriesOverride ?? 3));
+    const repsPerSeries = stimulusType === "rst" ? 6 : is1515 ? 20 : isBillat ? [10, 12, 15][billatStep - 1] : 13;
+    const defaultSeries = stimulusType === "rst" ? 4 : isBillat ? 2 : 3;
     // Dosis progresiva (práctica de entrenadores, no dosis de los estudios): el generador
     // puede pedir menos series que el protocolo completo.
-    const numSeries = seriesOverride ?? defaultSeries;
+    const numSeries = isBillat ? (maintenance ? 1 : defaultSeries) : (seriesOverride ?? defaultSeries);
     const restBetweenSeriesSec = 180;
 
     // Rønnestad 2015 (SMS): "the power output during the first short work intervals was set to
@@ -434,9 +512,11 @@ export function buildBlocks(
     // recuperación es el 50% de la potencia del intervalo. El libro (Chicharro) da 100-110% PAM.
     // Con PAM medida se arranca al 100% (tope 140% FTP); sin PAM, el %FTP de la librería.
     const usesPam = !!pvo2maxWatts && stimulusType !== "rst";
+    // Sin PAM ni librería (variantes nuevas) se estima ~112% FTP: nunca por debajo del FTP
+    const noLib = !(intensityPctLow && intensityPctHigh);
     const shortWatts = usesPam
       ? Math.min(Math.round(pvo2maxWatts as number), Math.round(ftp * 1.4))
-      : targetWatts;
+      : noLib && stimulusType !== "rst" ? Math.round(ftp * 1.12) : targetWatts;
     const shortRecoveryWatts = usesPam ? Math.round(shortWatts * 0.5) : z2Watts;
 
     const blocks: WorkoutBlock[] = [...buildWarmupVo2(ftp)];

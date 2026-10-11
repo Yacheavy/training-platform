@@ -159,10 +159,10 @@ export function PlanStyleCard({
               :`Se aplica cuando el bloque activo es de VO2max${activeObjective ? ` (el actual es «${activeObjective}», así que por ahora no cambia nada)` : ""}.`}
           </p>
           <div className="field-grid">
-            <Field label="Sesión de VO2max" hint="Qué sesión de VO2max se hace cada semana. «Rotar» alterna tres variantes."
-              why="HIIT genuino: libro de López Chicharro 2018. Rønnestad 30/15 tiene ensayos en ciclistas entrenados y progresa por series. VO2max largo 5′ y alternar son criterio de práctica.">
+            <Field label="Sesión de VO2max" hint="Qué sesión de VO2max se hace cada semana. «Rotar» alterna ocho variantes (intervalos cortos, largos y supramáximos)."
+              why="HIIT genuino: libro de López Chicharro 2018. Rønnestad 30/15, el VO2max largo 5′, el de 2′40″ y el supramáximo de 30″ tienen ensayos en ciclistas (muestras chicas). El 15/15, Billat 30/30 y la pirámide son práctica de entrenadores, sin ensayos en ciclistas.">
               <select name="vo2Stimulus" defaultValue={t.vo2Stimulus ?? (t.varietyLevel === "conservative" ? "hiit_genuino" : "rotate")}>
-                <option value="rotate">Rotar: HIIT genuino / Rønnestad 30/15 / VO2max largo 5′</option>
+                <option value="rotate">Rotar entre las 8 variantes de VO2max</option>
                 <option value="hiit_genuino">Solo HIIT genuino 7×3′ al 100% PAM</option>
                 <option value="ronnestad_30_15">Solo Rønnestad 30/15 (3×13 de 30″/15″)</option>
                 <option value="alternate">Alternar semanas: HIIT genuino / Rønnestad</option>

@@ -633,6 +633,22 @@ export const REFERENCES: Reference[] = [
     level: "Revisión narrativa (nivel moderado-bajo).",
     checked: "abstract",
   },
+  {
+    id: "R77",
+    surnames: [],
+    cite: "Interval training program optimization in highly trained endurance cyclists. Med Sci Sports Exerc. 2002;34(11):1801-1807 (autores no confirmados en la fuente consultada: no la cites por apellido).",
+    supports: "38 ciclistas y triatletas muy entrenados (VO2peak ~64,5), 4 semanas con 2 sesiones por semana de HIT sobre su entrenamiento habitual. Grupos: 8 intervalos a la potencia pico durante el 60% del tiempo máximo a esa potencia, con recuperación 1:2 (n=8) o recuperación al 65% de la FC máxima (n=9); 12 × 30 s al 175% de la potencia pico con 4,5 min de recuperación (n=10); control (n=11). Todos los grupos de HIT mejoraron la contrarreloj de 40 km entre 4,4 y 5,8% y la potencia pico entre 3,0 y 6,2%, más que el control; el VO2peak mejoró significativamente en los dos grupos de 8 intervalos (+5,4% y +8,1%) frente a +1,0% del control. En el grupo de 30 s supramáximos no se informó una mejora significativa del VO2peak.",
+    level: "Ensayo con grupos pequeños y solo 4 semanas. Solo se leyó el abstract (vía registro bibliográfico): la duración individual de los intervalos depende del tiempo máximo de cada atleta, que acá no se mide.",
+    checked: "abstract",
+  },
+  {
+    id: "R78",
+    surnames: ["Rønnestad", "Ronnestad", "Øfsteng", "Zambolin", "Raastad", "Hammarström"],
+    cite: "Rønnestad BR, Øfsteng SJ, Zambolin F, Raastad T, Hammarström D. Superior physiological adaptations after a microcycle of short intervals versus long intervals in cyclists. Int J Sports Physiol Perform. 2021;16(10):1432-1438. doi:10.1123/ijspp.2020-0647.",
+    supports: "17 ciclistas de nivel nacional, microciclo de 5 sesiones de HIT en 7 días con ~30 min de trabajo por sesión: intervalos cortos (30 s/15 s) mejoraron más el VO2max (diferencia 5,7%) y la potencia a 4 mmol/L (3,8%) que los largos (6 × 5 min); sin diferencias en potencia máxima, eficiencia ni potencia de 1 min. El grupo de intervalos largos no mejoró en ninguna medida (los autores lo atribuyen en parte a fatiga residual).",
+    level: "Muestra pequeña, un microciclo de choque (no es el uso semanal del sistema) y sin grupo control. Se leyó el manuscrito aceptado, no la versión publicada.",
+    checked: "abstract",
+  },
 ];
 
 /** Apellidos que se aceptan como citas (el resto se marca como no verificado). */

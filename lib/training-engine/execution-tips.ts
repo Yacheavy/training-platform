@@ -62,6 +62,32 @@ export function getExecutionTips(stimulusType: string): string[] {
       "Guiate por la potencia; la frecuencia cardíaca tarda 1-2 min en subir y en los intervalos largos sube con deriva.",
       "Recuperación de 2:30 al ~50%: pedaleá suave, no pares. Si no completás la última repetición, anotalo.",
     ],
+    vo2_pmax: [
+      "Son pocos intervalos y largos de recuperación: 2′40″ a tu potencia en VO2max, y 5′20″ pedaleando suave. Es una sesión larga (~90 min) por las pausas, no por el esfuerzo.",
+      "Arrancá cada intervalo en el watt objetivo, sin pasarte en los primeros 30 s: tenés que llegar al último con la misma potencia.",
+      "La duración fija de 2′40″ es una aproximación: el ensayo usaba el 60% de tu tiempo máximo a esa potencia. Si te sobra mucho, anotalo.",
+    ],
+    vo2_supra_30: [
+      "Cada esfuerzo dura 30 s y es casi máximo (por encima de tu potencia en VO2max). El número del plan es una referencia: no pasa nada si en las últimas repeticiones no llegás.",
+      "Los 4′30″ de recuperación son fáciles a propósito: soltá las piernas y recuperá casi por completo antes del siguiente.",
+      "Salí sentado y con resistencia alta, en llano o falsa bajada controlada. Si hay dolor o molestia, cortá la serie.",
+      "No lo hagas con piernas muy cargadas ni el día después de una sesión dura.",
+    ],
+    vo2_corto_15_15: [
+      "Es como el 30/15 pero con intervalos de 15 s: arrancá en tu potencia en VO2max y ajustá entre series según cómo te sintas.",
+      "Los 15 s de recuperación son cortos: seguí pedaleando suave sin parar.",
+      "Es un formato extrapolado del 30/15; sin ensayo propio en ciclistas. Si te cuesta sostenerlo, quedate con menos series.",
+    ],
+    billat_30_30: [
+      "Alternás 30 s a tu potencia en VO2max con 30 s suaves, en 2 series. Mantené el mismo watt en todas las repeticiones.",
+      "Si la potencia cae mucho antes de terminar la serie, cortá ahí: la idea es repetir el esfuerzo, no llegar vacío.",
+      "Este formato viene de la carrera a pie; en ciclismo no tiene ensayos propios.",
+    ],
+    vo2_piramide: [
+      "Los intervalos suben y bajan (por ejemplo 1-2-3-4-3-2-1′): los cortos van un poco más fuertes y los largos algo más suaves, siempre por encima del FTP.",
+      "Los 2′ entre intervalos son pedaleo suave: no pares del todo.",
+      "No hay ensayos que respalden esta forma: es una variante para variar el estímulo.",
+    ],
     sprint_neuro: [
       "Cada sprint dura apenas 6 s: salí desde casi parado, sentado, con resistencia alta, y acelerá al máximo sostenido hasta el final.",
       "Recuperá bien (2 min) entre sprints y 5 min entre series: la calidad de cada sprint importa más que la cantidad.",

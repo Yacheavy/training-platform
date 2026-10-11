@@ -75,9 +75,9 @@ export interface PlannedDay {
 }
 
 /** Variantes con escalón de progresión por mesociclo (calendario; Fase 2 lo ajustará con la ejecución real). */
-const PROGRESSION_KEYS = new Set(["hiit_genuino", "sweet_spot", "umbral", "vo2_long", "over_under", "endurance_tempo", "long_durability"]);
+const PROGRESSION_KEYS = new Set(["hiit_genuino", "sweet_spot", "umbral", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_piramide", "over_under", "endurance_tempo", "long_durability"]);
 /** Variantes con series 1→3 (criterio propio, igual que Rønnestad). */
-const SERIES_KEYS = new Set(["ronnestad_30_15", "z2_sprints", "sprint_neuro"]);
+const SERIES_KEYS = new Set(["ronnestad_30_15", "vo2_corto_15_15", "billat_30_30", "z2_sprints", "sprint_neuro"]);
 /** Un slot de ciclismo de al menos esta duración (min) se trata como salida larga. */
 export const LONG_SLOT_MIN = 150;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -450,6 +450,16 @@ export function buildPlan(input: {
           ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Ajustes)"}`
           : effectiveStimulusType === "ronnestad_30_15"
             ? ` · ${series} serie${series === 1 ? "" : "s"} de 13×(30s/15s) (progresivo 1→3)`
+            : effectiveStimulusType === "vo2_corto_15_15"
+              ? ` · ${series} serie${series === 1 ? "" : "s"} de 20×(15s/15s) (progresivo 1→3; formato extrapolado del 30/15, sin ensayo propio)`
+            : effectiveStimulusType === "billat_30_30"
+              ? ` · ${maintenance ? 1 : 2} serie${maintenance ? "" : "s"} de ${[10, 12, 15][Math.min(3, Math.max(1, series ?? 3)) - 1]}×(30s/30s) (extrapolado de la carrera a pie; sin ensayos en ciclistas)`
+            : effectiveStimulusType === "vo2_pmax"
+              ? " · intervalos de 2′40″ a tu potencia en VO2max con recuperación 1:2 (el ensayo usaba el 60% del tiempo máximo individual; la duración fija es criterio propio)"
+            : effectiveStimulusType === "vo2_supra_30"
+              ? " · 30″ supramáximos (~175% de tu potencia en VO2max) con 4′30″ de recuperación; ensayo en ciclistas muy entrenados, la conversión a vatios es criterio propio"
+            : effectiveStimulusType === "vo2_piramide"
+              ? " · pirámide de intervalos de 1 a 5 min (práctica de entrenadores; sin ensayos)"
             : effectiveStimulusType === "z2_sprints"
               ? ` · ${sprintCountFor(series ?? 3, maintenance)} sprints de 30" a máxima potencia dentro de un rodaje Z2 (Rønnestad 2020 usó 9; evidencia preliminar en ciclistas de élite; progresión 5→7→9 = criterio propio)`
               : "";

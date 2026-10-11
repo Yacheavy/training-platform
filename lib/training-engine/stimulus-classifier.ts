@@ -59,6 +59,9 @@ export function classifyStimulusType(activity: {
         const name = (activity.name ?? "").toLowerCase();
         if (name.includes("hiit corto") || name.includes("30/15") || name.includes("30-15"))
           return "ronnestad_30_15";
+        if (name.includes("30/30") || name.includes("30-30") || name.includes("billat")) return "billat_30_30";
+        if (name.includes("15/15") || name.includes("15-15")) return "vo2_corto_15_15";
+        if (name.includes("pirámide") || name.includes("piramide")) return "vo2_piramide";
         if (name.includes("sprint") || name.includes("rst")) return "rst";
         return "hiit_genuino";
       }

@@ -110,7 +110,22 @@ FRECUENCIA DE SESIONES DURAS (por qué el sistema pone UN solo VO2max por semana
 
 BILLAT 30-30: método de intervalos cortos alternados descrito en la literatura de carrera [R6]. El esquema
 exacto (~100%/~50% de vVO2max, series hasta el fallo) NO se pudo confirmar en el texto de la fuente: tratalo
-como [PRÁCTICA] y no atribuyas cifras a Billat. Está extrapolado de carrera a ciclismo.
+como [PRÁCTICA] y no atribuyas cifras a Billat. Está extrapolado de carrera a ciclismo. El sistema lo usa como
+variante de VO2max (2 series de 10-15 × 30 s/30 s al 100% de la PAM, recuperación al 50%): la dosis es criterio propio.
+
+VARIANTES DE VO2MAX (el sistema rota entre 8 para que el atleta no repita siempre lo mismo; la rotación y la
+progresión son criterio propio, y cada variante lleva su nivel de evidencia):
+- HIIT genuino 7-10 × 3-4 min [PRÁCTICA, protocolo del libro R1]. Rønnestad 30/15 [ensayos, R2 R3, muestras chicas].
+- VO2max largo 5': 4-5 × 5 min [ensayo del comparador largo en R2/R3; la intensidad exacta es criterio propio].
+- 8 × 2'40" al 100% de la PAM con recuperación 1:2 y supramáximo 12 × 30" (~175% de la PAM, recuperación 4'30"): salen
+  de un ensayo en 38 ciclistas muy entrenados, 4 semanas [R77]: todos los grupos de HIT mejoraron la contrarreloj de 40 km
+  (+4,4 a +5,8%); el VO2peak mejoró en los grupos de 8 intervalos pero en el de 30 s supramáximos no se informó mejora
+  significativa. Las duraciones fijas (2'40") y la conversión a vatios son criterio propio. Son sesiones largas (~90 min).
+- 15/15 [PRÁCTICA]: extrapola el formato corto con ensayos (30/15) [R2][R3][R78]; el 15/15 no tiene ensayo propio. 1-3 series de 20 × 15 s/15 s.
+- Pirámide 1-2-3-4-3-2-1' [PRÁCTICA]: sin ensayos; solo varía el estímulo. La potencia por tramo es criterio propio.
+- Intervalos cortos vs largos: en ciclistas, los cortos (30/15) mejoraron más el VO2max que los largos igualados por esfuerzo
+  en tres ensayos pequeños [R2][R3][R78]; ninguno concluye que los largos no sirvan, y R78 fue un microciclo de choque.
+  No digas que una variante es "la mejor": la evidencia es de muestras chicas y pocas semanas.
 
 SIT / RST: esfuerzos muy cortos (4-30s) a intensidad supramáxima. Objetivo neuromuscular/anaeróbico, NO
 equivalente a trabajo de VO2max [R1]: no reemplaza HIIT genuino ni Rønnestad para ese fin. El % exacto de

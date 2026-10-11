@@ -29,14 +29,14 @@ export async function generateFullPlan(
   const libraryRows = await prisma.workoutLibraryEntry.findMany();
   const library: Record<string, PlanLibraryEntry> = Object.fromEntries(libraryRows.map((l) => [l.key, l]));
 
-  // Historial para la rotación: sesiones de las 4 semanas previas al bloque y, al regenerar parcialmente,
+  // Historial para la rotación: sesiones de las 12 semanas previas al bloque (memoria larga del selector de variantes) y, al regenerar parcialmente,
   // las ya existentes dentro del bloque anteriores al día objetivo (así la simulación coincide con lo real).
   const DAY = 86400000;
   const startMs = block.startDate.getTime();
   const offsetOf = (d: Date) => Math.round((d.getTime() - startMs) / DAY);
   const isVariantRow = (k: string) => !isOffBike(k) && !k.startsWith("ftp_test");
   const prior = await prisma.generatedWorkout.findMany({
-    where: { athleteId: block.athleteId, date: { gte: new Date(startMs - 28 * DAY), lt: block.startDate } },
+    where: { athleteId: block.athleteId, date: { gte: new Date(startMs - 84 * DAY), lt: block.startDate } },
     select: { date: true, workoutLibraryKey: true },
   });
   const history = prior.filter((r) => isVariantRow(r.workoutLibraryKey)).map((r) => ({ dayOffset: offsetOf(r.date), key: r.workoutLibraryKey }));

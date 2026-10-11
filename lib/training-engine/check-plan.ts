@@ -1,4 +1,5 @@
 import { buildPlan } from "./plan-builder";
+import { isVo2Key } from "./variants";
 import { validatePlan } from "./plan-validator";
 import { evaluateAvailability, recoverySources, scoreAvailability, buildAvailabilityHistory, SCORE_BANDS, type CheckinInput } from "./availability-score";
 import { hrvSignal, restingHrSignal } from "./recovery-signals";
@@ -80,7 +81,7 @@ for (const tn of Object.keys(templates)) for (const ratio of ["3:1","4:1"]) for 
 }
 const bs = new Date(Date.UTC(2026,9,5,12,0,0));
 const bp = buildPlan({block:{name:"t",objective:"vo2max",startDate:bs,endDate:new Date(bs.getTime()+12*7*86400000)},ftp:300,pvo2maxWatts:380,thresholds:{deloadRatio:"3:1",weeksBetweenFtpTest:0,ftpTestProtocol:"20min",vo2Stimulus:"rotate",varietyLevel:"balanced",periodization:"block"},template:templates.user,library});
-const vo2PerWeek = new Map<number,number>(); for (const d of bp) if (["hiit_genuino","ronnestad_30_15","vo2_long"].includes(d.stimulusType) && !d.isDeload) vo2PerWeek.set(d.weekIndex,(vo2PerWeek.get(d.weekIndex)??0)+1);
+const vo2PerWeek = new Map<number,number>(); for (const d of bp) if (isVo2Key(d.stimulusType) && !d.isDeload) vo2PerWeek.set(d.weekIndex,(vo2PerWeek.get(d.weekIndex)??0)+1);
 console.log("VO2max por semana (bloques, plantilla del usuario):",[...vo2PerWeek.entries()].map(([k,v])=>`s${k+1}:${v}`).join(" "));
 for (const [wk,c] of vo2PerWeek) { const exp = bp.some((d)=>d.weekIndex===wk&&d.intensified)?2:1; if (c!==exp) { bad++; console.log("BLOQUE: semana",wk+1,"tiene",c,"VO2max, esperado",exp); } }
 

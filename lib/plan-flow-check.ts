@@ -4,6 +4,7 @@
  * Corre con: npx tsx lib/plan-flow-check.ts   (no toca ninguna base real)
  */
 process.env.DATABASE_URL ||= "postgresql://x:x@localhost:5432/x";
+import { VARIANTS } from "./training-engine/variants";
 import { applySeasonCore } from "./season-apply";
 import { generateFullPlan, type PlanDb } from "./training-engine/generate-full-plan";
 import { regenerateBlocks } from "./training-engine/regenerate";
@@ -275,6 +276,11 @@ async function run() {
   for (const [id, s] of finalSnaps) ok(JSON.stringify(snap(db, id)) === s, `${id}: sus sesiones cambiaron por operaciones de otros alumnos`);
 
   for (const id of ["contraste-frances", "contraste-tradicional"]) ok(contrastSeen.has(id), `${id}: el plan no generó ninguna superserie de contraste`);
+  // Variedad de VO2max: los atletas virtuales deben recibir varias variantes distintas, no siempre las mismas
+  const vo2Rows = db.generatedWorkout.rows.filter((r: Row) => VARIANTS[r.workoutLibraryKey]?.vo2);
+  const vo2Keys = new Set(vo2Rows.map((r: Row) => r.workoutLibraryKey));
+  ok(vo2Keys.size >= 4, `solo ${vo2Keys.size} variantes de VO2max distintas en todos los perfiles (${[...vo2Keys].join(", ")})`);
+  log.push(`\nvariantes de VO2max generadas (${vo2Rows.length} sesiones): ` + [...vo2Keys].map((k) => `${k}:${vo2Rows.filter((r: Row) => r.workoutLibraryKey === k).length}`).join(", "));
   const raceRows = db.generatedWorkout.rows.filter((r: Row) => r.workoutLibraryKey === ACTIVATION_KEY || r.workoutLibraryKey === RACE_WARMUP_KEY);
   ok(raceRows.length >= 12, `solo ${raceRows.length} sesiones de carrera en todos los perfiles`);
   log.push(`\nsesiones de carrera generadas: ${raceRows.filter((r: Row) => r.workoutLibraryKey === ACTIVATION_KEY).length} activaciones, ${raceRows.filter((r: Row) => r.workoutLibraryKey === RACE_WARMUP_KEY).length} calentamientos`);

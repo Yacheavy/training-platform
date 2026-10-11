@@ -124,6 +124,38 @@ export const VARIANTS: Record<string, VariantDef> = {
     purpose: "4-5 × 5 min a ~92% de la potencia en VO2max, con 2'30\" de recuperación activa.",
     intensity: 3, vo2: true, minSlotMin: 50, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
   },
+  vo2_pmax: {
+    key: "vo2_pmax", label: "VO2max 8 × 2′40″", family: "vo2", evidence: "ensayo",
+    evidenceNote: "Un ensayo en ciclistas y triatletas muy entrenados (n=38, 4 semanas, 2 sesiones por semana, Med Sci Sports Exerc 2002): 8 intervalos a la potencia pico durante el 60% del tiempo máximo individual, con recuperación 1:2, mejoraron la contrarreloj de 40 km (+4,4 a +5,8% en los grupos de HIT) y el VO2peak. Acá la duración se fija en 2′40″: es criterio propio (el estudio usaba el 60% del tiempo máximo de cada atleta).",
+    purpose: "6-8 × 2′40″ al 100% de la potencia en VO2max, con recuperación activa al 50% del doble de duración (5′20″).",
+    caveat: "Es una sesión larga (~90 min por las recuperaciones); si el día tiene menos tiempo, se recortan repeticiones (mínimo 3).",
+    intensity: 3, vo2: true, minSlotMin: 75, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
+  vo2_supra_30: {
+    key: "vo2_supra_30", label: "Supramáximo 12 × 30″", family: "vo2", evidence: "ensayo",
+    evidenceNote: "Mismo ensayo en ciclistas muy entrenados (Med Sci Sports Exerc 2002): 12 × 30 s al 175% de la potencia pico con 4,5 min de recuperación mejoró la contrarreloj de 40 km y la potencia pico; en ese grupo no se informó una mejora significativa del VO2peak. La conversión a vatios (175% de tu potencia en VO2max) es criterio propio.",
+    purpose: "8-12 × 30″ muy por encima de la potencia en VO2max, con 4′30″ de recuperación fácil.",
+    caveat: "El número del plan es una referencia: cada esfuerzo es casi máximo y es normal no llegar en las últimas repeticiones.",
+    intensity: 3, vo2: true, minSlotMin: 75, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
+  vo2_corto_15_15: {
+    key: "vo2_corto_15_15", label: "VO2max corto 15/15", family: "vo2", evidence: "practica",
+    evidenceNote: "Extrapola el formato de intervalos cortos con ensayos en ciclistas (30/15, Rønnestad 2015 y 2020). El 15/15 en sí no tiene ensayo propio en ciclistas.",
+    purpose: "1-3 series de 20 × (15 s / 15 s) a la potencia en VO2max, con 3 min entre series.",
+    intensity: 3, vo2: true, minSlotMin: 40, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
+  billat_30_30: {
+    key: "billat_30_30", label: "Billat 30/30", family: "vo2", evidence: "practica",
+    evidenceNote: "Método de intervalos cortos descrito en la literatura de carrera (Billat 2001). No se pudo confirmar el esquema exacto en el texto y está extrapolado al ciclismo: sin ensayos propios en ciclistas.",
+    purpose: "2 series de 10-15 × (30 s / 30 s) a la potencia en VO2max, con recuperación al 50%.",
+    intensity: 3, vo2: true, minSlotMin: 45, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
+  vo2_piramide: {
+    key: "vo2_piramide", label: "Pirámide 1-2-3-4-3-2-1′", family: "vo2", evidence: "practica",
+    evidenceNote: "Práctica de entrenadores: reúne intervalos de 1 a 5 min en una sola sesión para variar el estímulo. Sin ensayos; las duraciones y la intensidad por tramo son criterio propio.",
+    purpose: "Intervalos de 1 a 5 min en escalera hasta el máximo y de vuelta (por ejemplo 1-2-3-4-3-2-1′), a ~90-99% de la potencia en VO2max, con 2′ de recuperación.",
+    intensity: 3, vo2: true, minSlotMin: 50, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
   z2_sprints: {
     key: "z2_sprints", label: "Z2 + sprints", family: "neuro", evidence: "preliminar",
     evidenceNote: "Almquist 2020 y Taylor 2021: ciclistas de élite en transición, muestra pequeña; el seguimiento (Taylor 2021) informa mejor rendimiento de resistencia 6 semanas después de empezar la preparación.",

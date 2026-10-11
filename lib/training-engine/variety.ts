@@ -34,6 +34,12 @@ interface PoolEntry {
 }
 
 const WINDOW_DAYS = 28;
+/**
+ * Memoria larga para la rotación: con muchas variantes (p. ej. 8 de VO2max) una ventana de 4 semanas solo ve 4 sesiones y las de menor
+ * reparto nunca llegarían. La antigüedad de la última vez (hasta 12 semanas) suma al puntaje de cada variante para que todas roten.
+ */
+const LONG_MEMORY_DAYS = 84;
+const RECENCY_WEIGHT = 0.15;
 
 const LEVEL_INDEX: Record<VarietyLevel, 0 | 1 | 2> = { conservative: 0, balanced: 1, varied: 2 };
 
@@ -46,9 +52,14 @@ export function poolFor(objective: string, role: SlotRole, vo2Stimulus: string |
       if (vo2Stimulus === "hiit_genuino") return [E("hiit_genuino", 1, 1, 1)];
       if (vo2Stimulus === "ronnestad_30_15") return [E("ronnestad_30_15", 1, 1, 1)];
       if (vo2Stimulus === "alternate") return [E(weekIndex % 2 === 1 ? "ronnestad_30_15" : "hiit_genuino", 1, 1, 1)];
-      if (vo2Stimulus === "rotate") return [E("hiit_genuino", 0.4, 0.4, 0.35), E("ronnestad_30_15", 0.4, 0.4, 0.35), E("vo2_long", 0.2, 0.2, 0.3)];
-      // Sin preferencia explícita: conservador mantiene el HIIT genuino de siempre; los demás rotan
-      return [E("hiit_genuino", 1, 0.4, 0.35), E("ronnestad_30_15", 0, 0.4, 0.35), E("vo2_long", 0, 0.2, 0.3)];
+      // Rotar y "sin preferencia": conservador mantiene el HIIT genuino de siempre; los demás rotan entre todas las variantes de VO2max.
+      // Las de ensayo en ciclistas (Rønnestad, 5′, 2′40″, supramáximo) pesan más que las de práctica (15/15, Billat, pirámide).
+      // Las dos sesiones largas (2′40″ y supramáximo) solo entran si el día tiene tiempo (≥90 min).
+      const all = [
+        E("hiit_genuino", 1, 0.22, 0.16), E("ronnestad_30_15", 0, 0.2, 0.16), E("vo2_long", 0, 0.14, 0.12), E("vo2_corto_15_15", 0, 0.12, 0.12),
+        E("billat_30_30", 0, 0.12, 0.12), E("vo2_piramide", 0, 0.1, 0.12), E("vo2_pmax", 0, 0.06, 0.1), E("vo2_supra_30", 0, 0.04, 0.1),
+      ];
+      return all;
     }
     if (objective === "umbral") return [E("umbral", 1, 0.65, 0.5), E("over_under", 0, 0.35, 0.5)];
     // base (y cualquier otro): sweet spot como eje; tempo y torque como variedad
@@ -151,8 +162,8 @@ export function pickVariant(a: PickArgs): PickResult {
     const target = c.w[li] / wSum;
     const actual = total ? recent.filter((h) => h.key === c.key).length / total : 0;
     const last = lastOf(c.key);
-    const since = last == null ? WINDOW_DAYS : Math.min(WINDOW_DAYS, a.dayOffset - last);
-    const score = target - actual + 0.02 * (since / WINDOW_DAYS);
+    const since = last == null ? LONG_MEMORY_DAYS : Math.min(LONG_MEMORY_DAYS, a.dayOffset - last);
+    const score = target - actual + RECENCY_WEIGHT * (since / LONG_MEMORY_DAYS);
     if (score > bestScore + 1e-9) {
       best = c;
       bestScore = score;
