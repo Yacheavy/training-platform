@@ -9,7 +9,7 @@ import { NUTRITION_SELECT, RIDE_TYPES, toNutritionInput } from "@/lib/nutrition-
 import { toSessionNutrition, MIN_ELIGIBLE_SEC } from "@/lib/training-engine/nutrition-analysis";
 import { getIntervalsCreds } from "@/lib/intervals-creds";
 import { updateActivityRatings } from "@/lib/intervals-client";
-import { validFeel, validRpe } from "@/lib/ratings";
+import { validFeel, validRpe, triggersAnalysisMail } from "@/lib/ratings";
 
 function optInt(raw: FormDataEntryValue | null, max: number, label: string): number | null {
   const s = String(raw ?? "").trim().replace(",", ".");
@@ -79,7 +79,8 @@ export async function savePostRide(formData: FormData): Promise<{ error: string 
 
     await prisma.activity.update({ where: { id: a.id }, data });
     revalidatePath("/", "layout");
-    after(() => sendActivityAnalysis(a.id));
+    // El mail sale una sola vez, al cerrar la salida; corregir el RPE o la sensación después no lo vuelve a disparar
+    if (triggersAnalysisMail(intent)) after(() => sendActivityAnalysis(a.id));
 
     if (rpe != null || feel != null) {
       const creds = await getIntervalsCreds(a.athleteId);

@@ -1,5 +1,5 @@
 // npx tsx lib/ratings-check.ts — pruebas de las etiquetas y validaciones de RPE y sensación (sin red ni base de datos)
-import { describeRatings, validFeel, validRpe, FEEL_LABELS, RPE_LABELS, expectedRpeBand, ifRatio, readRatings } from "./ratings";
+import { describeRatings, validFeel, validRpe, FEEL_LABELS, RPE_LABELS, expectedRpeBand, ifRatio, readRatings, triggersAnalysisMail } from "./ratings";
 
 const problems: string[] = [];
 const eq = (name: string, got: unknown, want: unknown) => { if (JSON.stringify(got) !== JSON.stringify(want)) problems.push(`${name}: ${JSON.stringify(got)} ≠ ${JSON.stringify(want)}`); };
@@ -29,6 +29,9 @@ const prior = [0.8, 0.78, 0.82].map((f, k) => ({ rpe: 5, feel: 2, ifr: f, label:
 eq("RPE 8 con IF 0,80 vs previas de 5 → tendencia más alta", readRatings({ ...base, rpe: 8, intensityFactor: 0.8, variabilityIndex: 1.05, prior }).some((l) => l.includes("claramente MÁS ALTO")), true);
 eq("RPE 5 con IF 0,80 vs previas de 5 → en línea", readRatings({ ...base, rpe: 5, intensityFactor: 0.8, variabilityIndex: 1.05, prior }).some((l) => l.includes("en línea")), true);
 eq("sin datos → sin líneas", readRatings({ ...base, rpe: null, feel: null }), []);
+
+eq("cerrar la salida dispara el mail", ["save", "planned", "skip"].every(triggersAnalysisMail), true);
+eq("editar RPE/sensación después no lo dispara", triggersAnalysisMail("rating"), false);
 
 console.log({ problems: problems.length });
 if (problems.length) { console.log(problems); process.exit(1); }

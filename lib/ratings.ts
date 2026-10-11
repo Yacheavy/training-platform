@@ -81,3 +81,9 @@ export function readRatings(i: RatingReadingInput): string[] {
   }
   return out;
 }
+
+/**
+ * ¿Este guardado puede disparar el mail de análisis/resumen? Solo el cierre de la salida (popup: guardar, "lo planificado" u omitir).
+ * Editar después el RPE o la sensación desde la sesión NO analiza ni envía nada: si hace falta otro análisis, lo pide el atleta.
+ */
+export const triggersAnalysisMail = (intent: string): boolean => intent !== "rating";
