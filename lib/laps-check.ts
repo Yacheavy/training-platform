@@ -2,7 +2,7 @@
 // Ejecutar: npx tsx lib/laps-check.ts
 import { gzipSync } from "node:zlib";
 import { FitEncoder, FitBaseType } from "fit-file-parser/encoder";
-import { parseFitLaps, describeLaps, type StoredLaps } from "./laps";
+import { parseFitLaps, parseFitPower, sustainedEfforts, describeLaps, type StoredLaps } from "./laps";
 
 const start = new Date("2026-10-08T12:00:00Z");
 const enc = new FitEncoder();
@@ -24,6 +24,13 @@ for (const p of plan) {
     { number: 19, size: 2, baseType: FitBaseType.Uint16, value: p.w },
     { number: 20, size: 2, baseType: FitBaseType.Uint16, value: p.w + 90 },
   ]);
+  // Registros segundo a segundo (marca de tiempo + potencia)
+  for (let s = 0; s < p.dur; s++) {
+    enc.writeMessage(20, [
+      { number: 253, size: 4, baseType: FitBaseType.Uint32, value: st + s },
+      { number: 7, size: 2, baseType: FitBaseType.Uint16, value: p.w },
+    ]);
+  }
   t += p.dur;
 }
 const bytes = enc.close();
@@ -40,6 +47,17 @@ const bytes = enc.close();
     const stored: StoredLaps = { source: "fit", fetchedAt: "x", laps };
     const txt = describeLaps(stored, 300);
     check(/≥ 90% del FTP \(270 W[^)]*\): 4 \(V2, V4, V6, V8\)/.test(txt), `${name}: conteo de trabajo duro incorrecto\n${txt}`);
+    const power = await parseFitPower(input);
+    const total = plan.reduce((s, p) => s + p.dur, 0);
+    check(Math.abs(power.length - total / 5) <= 2, `${name}: ${power.length} muestras de 5 s, esperadas ~${total / 5}`);
+    const eff = sustainedEfforts(power, 300);
+    check(eff.length === 4, `${name}: ${eff.length} tramos sostenidos, esperados 4 (${JSON.stringify(eff)})`);
+    check(eff.every((e) => Math.abs(e.durSec - 240) <= 15 && e.avgW >= 328 && e.avgW <= 336), `${name}: tramos mal medidos ${JSON.stringify(eff)}`);
+    check(eff[0] && Math.abs(eff[0].startSec - 600) <= 15, `${name}: inicio del 1er tramo ${eff[0]?.startSec}`);
+    check(sustainedEfforts(power, 400).length === 0, `${name}: con FTP 400 no debería haber tramos`);
+    const withPower = describeLaps({ ...stored, power5: power }, 300);
+    check(/4 en total/.test(withPower) && /% del FTP/.test(withPower), `${name}: el texto no lista los tramos\n${withPower}`);
+    if (name === "fit") console.log(withPower.split("\n").slice(-1)[0]);
     if (name === "fit") console.log(txt.split("\n").slice(0, 5).join("\n"));
   }
   console.log({ problems });
