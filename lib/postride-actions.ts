@@ -37,7 +37,7 @@ export async function savePostRide(formData: FormData): Promise<{ error: string 
     if (!session?.user?.id) return { error: "No autenticado" };
     const a = await prisma.activity.findUnique({
       where: { id: String(formData.get("activityId") ?? "") },
-      select: { ...NUTRITION_SELECT, athleteId: true, type: true, intervalsActivityId: true, nutritionLoggedAt: true },
+      select: { ...NUTRITION_SELECT, athleteId: true, type: true, intervalsActivityId: true, nutritionLoggedAt: true, analysisEmailSentAt: true },
     });
     if (!a || a.athleteId !== session.user.id) return { error: "Actividad no encontrada" };
     if (!RIDE_TYPES.includes(a.type)) return { error: "Esto se registra solo en salidas de bici" };
@@ -80,7 +80,7 @@ export async function savePostRide(formData: FormData): Promise<{ error: string 
     await prisma.activity.update({ where: { id: a.id }, data });
     revalidatePath("/", "layout");
     // El mail sale una sola vez, al cerrar la salida; corregir el RPE o la sensación después no lo vuelve a disparar
-    if (triggersAnalysisMail(intent)) after(() => sendActivityAnalysis(a.id));
+    if (triggersAnalysisMail(intent) && a.nutritionLoggedAt == null && a.analysisEmailSentAt == null) after(() => sendActivityAnalysis(a.id));
 
     if (rpe != null || feel != null) {
       const creds = await getIntervalsCreds(a.athleteId);

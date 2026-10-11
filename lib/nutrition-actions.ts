@@ -16,6 +16,12 @@ function optInt(raw: FormDataEntryValue | null, max: number, label: string): num
   return Math.round(n);
 }
 
+/** ¿Ya se cerró la salida antes (nutrición cargada u omitida)? Solo el PRIMER cierre puede disparar el análisis automático por mail. */
+async function alreadyClosed(activityId: string): Promise<boolean> {
+  const a = await prisma.activity.findUnique({ where: { id: activityId }, select: { nutritionLoggedAt: true, analysisEmailSentAt: true } });
+  return !!a && (a.nutritionLoggedAt != null || a.analysisEmailSentAt != null);
+}
+
 async function ownRide(activityId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
@@ -35,6 +41,7 @@ export async function saveActivityNutrition(formData: FormData) {
   const gi = giRaw === "" ? null : Number(giRaw);
   if (gi != null && ![1, 2, 3].includes(gi)) throw new Error("Tolerancia digestiva inválida");
   const empty = carbs == null && fluid == null && sodium == null && gi == null;
+  const closedBefore = await alreadyClosed(activityId);
 
   await prisma.activity.update({
     where: { id: activityId },
@@ -49,7 +56,7 @@ export async function saveActivityNutrition(formData: FormData) {
   });
   revalidatePath(`/activities/${activityId}`);
   revalidatePath("/dashboard");
-  after(() => sendActivityAnalysis(activityId));
+  if (!closedBefore) after(() => sendActivityAnalysis(activityId));
 }
 
 /** "Consumí lo planificado": guarda los carbohidratos sugeridos para esa sesión (proporcionales a la duración real). */
@@ -59,6 +66,7 @@ export async function applyPlannedNutrition(formData: FormData) {
   if (!row) throw new Error("Actividad no encontrada");
   const s = toSessionNutrition(toNutritionInput(row));
   if (s.targetGPerHour <= 0) throw new Error("Para esta sesión no se sugirieron carbohidratos");
+  const closedBefore = await alreadyClosed(activityId);
 
   await prisma.activity.update({
     where: { id: activityId },
@@ -66,13 +74,14 @@ export async function applyPlannedNutrition(formData: FormData) {
   });
   revalidatePath(`/activities/${activityId}`);
   revalidatePath("/dashboard");
-  after(() => sendActivityAnalysis(activityId));
+  if (!closedBefore) after(() => sendActivityAnalysis(activityId));
 }
 
 /** "Omitir": no se acuerda o no quiere cargarla; deja de aparecer el aviso. Sigue siendo "sin dato". */
 export async function skipActivityNutrition(formData: FormData) {
   const { activityId } = await ownRide(String(formData.get("activityId")));
+  const closedBefore = await alreadyClosed(activityId);
   await prisma.activity.update({ where: { id: activityId }, data: { nutritionLoggedAt: new Date() } });
   revalidatePath("/dashboard");
-  after(() => sendActivityAnalysis(activityId));
+  if (!closedBefore) after(() => sendActivityAnalysis(activityId));
 }

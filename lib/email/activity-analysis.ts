@@ -13,7 +13,7 @@ export type AnalysisMailResult = "sent" | "skipped" | "failed";
 
 /**
  * Envía por mail el análisis de una salida de bici, una sola vez, cuando ya se completó o se omitió la nutrición.
- * Se "reclama" la salida antes de generar el texto para que dos disparos seguidos no manden dos mails; si falla, se libera para reintentar.
+ * Se "reclama" la salida antes de generar el texto para que dos disparos seguidos no manden dos mails; un solo intento automático por salida (si falla, no se reintenta solo).
  */
 export async function sendActivityAnalysis(activityId: string): Promise<AnalysisMailResult> {
   if (!mailConfigured()) return "skipped";
@@ -61,8 +61,8 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
     });
     return "sent";
   } catch (e) {
+    // Un solo intento automático por sesión: si falla no se reintenta solo (cada intento cuesta una llamada a la IA); el atleta puede pedir el análisis en el chat
     console.error("sendActivityAnalysis falló", e);
-    await prisma.activity.update({ where: { id: a.id }, data: { analysisEmailSentAt: null } }).catch(() => {});
     return "failed";
   }
 }
