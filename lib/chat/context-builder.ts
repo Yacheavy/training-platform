@@ -1,4 +1,5 @@
-import { ensureActivityLaps, describeLaps } from "@/lib/laps";
+import { ensureActivityLaps, describeLaps, sustainedEfforts } from "@/lib/laps";
+import { comparePlanVsReal } from "@/lib/plan-vs-real";
 import { ensureActivityWeather, describeWeather } from "@/lib/weather";
 import { describeRatings, readRatings, validRpe, ifRatio } from "@/lib/ratings";
 import { getNutritionSummary, toNutritionInput, NUTRITION_SELECT } from "@/lib/nutrition-data";
@@ -308,6 +309,8 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
             return `Real vs plan (calculado, usalo tal cual): duración ${rm} min vs ${pm} planeados (${pct(rm, pm)})${a.tss != null && a.generatedWorkout!.estimatedTss ? `; TSS ${Math.round(a.tss)} vs ${a.generatedWorkout!.estimatedTss} planeado (${pct(a.tss, a.generatedWorkout!.estimatedTss)})` : ""}.`;
           })(),
           `Estructura PLANIFICADA exacta: ${summarizeBlocks(pb)}`,
+          // Plan vs potencia real: cuentas en código (tiempo a ≥ 90% del FTP planeado vs detectado)
+          ...(lapsData?.power5?.length && user?.ftp ? [comparePlanVsReal(pb, sustainedEfforts(lapsData.power5, user.ftp), user.ftp)] : []),
           `Para comparar plan vs real usá SOLO esta estructura planificada y los datos reales de arriba; si un dato real (por ejemplo la cantidad de series o repeticiones) no figura, decí que no lo sabés en vez de suponerlo. Nunca inventes la estructura planificada.`
         );
       } else {
