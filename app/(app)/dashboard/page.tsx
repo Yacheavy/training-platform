@@ -88,10 +88,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const upcomingBlocks = await getUpcomingBlocks(session.user.id);
   const pendingNutrition = await getPendingNutrition(session.user.id).catch(() => []);
 
-  const hrvDeltaPct =
-    data.hrvToday != null && data.hrvAvg7d != null && data.hrvAvg7d > 0
-      ? Math.round(((data.hrvToday - data.hrvAvg7d) / data.hrvAvg7d) * 1000) / 10
-      : null;
+  // Mismo criterio que el semáforo (no un número distinto con el mismo nombre): media de 7 días contra tu línea base (o los 6 días previos si todavía no hay base)
+  const hrvTrend =
+    availability.hrvDeltaPct != null
+      ? `${availability.hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(Math.round(availability.hrvDeltaPct * 10) / 10).toString().replace(".", ",")}% ${availability.hrvMethod === "baseline" ? "media 7 d vs tu base" : "hoy vs 6 días previos"}`
+      : undefined;
+  const rhrTrend =
+    availability.restingHrDeltaAbs != null
+      ? `${availability.restingHrDeltaAbs > 0 ? "↑" : "↓"} ${Math.abs(Math.round(availability.restingHrDeltaAbs * 10) / 10).toString().replace(".", ",")} lpm ${availability.restingHrMethod === "baseline" ? "media 7 d vs tu base" : "hoy vs 6 días previos"}`
+      : undefined;
+  const hrvAlert = availability.signalsTriggered.includes("hrv");
+  const rhrAlert = availability.signalsTriggered.includes("resting_hr");
 
   let originalSuggestion: string | null = null;
   if (todayWorkout?.rationale) {
@@ -221,11 +228,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <StatCard
             label={`HRV ${ageLabel(data.hrvDate)}`}
             value={data.hrvToday?.toFixed(0) ?? "—"}
-            sub={hrvDeltaPct != null ? `${hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(hrvDeltaPct)}% vs 7d` : undefined}
+            sub={hrvTrend}
+            accent={hrvAlert ? "amber" : undefined}
             spark={hrvBand.points.slice(-28).map((p) => p.hrv)}
             color="#4FD1C5"
           />
-          <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} spark={hrvBand.points.slice(-28).map((p) => p.restingHr)} color="#E8A33D" />
+          <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} sub={rhrTrend} accent={rhrAlert ? "amber" : undefined} spark={hrvBand.points.slice(-28).map((p) => p.restingHr)} color="#E8A33D" />
           <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} />
         </div>
       </Section>
@@ -488,14 +496,14 @@ function StatCard({
   label: string;
   value: string;
   sub?: string;
-  accent?: "red" | "teal";
+  accent?: "red" | "teal" | "amber";
   spark?: (number | null)[];
   color?: string;
 }) {
   return (
     <div className="metric">
       <div className="metric-label">{label}</div>
-      <div className="metric-value" style={{ color: accent === "red" ? "var(--red)" : accent === "teal" ? "var(--teal)" : "var(--text)" }}>
+      <div className="metric-value" style={{ color: accent === "red" ? "var(--red)" : accent === "teal" ? "var(--teal)" : accent === "amber" ? "var(--amber)" : "var(--text)" }}>
         {value}
       </div>
       {sub && <div className="metric-sub">{sub}</div>}

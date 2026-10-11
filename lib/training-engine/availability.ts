@@ -85,7 +85,8 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const { status, signalsTriggered } = ev;
   const reasons = [...ev.reasons];
   if (wellnessAgeDays != null && wellnessAgeDays >= 1) {
-    reasons.push(`Último dato de HRV/FC de hace ${wellnessAgeDays} día${wellnessAgeDays === 1 ? "" : "s"} (todavía no sincronizó hoy)`);
+    // Primero: si el dato es viejo, hay que saberlo antes de leer el resto (la pantalla muestra solo los primeros motivos)
+    reasons.unshift(`Último dato de HRV/FC de hace ${wellnessAgeDays} día${wellnessAgeDays === 1 ? "" : "s"} (todavía no sincronizó hoy)`);
   }
   const sources = recoverySources({ hrvSig, rhrSig, checkin: checkinToday });
   const insufficient = sources.length === 0 && status === "GREEN";

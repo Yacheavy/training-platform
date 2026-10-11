@@ -10,6 +10,13 @@ export async function getDashboardData(athleteId: string) {
     orderBy: { date: "desc" },
   });
 
+  // CTL/ATL/TSB: última fila que trae CTL y ATL (igual que el semáforo): una fila de hoy que solo trae HRV no debe borrar la forma
+  const loadRow = await prisma.wellness.findFirst({
+    where: { athleteId, date: { lte: dayKeyDate(new Date()) }, ctl: { not: null }, atl: { not: null } },
+    orderBy: { date: "desc" },
+    select: { ctl: true, atl: true },
+  });
+
   // Cada métrica toma su último valor disponible (el de hoy llega recién cuando el
   // reloj sincroniza a la mañana); se informa la fecha para mostrar "de ayer", etc.
   const recent = await prisma.wellness.findMany({
@@ -46,12 +53,9 @@ export async function getDashboardData(athleteId: string) {
   }));
 
   return {
-    ctl: latestWellness?.ctl ?? null,
-    atl: latestWellness?.atl ?? null,
-    tsb:
-      latestWellness?.ctl != null && latestWellness?.atl != null
-        ? Math.round((latestWellness.ctl - latestWellness.atl) * 10) / 10
-        : null,
+    ctl: loadRow?.ctl ?? null,
+    atl: loadRow?.atl ?? null,
+    tsb: loadRow?.ctl != null && loadRow?.atl != null ? Math.round((loadRow.ctl - loadRow.atl) * 10) / 10 : null,
     hrvToday: hrvRow?.hrv ?? null,
     hrvDate: hrvRow?.date ?? null,
     hrvAvg7d: hrvAvg7d != null ? Math.round(hrvAvg7d * 10) / 10 : null,

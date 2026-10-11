@@ -76,7 +76,7 @@ export function hrvSignal(points: DailyPoint[], todayKey: Date, fallbackDropPct 
       baseline: Math.exp(bMean),
       delta: deltaPct,
       reason: triggered
-        ? `HRV: tu media de 7 días (${Math.exp(rMean).toFixed(0)} ms) está ${Math.abs(deltaPct).toFixed(1)}% bajo tu línea base de ${baseline.length} días (${Math.exp(bMean).toFixed(0)} ms), fuera de tu rango normal (−0,5 DE)`
+        ? `HRV: tu media de 7 días (${Math.exp(rMean).toFixed(0)} ms) está ${Math.abs(deltaPct).toFixed(1)}% bajo tu línea base de ${baseline.length} días (${Math.exp(bMean).toFixed(0)} ms), por debajo de tu rango habitual`
         : null,
     };
   }
@@ -116,7 +116,7 @@ export function restingHrSignal(points: DailyPoint[], todayKey: Date, fallbackBp
       baseline: bMean,
       delta: rMean - bMean,
       reason: triggered
-        ? `FC de reposo: media de 7 días ${rMean.toFixed(1)} lpm, ${(rMean - bMean).toFixed(1)} sobre tu línea base (${bMean.toFixed(1)} lpm; +1 DE = ${bSd.toFixed(1)})`
+        ? `FC de reposo: media de 7 días ${rMean.toFixed(1)} lpm, ${(rMean - bMean).toFixed(1)} sobre tu línea base (${bMean.toFixed(1)} lpm), por encima de tu rango habitual`
         : null,
     };
   }
