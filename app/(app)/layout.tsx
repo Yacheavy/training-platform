@@ -10,6 +10,7 @@ import { CONSENT_VERSION, CREATOR } from "@/lib/brand";
 import { PostRideModal } from "@/components/PostRideModal";
 import { savePostRide } from "@/lib/postride-actions";
 import { getPendingPostRide } from "@/lib/nutrition-data";
+import { syncIfStale } from "@/lib/intervals-sync";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -18,6 +19,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const isCoach = me?.role === "COACH";
   const needsConsent = me?.consentVersion !== CONSENT_VERSION;
   // Tras una salida: popup para completar alimentación, RPE y sensación (no se muestra si falta el consentimiento)
+  // Se sincroniza ANTES de buscar la salida pendiente: el layout y la página se piden a la vez, y si solo sincronizaba la página, el popup de la salida recién subida no aparecía hasta recargar.
+  // syncIfStale comparte la ejecución en curso y no repite si la última sync tiene menos de 5 min.
+  if (!needsConsent) await syncIfStale(session.user.id);
   const pendingRide = needsConsent ? null : await getPendingPostRide(session.user.id).catch(() => null);
   const coachName = isCoach ? CREATOR.name : (me?.coach?.name ?? CREATOR.name);
 
