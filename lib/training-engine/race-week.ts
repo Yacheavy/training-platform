@@ -181,3 +181,22 @@ export function miniTaperRationale(r: RaceContext): string {
     `Criterio de práctica: el taper con respaldo (Bosquet 2007) es el de ~2 semanas de las carreras A.`
   );
 }
+
+/** Qué cambia hoy por una carrera A/B cercana (lo usa la sugerencia "generar la sesión de hoy" cuando no hay plan). */
+export type RaceAdjust =
+  | { kind: "warmup" }
+  | { kind: "activation"; optional: boolean }
+  | { kind: "no_gym" }
+  | { kind: "easy"; maxMin: number }
+  | { kind: "taper"; mult: number };
+
+export function raceAdjust(race: RaceContext | null, slotType: string | null | undefined): RaceAdjust | null {
+  if (!race) return null;
+  if (race.daysTo <= 0) return { kind: "warmup" };
+  if (race.daysTo === 1) return { kind: "activation", optional: !slotType || slotType === "rest" };
+  if (slotType === "gym" && race.daysTo <= gymFreeDays(race.priority)) return { kind: "no_gym" };
+  if (slotType !== "cycling") return null;
+  if (race.daysTo <= NO_QUALITY_DAYS) return { kind: "easy", maxMin: RACE_EASY_MAX_MIN };
+  if (race.daysTo <= MINI_TAPER_DAYS) return { kind: "taper", mult: MINI_TAPER_MULT };
+  return null;
+}

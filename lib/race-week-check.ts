@@ -165,5 +165,21 @@ for (const v of [null, undefined, "", "xxx", 5, "LLANO", " montana"]) ok(normali
 ok(normalizeCourseProfile("montana") === "montana", "normalize montana");
 ok(normalizeCourseProfile("xxx") === null, "normalize xxx");
 
+// Sugerencia "generar hoy" sin plan: misma lógica que el planificador
+import { raceAdjust } from "./training-engine/race-week";
+for (const pr of ["A", "B"] as const) for (let d = 0; d <= 7; d++) for (const slot of [null, "rest", "cycling", "gym", "flexibility"]) {
+  const r = raceContext("2026-11-01", [{ dateKey: keyPlus("2026-11-01", d), priority: pr }]);
+  const a = raceAdjust(r, slot);
+  const tag = `raceAdjust ${pr} d${d} ${slot}`;
+  if (d === 0) ok(a?.kind === "warmup", tag);
+  else if (d === 1) ok(a?.kind === "activation" && a.optional === (slot === null || slot === "rest"), tag);
+  else if (slot === "gym" && d <= gymFreeDays(pr)) ok(a?.kind === "no_gym", tag);
+  else if (slot === "cycling" && d <= NO_QUALITY_DAYS) ok(a?.kind === "easy", tag);
+  else if (slot === "cycling" && d <= MINI_TAPER_DAYS) ok(a?.kind === "taper", tag);
+  else ok(a === null, tag);
+}
+function keyPlus(k: string, n: number) { return new Date(Date.parse(k + "T00:00:00Z") + n * DAY).toISOString().slice(0, 10); }
+ok(raceAdjust(null, "cycling") === null, "raceAdjust sin carrera");
+
 console.log({ checks, problems: bad });
 process.exit(bad ? 1 : 0);

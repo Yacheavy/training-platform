@@ -8,7 +8,11 @@ import { buildMesocycleWeeks } from "./mesocycle-builder";
 import { primaryStimulusFor, ALTERNATIVE_TO_STIMULUS, MIN_GAP_DAYS_BETWEEN_VO2MAX } from "./quality-assignment";
 import { ronnestadSeriesFor } from "./plan-builder";
 import { isVo2Key } from "./variants";
-import { dayOfWeekLocal, dayStartLocal, dayRangeLocal } from "../tz";
+import { dayOfWeekLocal, dayStartLocal, dayRangeLocal, dateKeyLocal } from "../tz";
+import {
+  raceContext, raceAdjust, buildActivationBlocks, buildRaceWarmupBlocks, activationRationale, raceWarmupRationale, miniTaperRationale,
+  ACTIVATION_KEY, RACE_WARMUP_KEY, RACE_KEYS, type RaceEvent,
+} from "./race-week";
 import { buildGymSession, buildFlexSession, gymBlocks } from "./strength";
 import { isOffBike } from "./off-bike";
 
@@ -118,6 +122,35 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
     where: { athleteId_dayOfWeek: { athleteId, dayOfWeek } },
   });
 
+  // Carrera A/B cercana: activación de la víspera, calentamiento del día, sin gimnasio ni calidad al final
+  const goalRows = await prisma.athleteGoal.findMany({ where: { athleteId, goalType: "EVENT", eventDate: { not: null }, priority: { in: ["A", "B"] } } });
+  const events: RaceEvent[] = goalRows.filter((g) => g.eventDate).map((g) => ({ dateKey: g.eventDate!.toISOString().slice(0, 10), priority: String(g.priority), name: g.name, profile: g.courseProfile }));
+  const race = raceContext(dateKeyLocal(now), events);
+  const adj = raceAdjust(race, slot?.stimulusType);
+
+  if (race && adj && (adj.kind === "warmup" || adj.kind === "activation")) {
+    const isWarmup = adj.kind === "warmup";
+    const actMin = Math.min(45, Math.max(30, slot?.targetDurationMin ?? 40));
+    const raceBlocks = isWarmup ? buildRaceWarmupBlocks(user.ftp, race.profile) : buildActivationBlocks(user.ftp, race.priority, actMin, race.profile);
+    const key = isWarmup ? RACE_WARMUP_KEY : ACTIVATION_KEY;
+    const text = (isWarmup ? raceWarmupRationale(race) : activationRationale(race)) + (!isWarmup && adj.kind === "activation" && adj.optional ? " · Hoy figura como descanso en tu semana tipo: la activación es opcional." : "");
+    const availability = await calculateAvailability(athleteId);
+    const fuel = calculateFueling(raceBlocks, user.ftp);
+    const workout = await prisma.generatedWorkout.create({
+      data: {
+        athleteId, date: now, workoutLibraryKey: key, status: "SUGGESTED",
+        blocksJson: raceBlocks as unknown as Prisma.InputJsonValue,
+        estimatedTss: calculateTss(raceBlocks, user.ftp), estimatedKj: fuel.totalKj,
+        suggestedCarbsG: fuel.suggestedCarbsG, suggestedCarbsGPerHour: fuel.suggestedCarbsGPerHour,
+        requiresMultipleCarbSources: fuel.requiresMultipleCarbSources, rationale: text,
+      },
+    });
+    return { workout, availability, source: "race" };
+  }
+  if (adj?.kind === "no_gym") {
+    return { restDay: true, message: `Faltan ${race!.daysTo} días para la carrera ${race!.priority}: sin gimnasio en estos días (descanso o salida suave).` };
+  }
+
   if (!slot || slot.stimulusType === "rest") {
     return { restDay: true, message: "Hoy es día de descanso según tu plantilla" };
   }
@@ -145,6 +178,12 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
     effectiveStimulusType = "z2";
   }
 
+  if (race && adj?.kind === "easy" && effectiveStimulusType !== "z2" && !isOffBike(effectiveStimulusType)) {
+    rationale.push(`Faltan ${race.daysTo} días para la carrera ${race.priority}: sin calidad ni salidas largas, rodaje suave (${effectiveStimulusType} → z2)`);
+    effectiveStimulusType = "z2";
+    quality = null;
+  }
+
   const availability = await calculateAvailability(athleteId);
 
   if (availability.status === "RED" && effectiveStimulusType !== "z2" && !isOffBike(effectiveStimulusType)) {
@@ -159,7 +198,12 @@ async function generateFromScratch(athleteId: string, forceDayOfWeek?: number) {
   }
 
   const library = await prisma.workoutLibraryEntry.findUnique({ where: { key: effectiveStimulusType } });
-  const duration = Math.round((slot.targetDurationMin ?? 60) * (quality?.loadMultiplier ?? 1));
+  let duration = Math.round((slot.targetDurationMin ?? 60) * (quality?.loadMultiplier ?? 1));
+  if (race && adj?.kind === "easy") duration = Math.min(duration, adj.maxMin);
+  if (race && adj && (adj.kind === "taper" || adj.kind === "easy") && !isOffBike(effectiveStimulusType)) {
+    duration = Math.round(duration * (adj.kind === "taper" ? Math.min(adj.mult, quality?.loadMultiplier ?? 1) / (quality?.loadMultiplier ?? 1) : 1));
+    rationale.push(miniTaperRationale(race));
+  }
   // Mismo criterio que el planificador: un escalón por mesociclo en HIIT genuino, sweet spot y umbral
   const progressionStep =
     ["hiit_genuino", "sweet_spot", "umbral"].includes(effectiveStimulusType) && quality ? Math.floor(quality.weekIndex / quality.cycleLength) : 0;
@@ -246,7 +290,10 @@ export async function generateTodayWorkout(athleteId: string, forceDayOfWeek?: n
   let finalBlocks = planned.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
   let wasModifiedToday = false;
 
-  if (availability.status === "RED" && finalStimulusType !== "z2" && !isOffBike(finalStimulusType)) {
+  if (RACE_KEYS.includes(finalStimulusType)) {
+    // El calentamiento y la activación son cortos y suaves: no se reemplazan por Z2 aunque la disponibilidad sea baja
+    rationale.push(`Validación diaria: disponibilidad ${availability.status}${availability.insufficient ? " (sin datos)" : ""} — la sesión de carrera se mantiene; si te sentís mal, acortala o salteá las aperturas`);
+  } else if (availability.status === "RED" && finalStimulusType !== "z2" && !isOffBike(finalStimulusType)) {
     rationale.push(`⚠ VALIDACIÓN DIARIA: disponibilidad RED (${availability.reasons.join("; ")}) — se ajusta el plan de hoy a Z2 en vez de ${finalStimulusType}`);
     finalStimulusType = "z2";
     wasModifiedToday = true;
