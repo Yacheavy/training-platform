@@ -10,7 +10,7 @@ import { ACTIVATION_KEY, RACE_WARMUP_KEY, NO_QUALITY_DAYS, RACE_EASY_MAX_MIN, ac
  * advertencias (vacía = plan consistente). No lanza: el generador las
  * devuelve al usuario y los chequeos automáticos fallan si hay alguna.
  */
-const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "vo2_piramide"]);
+const VO2_STIMULI = new Set(["hiit_genuino", "ronnestad_30_15", "billat_30_30", "rst", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "vo2_piramide", "hiit_10x2", "hiit_4min", "ronnestad_5x12"]);
 const HARD_STIMULI = new Set([...VO2_STIMULI, "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -193,6 +193,20 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     if (d.stimulusType === "billat_30_30") {
       if (ivBlocks.length < 10 || ivBlocks.length > 30) w.push(`${label(d)}: ${ivBlocks.length} intervalos de 30/30 (esperado 10–30)`);
       if (ivBlocks.some((b) => b.durationSec !== 30)) w.push(`${label(d)}: los intervalos del 30/30 deben durar 30 s`);
+    }
+    if (d.stimulusType === "hiit_10x2" || d.stimulusType === "hiit_4min") {
+      const is2 = d.stimulusType === "hiit_10x2";
+      const sec = is2 ? 120 : 240;
+      const minR = is2 ? 4 : 3;
+      if (ivBlocks.length < minR || ivBlocks.length > (is2 ? 10 : 6)) w.push(`${label(d)}: ${ivBlocks.length} repeticiones de ${is2 ? "2" : "4"}′ (esperado ${minR}–${is2 ? 10 : 6})`);
+      if (ivBlocks.some((b) => b.durationSec !== sec)) w.push(`${label(d)}: intervalos distintos de ${is2 ? "2" : "4"} min`);
+      if (d.blocks.filter((b) => b.type === "recovery").some((b) => b.durationSec !== sec)) w.push(`${label(d)}: la recuperación debe ser 1:1`);
+    }
+    if (d.stimulusType === "ronnestad_5x12") {
+      if (ivBlocks.length !== 60) w.push(`${label(d)}: ${ivBlocks.length} intervalos (debe ser 5×12 = 60)`);
+      if (ivBlocks.some((b) => b.durationSec !== 30)) w.push(`${label(d)}: los intervalos deben durar 30 s`);
+      if (ivBlocks.some((b) => b.targetWatts > ctx.ftp * 1.4 + 1)) w.push(`${label(d)}: intensidad > 140% FTP`);
+      if (!d.intensified) w.push(`${label(d)}: el 5×12 de choque solo va en la semana intensificada`);
     }
     if (d.stimulusType === "vo2_piramide") {
       const mins = ivBlocks.map((b) => b.durationSec / 60);

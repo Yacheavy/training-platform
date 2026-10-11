@@ -57,6 +57,9 @@ export function classifyStimulusType(activity: {
 
       if (pctHighIntensity > 8 || highMinutes >= 6) {
         const name = (activity.name ?? "").toLowerCase();
+        if (name.includes("30/15 x5") || name.includes("5x12") || name.includes("5 × 12")) return "ronnestad_5x12";
+        if (name.includes("10x2") || name.includes("10 × 2")) return "hiit_10x2";
+        if (name.includes("hiit 4min") || name.includes("5-6x4") || name.includes("5-6 × 4")) return "hiit_4min";
         if (name.includes("hiit corto") || name.includes("30/15") || name.includes("30-15"))
           return "ronnestad_30_15";
         if (name.includes("30/30") || name.includes("30-30") || name.includes("billat")) return "billat_30_30";

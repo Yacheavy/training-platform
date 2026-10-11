@@ -75,7 +75,7 @@ export interface PlannedDay {
 }
 
 /** Variantes con escalón de progresión por mesociclo (calendario; Fase 2 lo ajustará con la ejecución real). */
-const PROGRESSION_KEYS = new Set(["hiit_genuino", "sweet_spot", "umbral", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_piramide", "over_under", "endurance_tempo", "long_durability"]);
+const PROGRESSION_KEYS = new Set(["hiit_genuino", "sweet_spot", "umbral", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_piramide", "hiit_10x2", "hiit_4min", "over_under", "endurance_tempo", "long_durability"]);
 /** Variantes con series 1→3 (criterio propio, igual que Rønnestad). */
 const SERIES_KEYS = new Set(["ronnestad_30_15", "vo2_corto_15_15", "billat_30_30", "z2_sprints", "sprint_neuro"]);
 /** Un slot de ciclismo de al menos esta duración (min) se trata como salida larga. */
@@ -450,6 +450,12 @@ export function buildPlan(input: {
           ? ` · progresión escalón ${progressionStep + 1} según Chicharro & Vicente-Campos 2018${pvo2maxWatts ? ` · intervalos al 100% de tu potencia en VO2max (${Math.round(pvo2maxWatts)} W)` : " · intensidad por %FTP (cargá tu potencia en VO2max en Ajustes)"}`
           : effectiveStimulusType === "ronnestad_30_15"
             ? ` · ${series} serie${series === 1 ? "" : "s"} de 13×(30s/15s) (progresivo 1→3)`
+            : effectiveStimulusType === "ronnestad_5x12"
+              ? " · 5 series de 12×(30s/15s), ~2,5 min entre series: microciclo de choque de Rønnestad 2021 (ensayo en ciclistas de nivel nacional; allá eran 5 sesiones en 7 días, acá 1-2 en la semana intensificada)"
+            : effectiveStimulusType === "hiit_10x2"
+              ? " · 10×2′ al 100% de tu potencia en VO2max, recuperación 1:1 (práctica: el libro indica que los intervalos de 2 a 4 min dan un %VO2max similar; sin ensayo que compare distribuciones)"
+            : effectiveStimulusType === "hiit_4min"
+              ? " · 5-6×4′ al 100% de tu potencia en VO2max, recuperación 1:1 (práctica: el libro indica que los intervalos de 2 a 4 min dan un %VO2max similar; sin ensayo que compare distribuciones)"
             : effectiveStimulusType === "vo2_corto_15_15"
               ? ` · ${series} serie${series === 1 ? "" : "s"} de 20×(15s/15s) (progresivo 1→3; formato extrapolado del 30/15, sin ensayo propio)`
             : effectiveStimulusType === "billat_30_30"

@@ -2,7 +2,7 @@ import { buildBlocks } from "./block-builder";
 import type { WorkoutBlock } from "./tss";
 import { isOffBike } from "./off-bike";
 
-const QUALITY = new Set(["hiit_genuino", "ronnestad_30_15", "z2_sprints", "billat_30_30", "rst", "sweet_spot", "umbral", "over_under", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "vo2_piramide", "sprint_neuro", "endurance_tempo", "long_durability", "torque_low_cadence", "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
+const QUALITY = new Set(["hiit_genuino", "ronnestad_30_15", "z2_sprints", "billat_30_30", "rst", "sweet_spot", "umbral", "over_under", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "vo2_piramide", "hiit_10x2", "hiit_4min", "ronnestad_5x12", "sprint_neuro", "endurance_tempo", "long_durability", "torque_low_cadence", "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
 const FILL = new Set(["z2", "z2_fill"]);
 
 export interface ReadinessProposal {

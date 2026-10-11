@@ -156,6 +156,25 @@ export const VARIANTS: Record<string, VariantDef> = {
     purpose: "Intervalos de 1 a 5 min en escalera hasta el máximo y de vuelta (por ejemplo 1-2-3-4-3-2-1′), a ~90-99% de la potencia en VO2max, con 2′ de recuperación.",
     intensity: 3, vo2: true, minSlotMin: 50, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
   },
+  hiit_10x2: {
+    key: "hiit_10x2", label: "HIIT genuino 10 × 2′", family: "vo2", evidence: "practica",
+    evidenceNote: "Misma lógica del HIIT genuino (López Chicharro & Vicente-Campos 2018): el libro indica que los intervalos de 2 a 4 min dan un %VO2max similar y busca acumular ~10 min al ≥95% del VO2max. No hay ensayo que compare esta distribución con las otras; la progresión 8 → 9 → 10 es criterio propio.",
+    purpose: "8-10 × 2 min al 100% de la potencia en VO2max, con recuperación activa 1:1 al 50%.",
+    intensity: 3, vo2: true, minSlotMin: 60, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
+  hiit_4min: {
+    key: "hiit_4min", label: "HIIT genuino 5-6 × 4′", family: "vo2", evidence: "practica",
+    evidenceNote: "Misma lógica del HIIT genuino (López Chicharro & Vicente-Campos 2018) con intervalos más largos, de 4 min. No hay ensayo que compare esta distribución con las otras; la progresión 5 → 5 → 6 es criterio propio.",
+    purpose: "5-6 × 4 min al 100% de la potencia en VO2max, con recuperación activa 1:1 al 50%.",
+    intensity: 3, vo2: true, minSlotMin: 65, minGapDays: 6, maxPerWeek: 1, maintainable: true, indoor: "ok",
+  },
+  ronnestad_5x12: {
+    key: "ronnestad_5x12", label: "Rønnestad 5 × 12 (choque)", family: "vo2", evidence: "ensayo",
+    evidenceNote: "Rønnestad y col. 2021 (IJSPP, 17 ciclistas de nivel nacional): un microciclo de choque de 5 sesiones HIT en 7 días (5 series de 12 × 30″/15″, unos 30 min de trabajo por sesión, 2,5–3 min entre series) mejoró la potencia pico y media de 5 min en ese estudio. Acá se usa 1-2 veces en la semana intensificada (no 5): es una adaptación propia.",
+    purpose: "5 series de 12 × (30 s / 15 s) a la potencia en VO2max, con ~2,5 min entre series.",
+    caveat: "Es una sesión de choque: solo aparece en la semana intensificada de un bloque de VO2max, no semana tras semana.",
+    intensity: 3, vo2: true, minSlotMin: 80, minGapDays: 2, maxPerWeek: 1, maintainable: false, indoor: "ok",
+  },
   z2_sprints: {
     key: "z2_sprints", label: "Z2 + sprints", family: "neuro", evidence: "preliminar",
     evidenceNote: "Almquist 2020 y Taylor 2021: ciclistas de élite en transición, muestra pequeña; el seguimiento (Taylor 2021) informa mejor rendimiento de resistencia 6 semanas después de empezar la preparación.",

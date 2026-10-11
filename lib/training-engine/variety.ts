@@ -40,6 +40,8 @@ const WINDOW_DAYS = 28;
  */
 const LONG_MEMORY_DAYS = 84;
 const RECENCY_WEIGHT = 0.15;
+/** La semana intensificada es la única donde cabe el 5 × 12 de choque (Rønnestad 2021); como solo compite 1-2 veces por bloque, se le suma un empuje para que no quede sin aparecer. */
+const SHOCK_BONUS = 0.12;
 
 const LEVEL_INDEX: Record<VarietyLevel, 0 | 1 | 2> = { conservative: 0, balanced: 1, varied: 2 };
 
@@ -56,8 +58,11 @@ export function poolFor(objective: string, role: SlotRole, vo2Stimulus: string |
       // Las de ensayo en ciclistas (Rønnestad, 5′, 2′40″, supramáximo) pesan más que las de práctica (15/15, Billat, pirámide).
       // Las dos sesiones largas (2′40″ y supramáximo) solo entran si el día tiene tiempo (≥90 min).
       const all = [
-        E("hiit_genuino", 1, 0.22, 0.16), E("ronnestad_30_15", 0, 0.2, 0.16), E("vo2_long", 0, 0.14, 0.12), E("vo2_corto_15_15", 0, 0.12, 0.12),
-        E("billat_30_30", 0, 0.12, 0.12), E("vo2_piramide", 0, 0.1, 0.12), E("vo2_pmax", 0, 0.06, 0.1), E("vo2_supra_30", 0, 0.04, 0.1),
+        E("hiit_genuino", 1, 0.16, 0.12), E("ronnestad_30_15", 0, 0.16, 0.12), E("hiit_10x2", 0, 0.08, 0.08), E("hiit_4min", 0, 0.08, 0.08),
+        E("vo2_long", 0, 0.12, 0.1), E("vo2_corto_15_15", 0, 0.1, 0.1), E("billat_30_30", 0, 0.1, 0.1), E("vo2_piramide", 0, 0.08, 0.1),
+        E("vo2_pmax", 0, 0.05, 0.08), E("vo2_supra_30", 0, 0.03, 0.08),
+        // Microciclo de choque: solo entra en la semana intensificada (ver pickVariant)
+        E("ronnestad_5x12", 0, 0.04, 0.06),
       ];
       return all;
     }
@@ -127,6 +132,8 @@ export function pickVariant(a: PickArgs): PickResult {
     if (e.w[li] <= 0) return false;
     if (a.banned?.has(e.key) || a.exclude?.has(e.key)) return false;
     if (a.slotMin < v.minSlotMin) return false;
+    // El 5 × 12 es de choque: solo en la semana intensificada y una vez por semana
+    if (e.key === "ronnestad_5x12" && (!a.allowRepeat || thisWeek.some((h) => h.key === e.key))) return false;
     // Descarga: los rodajes y salidas largas son solo de baja intensidad
     if (a.isDeload && (a.role === "volume" || a.role === "long") && v.intensity > 0) return false;
     // Día después de una sesión dura (umbral/VO2max) o de sprints: solo rodaje fácil
@@ -163,7 +170,7 @@ export function pickVariant(a: PickArgs): PickResult {
     const actual = total ? recent.filter((h) => h.key === c.key).length / total : 0;
     const last = lastOf(c.key);
     const since = last == null ? LONG_MEMORY_DAYS : Math.min(LONG_MEMORY_DAYS, a.dayOffset - last);
-    const score = target - actual + RECENCY_WEIGHT * (since / LONG_MEMORY_DAYS);
+    const score = target - actual + RECENCY_WEIGHT * (since / LONG_MEMORY_DAYS) + (c.key === "ronnestad_5x12" ? SHOCK_BONUS : 0);
     if (score > bestScore + 1e-9) {
       best = c;
       bestScore = score;

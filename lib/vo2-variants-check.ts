@@ -1,5 +1,5 @@
 /**
- * Variantes de VO2max (HIIT genuino, Rønnestad, 5′, 2′40″, supramáximo, 15/15, Billat 30/30, pirámide):
+ * Variantes de VO2max (HIIT genuino y sus variantes 10×2′ y 4′, Rønnestad 30/15 y 5×12, Rønnestad, 5′, 2′40″, supramáximo, 15/15, Billat 30/30, pirámide):
  * estructura de cada una, que el plan las rote sin advertencias y que ninguna se quede sin aparecer.
  * Corre con: npx tsx lib/vo2-variants-check.ts   (puro, no toca ninguna base)
  */
@@ -8,13 +8,13 @@ import { validatePlan } from "./training-engine/plan-validator";
 import { buildBlocks } from "./training-engine/block-builder";
 import { VARIANTS } from "./training-engine/variants";
 
-const NEW_KEYS = ["vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "billat_30_30", "vo2_piramide"];
+const NEW_KEYS = ["vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "billat_30_30", "vo2_piramide", "hiit_10x2", "hiit_4min", "ronnestad_5x12"];
 const ALL_VO2 = Object.values(VARIANTS).filter((v) => v.vo2).map((v) => v.key);
 let bad = 0, checks = 0;
 const fail = (m: string) => { bad++; if (bad <= 25) console.log("FALLA:", m); };
 const ok = (c: boolean, m: string) => { checks++; if (!c) fail(m); };
 
-ok(ALL_VO2.length === 8, `esperaba 8 variantes de VO2max y hay ${ALL_VO2.length}: ${ALL_VO2.join(", ")}`);
+ok(ALL_VO2.length === 11, `esperaba 11 variantes de VO2max y hay ${ALL_VO2.length}: ${ALL_VO2.join(", ")}`);
 for (const k of NEW_KEYS) ok(!!VARIANTS[k], `falta ${k} en el catálogo`);
 
 // 1) Constructor directo: estructura por variante, FTP, PAM, duración y progresión
@@ -37,6 +37,9 @@ for (const dur of [45, 60, 75, 90, 120, 180]) for (const step of [0, 1, 2, 3]) f
   if (k === "vo2_supra_30") ok(iv.every((x) => x.durationSec === 30) && iv.length >= 4 && iv.length <= 12 && iv.every((x) => x.targetWatts <= ftp * 2.6 + 1), `${tag}: estructura supramáxima`);
   if (k === "vo2_corto_15_15") ok(iv.every((x) => x.durationSec === 15) && iv.length % 20 === 0 && iv.length <= 60, `${tag}: estructura 15/15`);
   if (k === "billat_30_30") ok(iv.every((x) => x.durationSec === 30) && iv.length >= 10 && iv.length <= 30, `${tag}: estructura 30/30 (${iv.length})`);
+  if (k === "hiit_10x2") ok(iv.every((x) => x.durationSec === 120) && iv.length >= 4 && iv.length <= 10, `${tag}: estructura 10×2′ (${iv.length})`);
+  if (k === "hiit_4min") ok(iv.every((x) => x.durationSec === 240) && iv.length >= 3 && iv.length <= 6, `${tag}: estructura 5-6×4′ (${iv.length})`);
+  if (k === "ronnestad_5x12") ok(iv.length === 60 && iv.every((x) => x.durationSec === 30), `${tag}: estructura 5×12 (${iv.length})`);
   if (k === "vo2_piramide") {
     const m = iv.map((x) => x.durationSec / 60);
     const peak = m.indexOf(Math.max(...m));
@@ -44,7 +47,7 @@ for (const dur of [45, 60, 75, 90, 120, 180]) for (const step of [0, 1, 2, 3]) f
   }
 }
 // La progresión crece: más repeticiones o más trabajo con el paso
-for (const k of ["vo2_pmax", "vo2_supra_30", "vo2_piramide"]) {
+for (const k of ["vo2_pmax", "vo2_supra_30", "vo2_piramide", "hiit_10x2", "hiit_4min"]) {
   const work = (step: number) => buildBlocks(k, 150, 300, null, null, step, undefined, 360, false).filter((x) => x.type === "interval").reduce((s, x) => s + x.durationSec, 0);
   ok(work(0) <= work(1) && work(1) <= work(2) && work(0) < work(2), `${k}: la progresión no crece (${work(0)}, ${work(1)}, ${work(2)})`);
 }

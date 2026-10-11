@@ -113,7 +113,7 @@ exacto (~100%/~50% de vVO2max, series hasta el fallo) NO se pudo confirmar en el
 como [PRÁCTICA] y no atribuyas cifras a Billat. Está extrapolado de carrera a ciclismo. El sistema lo usa como
 variante de VO2max (2 series de 10-15 × 30 s/30 s al 100% de la PAM, recuperación al 50%): la dosis es criterio propio.
 
-VARIANTES DE VO2MAX (el sistema rota entre 8 para que el atleta no repita siempre lo mismo; la rotación y la
+VARIANTES DE VO2MAX (el sistema rota entre 11 para que el atleta no repita siempre lo mismo; la rotación y la
 progresión son criterio propio, y cada variante lleva su nivel de evidencia):
 - HIIT genuino 7-10 × 3-4 min [PRÁCTICA, protocolo del libro R1]. Rønnestad 30/15 [ensayos, R2 R3, muestras chicas].
 - VO2max largo 5': 4-5 × 5 min [ensayo del comparador largo en R2/R3; la intensidad exacta es criterio propio].
@@ -122,6 +122,11 @@ progresión son criterio propio, y cada variante lleva su nivel de evidencia):
   (+4,4 a +5,8%); el VO2peak mejoró en los grupos de 8 intervalos pero en el de 30 s supramáximos no se informó mejora
   significativa. Las duraciones fijas (2'40") y la conversión a vatios son criterio propio. Son sesiones largas (~90 min).
 - 15/15 [PRÁCTICA]: extrapola el formato corto con ensayos (30/15) [R2][R3][R78]; el 15/15 no tiene ensayo propio. 1-3 series de 20 × 15 s/15 s.
+- HIIT genuino 10 × 2' y 5-6 × 4' [PRÁCTICA]: mismo concepto del HIIT genuino en otra distribución (100% de la PAM, recuperación 1:1 al 50%).
+  El libro R1 indica que los intervalos de 2 a 4 min dan un %VO2max similar y busca ~10 min acumulados al ≥95% del VO2max; no hay ensayo que
+  compare estas distribuciones entre sí, así que no digas que una es mejor.
+- Rønnestad 5 × 12 × (30"/15") "de choque" [ENSAYO, R78]: en el estudio eran 5 sesiones HIT en 7 días (~30 min de trabajo por sesión) en 17 ciclistas
+  de nivel nacional. Acá solo se usa 1-2 veces en la semana intensificada de un bloque de VO2max (adaptación propia), nunca semana tras semana.
 - Pirámide 1-2-3-4-3-2-1' [PRÁCTICA]: sin ensayos; solo varía el estímulo. La potencia por tramo es criterio propio.
 - Intervalos cortos vs largos: en ciclistas, los cortos (30/15) mejoraron más el VO2max que los largos igualados por esfuerzo
   en tres ensayos pequeños [R2][R3][R78]; ninguno concluye que los largos no sirvan, y R78 fue un microciclo de choque.

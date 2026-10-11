@@ -83,6 +83,22 @@ export function getExecutionTips(stimulusType: string): string[] {
       "Si la potencia cae mucho antes de terminar la serie, cortá ahí: la idea es repetir el esfuerzo, no llegar vacío.",
       "Este formato viene de la carrera a pie; en ciclismo no tiene ensayos propios.",
     ],
+    hiit_10x2: [
+      "Cada intervalo va al 100% de tu potencia en VO2max: son 2 min, así que se puede sostener sin guardar; si en el último no llegás, bajá 5 W en lugar de cortar.",
+      "Los 2 min de recuperación son pedaleo suave (~50%), no pares del todo.",
+      "Es el mismo concepto del HIIT genuino con intervalos más cortos; no hay ensayos que digan que sea mejor o peor que los de 4 min.",
+    ],
+    hiit_4min: [
+      "Cada intervalo va al 100% de tu potencia en VO2max y dura 4 min: arrancá controlado, el primer minuto no es para ir sobrado.",
+      "Los 4 min de recuperación son pedaleo suave (~50%); usalos para bajar la respiración.",
+      "Es el mismo concepto del HIIT genuino con intervalos más largos; no hay ensayos que digan que sea mejor o peor que los de 2 min.",
+    ],
+    ronnestad_5x12: [
+      "Es una sesión de choque: 5 series de 12 × (30 s / 15 s), unos 30 min de trabajo. Solo aparece en la semana intensificada.",
+      "Arrancá en tu potencia en VO2max y ajustá entre series: si completaste la serie sin caerte, subí 5 W; si no, bajá. El objetivo es aguantar el patrón las 5 series.",
+      "Entre series son ~2,5 min suaves. Si la 4ª o la 5ª serie se te cae mucho, cortá ahí y no fuerces: la semana intensificada ya tiene otra sesión de VO2max.",
+      "Cuidá el sueño y la comida del día: es de las sesiones que más cuestan.",
+    ],
     vo2_piramide: [
       "Los intervalos suben y bajan (por ejemplo 1-2-3-4-3-2-1′): los cortos van un poco más fuertes y los largos algo más suaves, siempre por encima del FTP.",
       "Los 2′ entre intervalos son pedaleo suave: no pares del todo.",
