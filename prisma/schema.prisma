@@ -63,6 +63,7 @@ model User {
   responseProfiles  AthleteResponseProfile[]
   generatedWorkouts GeneratedWorkout[]
   chatMessages      ChatMessage[]
+  aiUsageEvents     AiUsageEvent[]
   weeklyReviews     WeeklyReview[]
 }
 
@@ -376,6 +377,21 @@ enum WorkoutStatus {
   APPROVED
   SENT_TO_INTERVALS
   COMPLETED
+}
+
+/// Uso de la IA fuera del chat (hoy: análisis enviados por mail). Se suma al contador de consumo.
+model AiUsageEvent {
+  id           String   @id @default(cuid())
+  athleteId    String
+  athlete      User     @relation(fields: [athleteId], references: [id])
+  kind         String
+  activityId   String?
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Float
+  createdAt    DateTime @default(now())
+
+  @@index([athleteId, createdAt])
 }
 
 model ChatMessage {

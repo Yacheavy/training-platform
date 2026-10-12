@@ -12,7 +12,9 @@ export async function getCoachUsageOverview(): Promise<CoachUsageOverview> {
     where: { role: "assistant" },
     select: { athleteId: true, role: true, createdAt: true, inputTokens: true, outputTokens: true, costUsd: true },
   });
-  const overview = summarizeUsage(rows, now);
+  // Los análisis enviados por mail gastan IA igual: entran como una respuesta más de cada persona
+  const mail = await prisma.aiUsageEvent.findMany({ select: { athleteId: true, createdAt: true, inputTokens: true, outputTokens: true, costUsd: true } });
+  const overview = summarizeUsage([...rows, ...mail.map((m) => ({ ...m, role: "assistant" }))], now);
   const users = await prisma.user.findMany({ where: { id: { in: overview.perStudent.map((s) => s.athleteId) } }, select: { id: true, name: true, email: true } });
   const names = Object.fromEntries(users.map((u) => [u.id, u.name ?? u.email ?? "Sin nombre"]));
   return { ...overview, names };
