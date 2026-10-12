@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { dayKeyDate, dateKeyLocal, ATHLETE_TZ } from "@/lib/tz";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { calculateAvailability } from "@/lib/training-engine/availability";
+import { sleepNote } from "@/lib/sleep-note";
 import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
 
 type Blk = { type: string; durationSec: number; targetWatts: number };
@@ -75,6 +76,15 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   parts.push(
     `DISPONIBILIDAD HOY: ${availability.insufficient ? "SIN DATOS SUFICIENTES (no hay HRV, FC de reposo ni check-in; no la presentes como verde ni inventes un puntaje)" : availability.status} — HRV hoy ${availability.hrvToday ?? "sin dato"}, media 7d ${availability.hrvAvg7d?.toFixed(1) ?? "sin dato"}, TSB ${availability.tsb?.toFixed(1) ?? "sin dato"}. Razones: ${availability.reasons.join("; ")}`
   );
+
+  // Sueño: solo si es notable (poco o muy mal calificado); si está normal no se menciona para no repetir el dashboard
+  const sleepRow = await prisma.wellness.findFirst({
+    where: { athleteId, sleepHours: { not: null }, date: { gte: new Date(dayKeyDate(new Date()).getTime() - 24 * 60 * 60 * 1000), lte: dayKeyDate(new Date()) } },
+    orderBy: { date: "desc" },
+    select: { sleepHours: true },
+  });
+  const note = sleepNote({ sleepHours: sleepRow?.sleepHours ?? null, checkinQuality: availability.checkinToday?.sleepQuality ?? null });
+  if (note) parts.push(note);
 
   const latestWellness = await prisma.wellness.findFirst({
     where: { athleteId, ctl: { not: null }, date: { lte: dayKeyDate(new Date()) } },

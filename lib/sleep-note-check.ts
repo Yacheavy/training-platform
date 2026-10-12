@@ -1,0 +1,15 @@
+import { sleepNote } from "./sleep-note";
+let problems = 0, checks = 0;
+const eq = (n: string, got: unknown, want: unknown) => { checks++; if (got !== want) { problems++; console.log("FALLA", n, got, want); } };
+const has = (i: Parameters<typeof sleepNote>[0]) => sleepNote(i) !== null;
+eq("normal", has({ sleepHours: 7.4, checkinQuality: 5 }), false);
+eq("sin datos", has({ sleepHours: null, checkinQuality: null }), false);
+eq("justo 6h", has({ sleepHours: 6, checkinQuality: null }), false);
+eq("5,9h", has({ sleepHours: 5.9, checkinQuality: null }), true);
+eq("0h (dato roto)", has({ sleepHours: 0, checkinQuality: null }), false);
+eq("check-in 3", has({ sleepHours: 7, checkinQuality: 3 }), false);
+eq("check-in 2", has({ sleepHours: 7, checkinQuality: 2 }), true);
+eq("ambos", /5,4 h/.test(sleepNote({ sleepHours: 5.4, checkinQuality: 1 })!) && /1\/7/.test(sleepNote({ sleepHours: 5.4, checkinQuality: 1 })!), true);
+eq("hipótesis", /hipótesis, nunca causa/.test(sleepNote({ sleepHours: 5, checkinQuality: null })!), true);
+console.log({ checks, problems });
+process.exit(problems ? 1 : 0);

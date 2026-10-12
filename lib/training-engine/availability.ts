@@ -1,7 +1,7 @@
 import { dayKeyDate } from "../tz";
 import { prisma } from "@/lib/prisma";
 import { hrvSignal, restingHrSignal, type SignalMethod } from "./recovery-signals";
-import { evaluateAvailability, recoverySources, scoreAvailability, type ScoreResult } from "./availability-score";
+import { evaluateAvailability, recoverySources, scoreAvailability, signalChips, type ScoreResult, type SignalChip } from "./availability-score";
 
 export interface AvailabilityResult {
   status: "GREEN" | "AMBER" | "RED";
@@ -18,6 +18,10 @@ export interface AvailabilityResult {
   checkinToday: { fatigue: number | null; stress: number | null; muscleSoreness: number | null; sleepQuality: number | null } | null;
   signalsTriggered: string[];
   reasons: string[];
+  /** Motivos de alerta para mostrar (más el aviso de dato viejo); vacío si no hay alertas. */
+  alertReasons: string[];
+  /** Estado de cada señal (chips). */
+  chips: SignalChip[];
   hrvMethod: SignalMethod;
   restingHrMethod: SignalMethod;
   /** Días desde el último dato de HRV/FC (0 = hoy). null si no hay datos. */
@@ -88,6 +92,9 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     // Primero: si el dato es viejo, hay que saberlo antes de leer el resto (la pantalla muestra solo los primeros motivos)
     reasons.unshift(`Último dato de HRV/FC de hace ${wellnessAgeDays} día${wellnessAgeDays === 1 ? "" : "s"} (todavía no sincronizó hoy)`);
   }
+  const alertReasons = [...ev.alertReasons];
+  if (wellnessAgeDays != null && wellnessAgeDays >= 1) alertReasons.unshift(reasons[0]);
+  const chips = signalChips({ hrvSig, rhrSig, checkin: checkinToday, tsb, minTsb }, ev);
   const sources = recoverySources({ hrvSig, rhrSig, checkin: checkinToday });
   const insufficient = sources.length === 0 && status === "GREEN";
   const scoreDetail = scoreAvailability({ status, hrvDeltaPct, restingHrDeltaAbs, tsb, checkin: checkinToday });
@@ -106,6 +113,8 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     checkinToday,
     signalsTriggered,
     reasons,
+    alertReasons,
+    chips,
     hrvMethod: hrvSig.method,
     restingHrMethod: rhrSig.method,
     wellnessAgeDays,

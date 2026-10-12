@@ -568,11 +568,30 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .avail-advice { font-size: 17px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.35; margin: 12px 0 10px; max-width: 46ch; }
 .avail-reasons { margin: 0 0 12px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
 .avail-reasons li::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--c); margin-right: 9px; vertical-align: middle; }
-.avail-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; margin: 0; max-width: 62ch; }
+.avail-chips { margin: 14px 0 12px; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; text-align: left; }
+.avail-chip { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--border, rgba(255,255,255,.08)); }
+.avail-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #4FD1C5; box-sizing: border-box; }
+.avail-chip.alert .avail-dot { background: #E8A33D; }
+.avail-chip.nodata .avail-dot { background: transparent; border: 1.5px solid var(--text-muted); }
+.avail-chip-name { display: block; font-size: 13px; font-weight: 600; }
+.avail-chip-state { display: block; font-size: 12px; color: var(--text-muted); }
+.avail-chip.alert .avail-chip-state { color: #E8A33D; font-weight: 600; }
+.avail-reasons { border-left: 2px solid var(--c); padding-left: 10px; }
+.avail-reasons li::before { content: none; }
+.avail-how { border-top: 1px solid rgba(255,255,255,.08); padding-top: 10px; font-size: 12.5px; color: var(--text-muted); text-align: left; }
+.avail-how summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+.avail-how summary::-webkit-details-marker { display: none; }
+.avail-how-link { color: var(--teal); font-weight: 600; white-space: nowrap; }
+.avail-how[open] .avail-how-link::after { content: " ▴"; }
+.avail-how:not([open]) .avail-how-link::after { content: " ›"; }
+.avail-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; margin: 10px 0 0; max-width: 62ch; }
+.avail-note p { margin: 0 0 6px; }
+.avail-note ul { margin: 0 0 6px; padding-left: 16px; }
 @media (max-width: 640px) {
   .avail-hero { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 20px; gap: 14px; }
   .avail-gauge { width: 176px; height: 176px; }
   .avail-reasons { text-align: left; }
+  .avail-body { align-self: stretch; text-align: center; }
 }
 
 /* Franja "Cómo estás" */

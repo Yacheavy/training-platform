@@ -30,6 +30,16 @@ export interface Evaluation {
   status: AvailabilityStatus;
   signalsTriggered: string[];
   reasons: string[];
+  /** Solo los motivos de alerta (sin avisos genéricos como "sin señales" o "datos insuficientes"): lo que se muestra en pantalla. */
+  alertReasons: string[];
+  tsbAlert: boolean;
+}
+
+export type ChipState = "alert" | "ok" | "nodata";
+export interface SignalChip {
+  key: "hrv" | "resting_hr" | "checkin" | "tsb";
+  label: string;
+  state: ChipState;
 }
 
 /** Qué señales de RECUPERACIÓN hay hoy (HRV, FC de reposo, check-in). Sin ninguna, el semáforo no tiene de dónde decidir. */
@@ -46,46 +56,63 @@ export function evaluateAvailability(i: EvaluationInput): Evaluation {
   const signalsTriggered: string[] = [];
   const reasons: string[] = [];
   const { hrvSig, rhrSig, checkin, tsb, minTsb } = i;
+  const alertReasons: string[] = [];
 
   if (hrvSig.triggered) {
     signalsTriggered.push("hrv");
-    if (hrvSig.reason) reasons.push(hrvSig.reason);
+    if (hrvSig.reason) {
+      reasons.push(hrvSig.reason);
+      alertReasons.push(hrvSig.reason);
+    }
   } else if (hrvSig.method === "insufficient") {
     reasons.push("HRV: datos insuficientes para evaluar (se necesitan al menos 4 de los últimos 7 días)");
   }
   if (rhrSig.triggered) {
     signalsTriggered.push("resting_hr");
-    if (rhrSig.reason) reasons.push(rhrSig.reason);
+    if (rhrSig.reason) {
+      reasons.push(rhrSig.reason);
+      alertReasons.push(rhrSig.reason);
+    }
   }
   if (checkin) {
     if ((checkin.fatigue ?? 0) >= 6) {
       signalsTriggered.push("fatigue");
       reasons.push(`Fatiga reportada ${checkin.fatigue === 7 ? "muy alta" : "elevada"} hoy (${checkin.fatigue}/7)`);
+      alertReasons.push(reasons[reasons.length - 1]);
     }
     if ((checkin.stress ?? 0) >= 6) {
       signalsTriggered.push("stress");
       reasons.push(`Estrés reportado ${checkin.stress === 7 ? "muy alto" : "elevado"} hoy (${checkin.stress}/7)`);
+      alertReasons.push(reasons[reasons.length - 1]);
     }
     if ((checkin.muscleSoreness ?? 0) >= 6) {
       signalsTriggered.push("muscle_soreness");
       reasons.push(`Dolor muscular reportado ${checkin.muscleSoreness === 7 ? "muy alto" : "elevado"} hoy (${checkin.muscleSoreness}/7)`);
+      alertReasons.push(reasons[reasons.length - 1]);
     }
     if ((checkin.sleepQuality ?? 8) <= 2) {
       signalsTriggered.push("sleep_quality");
       reasons.push(`Calidad de sueño reportada muy baja hoy (${checkin.sleepQuality}/7)`);
+      alertReasons.push(reasons[reasons.length - 1]);
     }
   }
 
   // TSB: señal de CARGA acumulada; por sí solo solo da ámbar. Rojo exige TSB bajo + 1 señal de recuperación, o 2+ señales.
   const tsbAlert = tsb != null && tsb < minTsb;
-  if (tsbAlert) reasons.push(`TSB en ${tsb!.toFixed(1)}, por debajo de tu mínimo configurado (${minTsb})`);
+  if (tsbAlert) {
+    reasons.push(`TSB en ${tsb!.toFixed(1)}, por debajo de tu mínimo configurado (${minTsb})`);
+    alertReasons.push(reasons[reasons.length - 1]);
+  }
 
   // Las 4 preguntas del check-in se mueven juntas (una mala noche las altera a la vez): cuentan como UNA señal, y como dos solo si
   // el cuadro es claro (3 o 4 de las 4 en alerta). Criterio de diseño, no un umbral validado en ensayos.
   const SUBJECTIVE = new Set(["fatigue", "stress", "muscle_soreness", "sleep_quality"]);
   const subjectiveHits = signalsTriggered.filter((s) => SUBJECTIVE.has(s)).length;
   const subjectiveWeight = subjectiveHits === 0 ? 0 : subjectiveHits >= 3 ? 2 : 1;
-  if (subjectiveHits === 2) reasons.push("Las respuestas del check-in cuentan como una sola señal (se mueven juntas); con 3 o más en alerta pesan como dos");
+  if (subjectiveHits === 2) {
+    reasons.push("Las respuestas del check-in cuentan como una sola señal (se mueven juntas); con 3 o más en alerta pesan como dos");
+    alertReasons.push(reasons[reasons.length - 1]);
+  }
   const n = signalsTriggered.length - subjectiveHits + subjectiveWeight;
   const status: AvailabilityStatus = n >= 2 || (tsbAlert && n >= 1) ? "RED" : n === 1 || tsbAlert ? "AMBER" : "GREEN";
   const noRecovery = recoverySources(i).length === 0;
@@ -96,7 +123,20 @@ export function evaluateAvailability(i: EvaluationInput): Evaluation {
   } else if (reasons.length === 0) {
     reasons.push("Sin señales de alerta en las señales disponibles");
   }
-  return { status, signalsTriggered, reasons };
+  return { status, signalsTriggered, reasons, alertReasons, tsbAlert };
+}
+
+/** Estado de cada señal para los chips de la pantalla: sale de la MISMA evaluación que el semáforo, no se recalcula aparte. */
+export function signalChips(i: EvaluationInput, ev: Pick<Evaluation, "signalsTriggered" | "tsbAlert">): SignalChip[] {
+  const has = (k: string) => ev.signalsTriggered.includes(k);
+  const checkinAlert = ["fatigue", "stress", "muscle_soreness", "sleep_quality"].some(has);
+  const checkinData = recoverySources(i).includes("check-in");
+  return [
+    { key: "hrv", label: "HRV", state: has("hrv") ? "alert" : i.hrvSig.method === "insufficient" ? "nodata" : "ok" },
+    { key: "resting_hr", label: "FC en reposo", state: has("resting_hr") ? "alert" : i.rhrSig.method === "insufficient" ? "nodata" : "ok" },
+    { key: "checkin", label: "Check-in", state: checkinAlert ? "alert" : checkinData ? "ok" : "nodata" },
+    { key: "tsb", label: "Forma (TSB)", state: ev.tsbAlert ? "alert" : i.tsb == null ? "nodata" : "ok" },
+  ];
 }
 
 export const SCORE_BANDS: Record<AvailabilityStatus, { lo: number; hi: number; base: number }> = {

@@ -6,7 +6,7 @@
  * un solo día malo, datos insuficientes).
  */
 import { hrvSignal, restingHrSignal, type DailyPoint } from "./training-engine/recovery-signals";
-import { evaluateAvailability, scoreAvailability, SCORE_BANDS, type AvailabilityStatus, type CheckinInput } from "./training-engine/availability-score";
+import { evaluateAvailability, signalChips, scoreAvailability, SCORE_BANDS, type AvailabilityStatus, type CheckinInput } from "./training-engine/availability-score";
 
 let problems = 0, checks = 0;
 const ok = (c: boolean, m: string) => { checks++; if (!c) { problems++; if (problems <= 25) console.log("FALLA:", m); } };
@@ -36,6 +36,14 @@ for (const h of [false, true]) for (const r of [false, true]) for (const s of [0
   if (n === 1 && !tsbAlert) ok(ev.status === "AMBER", `una sola señal debe dar ámbar (${h},${r},${s})`);
   // Todo rojo/ámbar tiene al menos un motivo escrito
   ok(ev.reasons.length > 0 && ev.reasons.every((x) => x.trim().length > 0), "motivos vacíos");
+  // Chips = misma evaluación: cada alerta del semáforo se ve en su chip, y sin alertas no hay motivos de alerta
+  const inp = { hrvSig: hrv as never, rhrSig: rhr as never, checkin: subj(s), tsb: tsbAlert ? -40 : -5, minTsb: -30 };
+  const ch = signalChips(inp, ev);
+  const st = (k: string) => ch.find((c) => c.key === k)!.state;
+  ok(ch.length === 4, "deben ser 4 chips");
+  ok((st("hrv") === "alert") === h && (st("resting_hr") === "alert") === r, `chips HRV/FC no coinciden (${h},${r})`);
+  ok((st("checkin") === "alert") === (s > 0) && (st("tsb") === "alert") === tsbAlert, `chips check-in/TSB no coinciden (${s},${tsbAlert})`);
+  ok((ch.filter((c) => c.state === "alert").length > 0) === (ev.alertReasons.length > 0), "motivos de alerta vs chips en alerta");
 }
 
 // 2) El puntaje siempre queda dentro de la banda de su semáforo

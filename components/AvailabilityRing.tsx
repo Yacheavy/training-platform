@@ -1,3 +1,5 @@
+import type { SignalChip } from "@/lib/training-engine/availability-score";
+
 type Status = "GREEN" | "AMBER" | "RED";
 
 const META: Record<Status, { color: string; soft: string; label: string; advice: string }> = {
@@ -28,23 +30,31 @@ const degAt = (score: number) => START + (Math.max(0, Math.min(100, score)) / 10
 export function AvailabilityRing({
   status,
   score,
-  reasons,
-  missing = [],
+  alertReasons,
+  chips,
   insufficient = false,
   sources = [],
+  ageDays = null,
 }: {
   status: Status;
   score: number;
-  reasons: string[];
-  missing?: string[];
+  /** Solo motivos de alerta (y aviso de dato viejo). Vacío = no hay nada que explicar. */
+  alertReasons: string[];
+  chips: SignalChip[];
   insufficient?: boolean;
+  /** Señales de recuperación con las que se calculó (HRV, FC de reposo, check-in). */
   sources?: string[];
+  /** Días desde el último dato de HRV/FC (0 = hoy). */
+  ageDays?: number | null;
 }) {
   if (insufficient) return <InsufficientHero />;
   const m = META[status];
   const end = degAt(score);
   const [kx, ky] = pt(end);
   const gid = `g-${status}`;
+  const alerts = chips.filter((c) => c.state === "alert").length;
+  const stale = ageDays != null && ageDays >= 1 ? (ageDays === 1 ? "de ayer" : `de hace ${ageDays} d`) : null;
+  const okText = (c: SignalChip) => (stale && (c.key === "hrv" || c.key === "resting_hr") ? `Normal · ${stale}` : "Normal");
 
   return (
     <div className="avail-hero" style={{ ["--c" as string]: m.color, ["--soft" as string]: m.soft }}>
@@ -76,17 +86,41 @@ export function AvailabilityRing({
       <div className="avail-body">
         <span className="avail-pill">{m.label}</span>
         <p className="avail-advice">{m.advice}</p>
-        <ul className="avail-reasons">
-          {reasons.slice(0, 3).map((r, i) => (
-            <li key={i}>{r}</li>
+        <ul className="avail-chips" aria-label="Estado de cada señal">
+          {chips.map((c) => (
+            <li key={c.key} className={`avail-chip ${c.state}`}>
+              <span className="avail-dot" aria-hidden="true" />
+              <span>
+                <span className="avail-chip-name">{c.label}</span>
+                <span className="avail-chip-state">{c.state === "alert" ? "En alerta" : c.state === "nodata" ? "Sin dato hoy" : okText(c)}</span>
+              </span>
+            </li>
           ))}
         </ul>
-        <p className="avail-note">
-          El estado (alta, moderada, baja) sale de reglas sobre tu HRV, tu FC en reposo, tu forma y tu check-in. El número es una
-          referencia dentro de ese estado, no una medida validada.
-          {sources.length > 0 && sources.length < 3 && <> Hoy se calculó solo con: {sources.join(" y ")}.</>}
-          {missing.length > 0 && <> Sin dato hoy: {missing.join(", ")}.</>}
-        </p>
+        {alertReasons.length > 0 && (
+          <ul className="avail-reasons">
+            {alertReasons.slice(0, 3).map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        )}
+        <details className="avail-how">
+          <summary>
+            <span>
+              {alerts === 0 ? "Sin alertas" : alerts === 1 ? "Una señal en alerta" : `${alerts} señales en alerta`} · calculado con {sources.length} de 3
+            </span>
+            <span className="avail-how-link">Cómo se calcula</span>
+          </summary>
+          <div className="avail-note">
+            <p>El estado (alta, moderada, baja) sale de reglas sobre cuatro señales:</p>
+            <ul>
+              <li>HRV y FC en reposo: se compara la media de tus últimos 7 días con tu línea base de 60 días. Es alerta si sale de tu rango habitual.</li>
+              <li>Check-in: sueño, fatiga, estrés y dolor muscular; cuentan como una sola señal.</li>
+              <li>Forma (TSB): alerta si baja de tu mínimo configurado.</li>
+            </ul>
+            <p>Una sola señal da moderada; baja exige dos coincidiendo (o forma baja más una). El número es una referencia dentro del estado, no una medida validada.</p>
+          </div>
+        </details>
       </div>
     </div>
   );
