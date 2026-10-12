@@ -9,6 +9,10 @@ import { buildActivitySummary } from "./activity-summary";
 const REQUEST = `${ANALYSIS_STYLE}
 Este texto se envía por email: sin markdown salvo los títulos «### » de las secciones, las viñetas «- » y **negrita** para 2 o 3 datos clave. Si hay vueltas (laps), basate en ellas para describir los intervalos realmente hechos. Si la nutrición no tiene dato, decilo en una frase y no la evalúes.`;
 
+/** Pasadas 48 h de la salida ya no se manda análisis automático (se acumularían y no se leen); sigue disponible a pedido en el chat. */
+export const AUTO_ANALYSIS_WINDOW_MS = 48 * 60 * 60 * 1000;
+export const withinAutoWindow = (activityDate: Date, now = new Date()) => now.getTime() - activityDate.getTime() <= AUTO_ANALYSIS_WINDOW_MS;
+
 export type AnalysisMailResult = "sent" | "skipped" | "failed";
 
 /**
@@ -23,6 +27,7 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
   });
   if (!a || !a.athlete.emailAnalysis || a.analysisEmailSentAt || !a.nutritionLoggedAt) return "skipped";
   if (!RIDE_TYPES.includes(a.type) || a.durationSec < 3600) return "skipped";
+  if (!withinAutoWindow(a.date)) return "skipped";
 
   const claim = await prisma.activity.updateMany({ where: { id: a.id, analysisEmailSentAt: null }, data: { analysisEmailSentAt: new Date() } });
   if (claim.count === 0) return "skipped";
