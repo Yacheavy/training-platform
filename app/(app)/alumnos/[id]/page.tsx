@@ -53,13 +53,13 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
   const l28 = load.slice(-28);
-  const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string }[] = [
+  const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string; sub?: string }[] = [
     { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", spark: l28.map((d) => d.ctl), color: "#6FA8DC" },
     { label: "Fatiga (ATL)", value: data.atl?.toFixed(1) ?? "—", spark: l28.map((d) => d.atl), color: "#B58CE0" },
     { label: "Forma (TSB)", value: data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—", spark: l28.map((d) => d.tsb) },
     { label: "HRV", value: data.hrvToday?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.hrv) },
     { label: "FC reposo", value: data.restingHr?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "#E8A33D" },
-    { label: "Sueño", value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—" },
+    { label: "Sueño", value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—", sub: data.sleepTrend ?? undefined },
   ];
   const row = { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" as const, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.05)", fontSize: "13px" };
 
@@ -82,6 +82,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             <div className="metric" key={m.label}>
               <div className="metric-label">{m.label}</div>
               <div className="metric-value">{m.value}</div>
+              {m.sub && <div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "3px" }}>{m.sub}</div>}
               {m.spark && m.spark.filter((v) => v != null).length > 1 && (
                 <div className="metric-spark"><Sparkline values={m.spark} color={m.color} id={`s${m.label.replace(/\W/g, "")}`} /></div>
               )}

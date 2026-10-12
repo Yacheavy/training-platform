@@ -234,7 +234,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             color="#4FD1C5"
           />
           <StatCard label={`FC reposo ${ageLabel(data.restingHrDate)}`} value={data.restingHr?.toFixed(0) ?? "—"} sub={rhrTrend} accent={rhrAlert ? "amber" : undefined} spark={hrvBand.points.slice(-28).map((p) => p.restingHr)} color="#E8A33D" />
-          <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} />
+          <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} sub={data.sleepTrend ?? undefined} />
         </div>
       </Section>
 

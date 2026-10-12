@@ -26,3 +26,25 @@ export function sleepNote(i: SleepInput): string | null {
     `Un solo sueño corto tiene efectos pequeños y variables en el rendimiento; los efectos claros aparecen con privación más larga (Craven y col., 2022).`
   );
 }
+
+/** Rango de referencia para adultos (Walsh y col., 2021: consenso de expertos sobre sueño y atletas). Informativo: no entra al semáforo. */
+export const SLEEP_RANGE = { lo: 7, hi: 9 };
+export const MIN_SLEEP_DAYS = 4;
+
+/** Promedio de los últimos 7 días hasta la última noche con dato (mínimo 4 noches). Ignora valores 0 o ausentes. */
+export function sleepAverage7d(rows: { date: Date; sleepHours: number | null }[], lastDate: Date | null): { avg: number; n: number } | null {
+  if (!lastDate) return null;
+  const from = lastDate.getTime() - 6 * 24 * 60 * 60 * 1000;
+  const v = rows.filter((r) => r.date.getTime() >= from && r.date.getTime() <= lastDate.getTime() && r.sleepHours != null && r.sleepHours > 0).map((r) => r.sleepHours!);
+  if (v.length < MIN_SLEEP_DAYS) return null;
+  return { avg: v.reduce((a, b) => a + b, 0) / v.length, n: v.length };
+}
+
+/** Línea informativa bajo la tarjeta de sueño. Sin juicio por encima del rango. */
+export function sleepTrendText(t: { avg: number; n: number } | null): string | null {
+  if (!t) return null;
+  const h = t.avg.toFixed(1).replace(".", ",");
+  if (t.avg < SLEEP_RANGE.lo) return `7 días: ${h} h · bajo el rango de ${SLEEP_RANGE.lo}–${SLEEP_RANGE.hi} h`;
+  if (t.avg <= SLEEP_RANGE.hi) return `7 días: ${h} h · dentro de ${SLEEP_RANGE.lo}–${SLEEP_RANGE.hi} h`;
+  return `7 días: ${h} h`;
+}

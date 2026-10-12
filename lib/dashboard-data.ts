@@ -1,3 +1,4 @@
+import { sleepAverage7d, sleepTrendText } from "@/lib/sleep-note";
 import { buildAvailabilityHistory } from "@/lib/training-engine/availability-score";
 import { dayKeyDate, dayRangeLocal, weekRangeLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
@@ -63,6 +64,7 @@ export async function getDashboardData(athleteId: string) {
     restingHrDate: rhrRow?.date ?? null,
     sleepHours: sleepRow?.sleepHours ?? null,
     sleepDate: sleepRow?.date ?? null,
+    sleepTrend: sleepTrendText(sleepAverage7d(recent, sleepRow?.date ?? null)),
     lastWellnessDate: latestWellness?.date ?? null,
     recentActivities,
   };
