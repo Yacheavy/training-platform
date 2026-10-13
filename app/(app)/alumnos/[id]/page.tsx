@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { pushGoalsToIntervals } from "@/lib/push-goals";
 import { requireCoachOfStudent } from "@/lib/access";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { getPlanVsActual, getHrvBandData } from "@/lib/analytics";
@@ -31,6 +32,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const student = await requireCoachOfStudent(id).catch(() => null);
   if (!student) notFound();
+  await pushGoalsToIntervals(id).catch((e) => console.error("Objetivos del alumno a Intervals", e));
 
   const todayKey = dateKeyLocal(new Date());
   const [availability, data, weeks, upcoming, activities, checkin, chatUsage, nutrition, load, hrvBand, availHistory] = await Promise.all([

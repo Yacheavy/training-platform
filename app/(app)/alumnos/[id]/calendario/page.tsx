@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireCoachOfStudent } from "@/lib/access";
+import { pushGoalsToIntervals } from "@/lib/push-goals";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { getCalendarData } from "@/lib/calendar-data";
 
@@ -14,6 +15,8 @@ export default async function StudentCalendarPage({ params, searchParams }: { pa
   const student = await requireCoachOfStudent(id).catch(() => null);
   if (!student) notFound();
 
+  // Si el alumno tiene objetivos pendientes de enviar a Intervals, se envían ahora con sus credenciales (no espera a que él abra la app)
+  await pushGoalsToIntervals(id).catch((e) => console.error("Objetivos del alumno a Intervals", e));
   const sp = await searchParams;
   const today = new Date();
   const year = sp.year ? parseInt(sp.year, 10) : today.getFullYear();
