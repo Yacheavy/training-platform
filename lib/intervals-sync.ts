@@ -1,3 +1,4 @@
+import { pushGoalsToIntervals } from "@/lib/push-goals";
 import { prisma } from "@/lib/prisma";
 import { getActivities, getWellness } from "@/lib/intervals-client";
 import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
@@ -223,6 +224,8 @@ export async function syncIntervals(userId: string, days = 14): Promise<SyncResu
   if (result.activities > 0 || result.wellness > 0 || result.errors.length === 0) {
     await prisma.user.update({ where: { id: userId }, data: { intervalsLastSyncAt: new Date() } });
   }
+  // Carreras y objetivos pendientes de enviar a Intervals (un solo pedido; nunca rompe la sincronización)
+  await pushGoalsToIntervals(userId, creds).catch((e) => result.errors.push(`Objetivos a Intervals: ${String(e)}`));
   return result;
 }
 

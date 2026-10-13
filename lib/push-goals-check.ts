@@ -1,0 +1,13 @@
+import { goalToIntervalsEvent, goalExternalId } from "./push-goals";
+let p = 0, c = 0;
+const ok = (b: boolean, m: string) => { c++; if (!b) { p++; console.log("FALLA", m); } };
+const base = { id: "g1", goalType: "EVENT" as const, name: "Vuelta Fem Uruguay", priority: "B" as const, eventDate: new Date("2026-10-23T00:00:00Z"), courseProfile: "ondulado", metric: null, baselineValue: null, targetValue: null };
+const race = goalToIntervalsEvent(base)!;
+ok(race.category === "RACE_B" && race.day === "2026-10-23" && race.name === "Vuelta Fem Uruguay" && race.external_id === goalExternalId("g1"), "carrera B");
+ok(/perfil ondulado/.test(race.description), "perfil en la descripción");
+ok(goalToIntervalsEvent({ ...base, priority: "A" })!.category === "RACE_A" && goalToIntervalsEvent({ ...base, priority: "C" })!.category === "RACE_C", "prioridades");
+ok(/montaña/.test(goalToIntervalsEvent({ ...base, courseProfile: "montana" })!.description), "montaña con ñ");
+const perf = goalToIntervalsEvent({ ...base, goalType: "PERFORMANCE", name: "FTP para Enero", priority: "A", eventDate: new Date("2027-01-01T00:00:00Z"), metric: "ftp", baselineValue: 300, targetValue: 320, courseProfile: null })!;
+ok(perf.category === "NOTE" && perf.day === "2027-01-01" && /Meta: 320/.test(perf.description) && /Punto de partida: 300/.test(perf.description) && perf.name.startsWith("Objetivo:"), "meta de rendimiento como nota");
+ok(goalToIntervalsEvent({ ...base, eventDate: null }) === null, "sin fecha no se envía");
+console.log({ checks: c, problems: p }); process.exit(p ? 1 : 0);

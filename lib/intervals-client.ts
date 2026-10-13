@@ -158,3 +158,44 @@ export async function updateActivityRatings(apiKey: string, activityId: string, 
   }
   return { ok: true };
 }
+
+export interface IntervalsGoalEvent {
+  external_id: string;
+  /** RACE_A / RACE_B / RACE_C para carreras; NOTE para metas de rendimiento. */
+  category: "RACE_A" | "RACE_B" | "RACE_C" | "NOTE";
+  /** "YYYY-MM-DD" */
+  day: string;
+  name: string;
+  description: string;
+}
+
+/** Crea o actualiza (por external_id, upsert masivo) las carreras y notas de objetivo en el calendario de Intervals. */
+export async function upsertGoalEvents(athleteId: string, apiKey: string, events: IntervalsGoalEvent[]) {
+  if (events.length === 0) return;
+  const res = await fetch(`${INTERVALS_BASE_URL}/athlete/${athleteId}/events/bulk?upsert=true`, {
+    method: "POST",
+    headers: { Authorization: authHeader(apiKey), "Content-Type": "application/json" },
+    body: JSON.stringify(
+      events.map((e) => ({
+        external_id: e.external_id,
+        category: e.category,
+        start_date_local: `${e.day}T00:00:00`,
+        name: e.name,
+        description: e.description,
+        ...(e.category === "NOTE" ? {} : { type: "Ride" }),
+      }))
+    ),
+  });
+  if (!res.ok) throw new Error(`Intervals API error: ${res.status} ${await res.text()}`);
+}
+
+/** Borra el evento de Intervals que tenga ese external_id ese día (si no existe, no hace nada). */
+export async function deleteEventByExternalId(athleteId: string, apiKey: string, externalId: string, day: string) {
+  const base = `${INTERVALS_BASE_URL}/athlete/${athleteId}`;
+  const list = await fetch(`${base}/events?oldest=${day}&newest=${day}`, { headers: { Authorization: authHeader(apiKey) }, cache: "no-store" });
+  if (!list.ok) throw new Error(`Intervals API error: ${list.status}`);
+  const events = (await list.json()) as { id: number; external_id?: string | null }[];
+  for (const e of events) {
+    if (e.external_id === externalId) await fetch(`${base}/events/${e.id}`, { method: "DELETE", headers: { Authorization: authHeader(apiKey) } });
+  }
+}

@@ -222,6 +222,8 @@ model AthleteGoal {
   createdByCoach Boolean @default(false)
   /// Perfil de la prueba (llano, ondulado, montana, fondo, contrarreloj, criterium): adapta la activación y el calentamiento. null = genérico
   courseProfile String?
+  /// Cuándo se envió a Intervals como evento (carrera o nota). null = pendiente
+  intervalsSentAt DateTime?
 }
 
 enum GoalType {

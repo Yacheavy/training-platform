@@ -1,4 +1,5 @@
 import { BANNABLE_KEYS } from "@/lib/training-engine/variants";
+import { pushGoalsToIntervals, removeGoalFromIntervals } from "@/lib/push-goals";
 import { prisma } from "@/lib/prisma";
 import { normalizeCourseProfile } from "@/lib/training-engine/race-week";
 
@@ -81,7 +82,7 @@ export async function addGoalCore(athleteId: string, formData: FormData, byCoach
   if (goalType === "EVENT" && !/^\d{4}-\d{2}-\d{2}$/.test(eventDateStr)) throw new Error("Elegí la fecha del evento");
   const priority = ["A", "B", "C"].includes(String(formData.get("priority"))) ? (String(formData.get("priority")) as "A" | "B" | "C") : "B";
 
-  await prisma.athleteGoal.create({
+  const created = await prisma.athleteGoal.create({
     data: {
       athleteId,
       createdByCoach: byCoach,
@@ -95,12 +96,17 @@ export async function addGoalCore(athleteId: string, formData: FormData, byCoach
       targetValue: goalType === "PERFORMANCE" && formData.get("targetValue") ? Number(formData.get("targetValue")) : null,
     },
   });
+  void created;
+  // Se envía a Intervals (carrera o nota); si falla no se pierde el objetivo: queda pendiente y se reintenta al sincronizar
+  await pushGoalsToIntervals(athleteId).catch((e) => console.error("No se pudo enviar el objetivo a Intervals", e));
 }
 
 export async function deleteGoalCore(athleteId: string, formData: FormData) {
   const id = String(formData.get("id"));
   // Solo se puede borrar un objetivo propio
+  const goal = await prisma.athleteGoal.findFirst({ where: { id, athleteId }, select: { id: true, eventDate: true, intervalsSentAt: true } });
   await prisma.athleteGoal.deleteMany({ where: { id, athleteId } });
+  if (goal) await removeGoalFromIntervals(athleteId, goal).catch((e) => console.error("No se pudo quitar el objetivo de Intervals", e));
 }
 
 /** Cambia el perfil de la prueba de un evento propio (vacío = genérico). Solo aplica a eventos; se nota al regenerar el plan. */
