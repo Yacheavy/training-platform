@@ -2,7 +2,9 @@
 
 import { STIMULUS_LABELS } from "@/lib/labels";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { dateKeyLocal } from "@/lib/tz";
+import type { CalendarEvent } from "@/lib/calendar-data";
 import { WorkoutMiniChart } from "./WorkoutMiniChart";
 import { moveWorkoutToDate, swapWorkouts } from "@/lib/calendar-actions";
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
@@ -51,6 +53,7 @@ export function CalendarGrid({
   ftp,
   readOnly = false,
   detailBase,
+  events = [],
 }: {
   year: number;
   month: number;
@@ -60,9 +63,35 @@ export function CalendarGrid({
   readOnly?: boolean;
   /** Si se pasa (ej. "/workouts/"), el detalle muestra un link a la sesión completa: base + id. (Es un texto, no una función: viene de un componente de servidor.) */
   detailBase?: string;
+  /** Carreras y metas con fecha (se muestran en su día). */
+  events?: CalendarEvent[];
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [detailWorkout, setDetailWorkout] = useState<CalendarWorkout | null>(null);
+  const todayKey = dateKeyLocal(new Date());
+  const [view, setView] = useState<"month" | "week">("month");
+  const [narrow, setNarrow] = useState(false);
+  // Semana (domingo a sábado, igual que la grilla): la de hoy si el mes mostrado es el actual, si no la primera del mes
+  const [weekStart, setWeekStart] = useState(() => {
+    const inMonth = todayKey.startsWith(`${year}-${String(month + 1).padStart(2, "0")}`);
+    const base = inMonth ? todayKey : keyOf(year, month, 1);
+    return addDays(base, -dow(base));
+  });
+  // En el celular se abre en semana (la grilla mensual de 7 columnas queda muy chica)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    setNarrow(mq.matches);
+    if (mq.matches) setView("week");
+    const on = (e: MediaQueryListEvent) => setNarrow(e.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const eventsByDate = new Map<string, CalendarEvent[]>();
+  for (const e of events) eventsByDate.set(e.date, [...(eventsByDate.get(e.date) ?? []), e]);
+  const monthFirst = keyOf(year, month, 1);
+  const monthLast = keyOf(year, month + 1, 0);
+  const canPrevWeek = addDays(weekStart, -7) >= addDays(monthFirst, -6);
+  const canNextWeek = addDays(weekStart, 7) <= monthLast;
 
   const firstDay = new Date(year, month, 1);
   const startWeekday = firstDay.getDay();
@@ -82,7 +111,7 @@ export function CalendarGrid({
   async function handleDrop(dayNumber: number) {
     if (readOnly || !draggingId) return;
     const newDate = new Date(year, month, dayNumber);
-    const targetKey = newDate.toISOString().split("T")[0];
+    const targetKey = keyOf(year, month, dayNumber);
     const existingAtTarget = workoutsByDate.get(targetKey);
 
     if (existingAtTarget && existingAtTarget.id !== draggingId) {
@@ -93,8 +122,66 @@ export function CalendarGrid({
     setDraggingId(null);
   }
 
+  const seg = (active: boolean) => ({
+    padding: "7px 16px", fontSize: "13px", cursor: "pointer", border: "1px solid var(--border)", color: active ? "var(--teal)" : "var(--text-muted)",
+    background: active ? "rgba(79,209,197,.12)" : "transparent",
+  }) as const;
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const weekLabel = `${fmtShort(weekDays[0])} – ${fmtShort(weekDays[6])}`;
+
   return (
     <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "14px" }}>
+        <div role="group" aria-label="Vista del calendario" style={{ display: "inline-flex" }}>
+          <button type="button" onClick={() => setView("week")} aria-pressed={view === "week"} style={{ ...seg(view === "week"), borderRadius: "999px 0 0 999px" }}>Semana</button>
+          <button type="button" onClick={() => setView("month")} aria-pressed={view === "month"} style={{ ...seg(view === "month"), borderRadius: "0 999px 999px 0", borderLeft: "none" }}>Mes</button>
+        </div>
+        {view === "week" && (
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button type="button" disabled={!canPrevWeek} onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Semana anterior" style={{ ...seg(false), borderRadius: "999px", opacity: canPrevWeek ? 1 : 0.4 }}>←</button>
+            <span style={{ fontSize: "13px", minWidth: "128px", textAlign: "center" }}>{weekLabel}</span>
+            <button type="button" disabled={!canNextWeek} onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Semana siguiente" style={{ ...seg(false), borderRadius: "999px", opacity: canNextWeek ? 1 : 0.4 }}>→</button>
+          </div>
+        )}
+      </div>
+
+      {view === "week" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {weekDays.map((k) => {
+            const w = workoutsByDate.get(k);
+            const ev = eventsByDate.get(k) ?? [];
+            const isToday = k === todayKey;
+            const inMonth = k >= monthFirst && k <= monthLast;
+            return (
+              <div key={k} style={{ display: "grid", gridTemplateColumns: "54px minmax(0, 1fr)", gap: "10px", alignItems: "center", padding: "10px 12px", borderRadius: "14px", border: `1px solid ${isToday ? "rgba(79,209,197,.6)" : "rgba(255,255,255,.06)"}`, background: isToday ? "linear-gradient(160deg, rgba(79,209,197,.14), rgba(79,209,197,.03))" : "var(--grad-card)", opacity: inMonth ? 1 : 0.75 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "11px", color: isToday ? "var(--teal)" : "var(--text-muted)", textTransform: "capitalize" }}>{DOW_LABELS[dow(k)]}</div>
+                  <div style={{ fontSize: "20px", fontWeight: 600 }}>{Number(k.slice(8))}</div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
+                  {ev.map((e, i) => <EventChip key={i} e={e} />)}
+                  {w ? (
+                    <button type="button" onClick={() => setDetailWorkout(w)} style={{ textAlign: "left", cursor: "pointer", border: `1px solid ${STATUS_BORDER[w.status] ?? "var(--border)"}`, borderRadius: "10px", padding: "8px 10px", background: "rgba(255,255,255,.04)", color: "inherit", width: "100%" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "13px", fontWeight: 600 }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}</span>
+                        <span style={{ fontFamily: "var(--font-mono)", fontSize: "11.5px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
+                          {w.workoutLibraryKey === "gym" || w.workoutLibraryKey === "flexibility" ? "" : `${Math.round(w.blocksJson.reduce((a, b) => a + b.durationSec, 0) / 60)} min${w.estimatedTss ? ` · ${Math.round(w.estimatedTss)} TSS` : ""}`}
+                        </span>
+                      </div>
+                      <div style={{ marginTop: "6px" }}><WorkoutMiniChart blocks={w.blocksJson} /></div>
+                    </button>
+                  ) : ev.length === 0 ? (
+                    <div style={{ fontSize: "12px", color: "var(--text-dim)" }}>Sin sesión</div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {view === "month" && (
+      <>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "4px", marginBottom: "6px" }}>
         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((d) => (
           <div key={d} style={{ fontSize: "11.5px", color: "var(--text-muted)", textAlign: "center", fontWeight: 500 }}>
@@ -106,9 +193,10 @@ export function CalendarGrid({
         {cells.map((dayNumber, idx) => {
           if (dayNumber == null) return <div key={idx} />;
 
-          const dateKey = new Date(year, month, dayNumber).toISOString().split("T")[0];
+          const dateKey = keyOf(year, month, dayNumber);
           const workout = workoutsByDate.get(dateKey);
-          const isToday = dateKey === new Date().toISOString().split("T")[0];
+          const dayEvents = eventsByDate.get(dateKey) ?? [];
+          const isToday = dateKey === todayKey;
 
           return (
             <div
@@ -126,7 +214,13 @@ export function CalendarGrid({
               <div style={{ fontSize: "11.5px", fontWeight: isToday ? 700 : 500, color: isToday ? "var(--teal)" : "var(--text-muted)", marginBottom: "4px" }}>
                 {dayNumber}
               </div>
-              {workout && (
+              {dayEvents.map((e, i) => <EventChip key={i} e={e} compact />)}
+              {workout && narrow && (
+                <button type="button" onClick={() => setDetailWorkout(workout)} aria-label={`Ver sesión del día ${dayNumber}`} style={{ display: "block", width: "100%", border: `1px solid ${STATUS_BORDER[workout.status] ?? "var(--border)"}`, borderRadius: "8px", padding: "4px 2px", background: "rgba(255,255,255,.06)", color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: "9.5px", cursor: "pointer" }}>
+                  {workout.estimatedTss ? Math.round(workout.estimatedTss) : "•"}
+                </button>
+              )}
+              {workout && !narrow && (
                 <div
                   draggable={!readOnly}
                   onDragStart={() => setDraggingId(workout.id)}
@@ -154,6 +248,9 @@ export function CalendarGrid({
           );
         })}
       </div>
+
+      </>
+      )}
 
       {detailWorkout && (
         <div
@@ -244,6 +341,37 @@ export function CalendarGrid({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const DOW_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const MONTHS_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+/** "YYYY-MM-DD" de un día del calendario, sin depender de la zona horaria del navegador. */
+function keyOf(y: number, m: number, d: number): string {
+  return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+}
+function addDays(key: string, n: number): string {
+  const [y, m, d] = key.split("-").map(Number);
+  return keyOf(y, m - 1, d + n);
+}
+function dow(key: string): number {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+function fmtShort(key: string): string {
+  return `${Number(key.slice(8))} ${MONTHS_SHORT[Number(key.slice(5, 7)) - 1]}`;
+}
+
+const PRIORITY_COLOR: Record<string, string> = { A: "var(--red)", B: "var(--amber)", C: "var(--teal)" };
+
+/** Carrera (con su prioridad A/B/C) o meta de rendimiento en su día. */
+function EventChip({ e, compact = false }: { e: CalendarEvent; compact?: boolean }) {
+  const isRace = e.kind === "EVENT";
+  const color = isRace ? PRIORITY_COLOR[e.priority] ?? "var(--amber)" : "var(--text-muted)";
+  return (
+    <div title={`${isRace ? "Carrera" : "Meta"} ${e.priority}: ${e.name}`} style={{ border: `1px solid ${color}`, color, borderRadius: "8px", padding: compact ? "1px 4px" : "5px 9px", fontSize: compact ? "9px" : "12px", fontWeight: 600, marginBottom: compact ? "3px" : 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      {isRace ? "Carrera" : "Meta"} {e.priority}{compact ? "" : ` · ${e.name}`}
     </div>
   );
 }

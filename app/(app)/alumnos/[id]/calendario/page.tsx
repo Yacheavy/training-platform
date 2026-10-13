@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { requireCoachOfStudent } from "@/lib/access";
 import { CalendarGrid } from "@/components/CalendarGrid";
+import { getCalendarData } from "@/lib/calendar-data";
 
 /** El entrenador ve, día a día, las sesiones planificadas de un alumno (solo lectura) y entra a cada una. */
 export default async function StudentCalendarPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ year?: string; month?: string }> }) {
@@ -17,13 +18,7 @@ export default async function StudentCalendarPage({ params, searchParams }: { pa
   const today = new Date();
   const year = sp.year ? parseInt(sp.year, 10) : today.getFullYear();
   const month = sp.month ? parseInt(sp.month, 10) : today.getMonth();
-  const startOfMonth = new Date(year, month, 1);
-  const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
-
-  const workouts = await prisma.generatedWorkout.findMany({
-    where: { athleteId: id, date: { gte: startOfMonth, lte: endOfMonth } },
-    select: { id: true, date: true, workoutLibraryKey: true, status: true, estimatedTss: true, estimatedKj: true, suggestedCarbsG: true, rationale: true, blocksJson: true },
-  });
+  const { workouts, events } = await getCalendarData(id, year, month);
 
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const prev = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
@@ -55,11 +50,8 @@ export default async function StudentCalendarPage({ params, searchParams }: { pa
         ftp={student.ftp ?? 254}
         readOnly
         detailBase="/workouts/"
-        workouts={workouts.map((w) => ({
-          ...w,
-          date: w.date.toISOString(),
-          blocksJson: w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[],
-        }))}
+        workouts={workouts}
+        events={events}
       />
     </div>
   );
