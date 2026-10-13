@@ -54,7 +54,7 @@ export default async function StudentCalendarPage({ params, searchParams }: { pa
         month={month}
         ftp={student.ftp ?? 254}
         readOnly
-        detailHref={(wid) => `/workouts/${wid}`}
+        detailBase="/workouts/"
         workouts={workouts.map((w) => ({
           ...w,
           date: w.date.toISOString(),

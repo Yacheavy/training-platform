@@ -50,7 +50,7 @@ export function CalendarGrid({
   workouts,
   ftp,
   readOnly = false,
-  detailHref,
+  detailBase,
 }: {
   year: number;
   month: number;
@@ -58,8 +58,8 @@ export function CalendarGrid({
   ftp: number;
   /** Vista del entrenador: sin arrastrar ni mover sesiones del alumno. */
   readOnly?: boolean;
-  /** Si se pasa, el detalle muestra un link a la sesión completa. */
-  detailHref?: (workoutId: string) => string;
+  /** Si se pasa (ej. "/workouts/"), el detalle muestra un link a la sesión completa: base + id. (Es un texto, no una función: viene de un componente de servidor.) */
+  detailBase?: string;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [detailWorkout, setDetailWorkout] = useState<CalendarWorkout | null>(null);
@@ -224,8 +224,8 @@ export function CalendarGrid({
               {detailWorkout.rationale}
             </div>
 
-            {detailHref && (
-              <a href={detailHref(detailWorkout.id)} className="btn btn-outline accent" style={{ display: "inline-block", marginBottom: "16px" }}>
+            {detailBase && (
+              <a href={`${detailBase}${detailWorkout.id}`} className="btn btn-outline accent" style={{ display: "inline-block", marginBottom: "16px" }}>
                 Ver la sesión completa →
               </a>
             )}
