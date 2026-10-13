@@ -49,11 +49,17 @@ export function CalendarGrid({
   month,
   workouts,
   ftp,
+  readOnly = false,
+  detailHref,
 }: {
   year: number;
   month: number;
   workouts: CalendarWorkout[];
   ftp: number;
+  /** Vista del entrenador: sin arrastrar ni mover sesiones del alumno. */
+  readOnly?: boolean;
+  /** Si se pasa, el detalle muestra un link a la sesión completa. */
+  detailHref?: (workoutId: string) => string;
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [detailWorkout, setDetailWorkout] = useState<CalendarWorkout | null>(null);
@@ -74,7 +80,7 @@ export function CalendarGrid({
   ];
 
   async function handleDrop(dayNumber: number) {
-    if (!draggingId) return;
+    if (readOnly || !draggingId) return;
     const newDate = new Date(year, month, dayNumber);
     const targetKey = newDate.toISOString().split("T")[0];
     const existingAtTarget = workoutsByDate.get(targetKey);
@@ -122,18 +128,18 @@ export function CalendarGrid({
               </div>
               {workout && (
                 <div
-                  draggable
+                  draggable={!readOnly}
                   onDragStart={() => setDraggingId(workout.id)}
                   onDragEnd={() => setDraggingId(null)}
                   onClick={() => setDetailWorkout(workout)}
                   style={{
-                    cursor: "grab",
+                    cursor: readOnly ? "pointer" : "grab",
                     border: `1px solid ${STATUS_BORDER[workout.status] ?? "var(--border)"}`,
                     borderRadius: "10px",
                     padding: "6px",
                     background: "rgba(255,255,255,.04)",
                   }}
-                  title="Click para ver detalle - arrastra para mover"
+                  title={readOnly ? "Click para ver el detalle" : "Click para ver detalle - arrastra para mover"}
                 >
                   <div style={{ fontSize: "9.5px", color: "var(--text-muted)", marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {STIMULUS_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}
@@ -217,6 +223,12 @@ export function CalendarGrid({
             <div style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6, marginBottom: "16px" }}>
               {detailWorkout.rationale}
             </div>
+
+            {detailHref && (
+              <a href={detailHref(detailWorkout.id)} className="btn btn-outline accent" style={{ display: "inline-block", marginBottom: "16px" }}>
+                Ver la sesión completa →
+              </a>
+            )}
 
             <div style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "8px" }}>
               Sugerencias de ejecución

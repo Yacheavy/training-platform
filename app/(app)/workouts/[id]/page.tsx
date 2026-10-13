@@ -3,6 +3,7 @@ import { BackLink } from "@/components/BackLink";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PendingLink } from "@/components/PendingLink";
 import { notFound, redirect } from "next/navigation";
+import { requireCoachOfStudent } from "@/lib/access";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ATHLETE_TZ } from "@/lib/tz";
@@ -97,12 +98,16 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
-  const [workout, user, thr] = await Promise.all([
-    prisma.generatedWorkout.findUnique({ where: { id } }),
-    prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true, pvo2maxWatts: true } }),
-    prisma.athleteThresholds.findUnique({ where: { athleteId: session.user.id }, select: { flexibilityEnabled: true } }),
+  const workout = await prisma.generatedWorkout.findUnique({ where: { id } });
+  if (!workout) notFound();
+  // Una sesión es del alumno; su entrenador la ve en SOLO LECTURA (sin aprobar, enviar ni cambiar nada)
+  const readOnly = workout.athleteId !== session.user.id;
+  const student = readOnly ? await requireCoachOfStudent(workout.athleteId).catch(() => null) : null;
+  if (readOnly && !student) notFound();
+  const [user, thr] = await Promise.all([
+    prisma.user.findUnique({ where: { id: workout.athleteId }, select: { ftp: true, pvo2maxWatts: true } }),
+    prisma.athleteThresholds.findUnique({ where: { athleteId: workout.athleteId }, select: { flexibilityEnabled: true } }),
   ]);
-  if (!workout || workout.athleteId !== session.user.id) notFound();
 
   const blocks = workout.blocksJson as unknown as Block[];
   const ftp = user?.ftp ?? null;
@@ -131,9 +136,10 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="page-container-narrow">
-      <BackLink fallback="/dashboard" />
+      <BackLink fallback={readOnly ? `/alumnos/${workout.athleteId}/calendario` : "/dashboard"} />
 
       <div style={{ margin: "14px 0 20px" }}>
+        {readOnly && student && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "4px" }}>Sesión de {student.name ?? student.email} · solo lectura</div>}
         <div style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "capitalize" }}>{dateLabel}</div>
         <h1 style={{ fontSize: "22px", fontWeight: 600, margin: "4px 0" }}>{TYPE_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}</h1>
         <span style={{ fontSize: "11px", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px" }}>
@@ -197,7 +203,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
             )}
           </div>
           <div style={{ fontSize: "10.5px", color: "var(--text-dim)", marginTop: "12px" }}>
-            Porcentajes sobre tu FTP{ftp ? ` (${ftp} W)` : ""}.
+            Porcentajes sobre {readOnly ? "el FTP" : "tu FTP"}{ftp ? ` (${ftp} W)` : ""}.
             {user?.pvo2maxWatts ? ` Los intervalos de HIIT usan tu potencia en VO2max (${user.pvo2maxWatts} W).` : ""}
           </div>
         </div>
@@ -244,6 +250,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       </div>
       )}
 
+      {!readOnly && (
       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
         <PendingLink href={`/chat?workoutId=${workout.id}`} className="btn btn-outline accent">
           Pedir ajustes en el chat
@@ -280,6 +287,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           </ActionForm>
         )}
       </div>
+      )}
     </div>
   );
 }

@@ -67,7 +67,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     <div className="page-container">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
         <Link href="/settings?tab=alumnos" style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>← Alumnos</Link>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <Link href={`/alumnos/${id}/calendario`} style={{ border: "1px solid var(--border-strong)", color: "var(--teal)", borderRadius: "12px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Calendario del alumno</Link>
         <Link href={`/alumnos/${id}/planificacion`} style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", borderRadius: "12px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Planificación del alumno →</Link>
+        </div>
       </div>
       <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: "12px 0 4px" }}>{student.name ?? student.email}</h1>
       <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px" }}>
@@ -99,12 +102,12 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
       <Section title="Entrenamiento">
         <div className="dash-row two">
-          <Card title="Próximos 7 días">
+          <Card title="Próximos 7 días" subtitle="Tocá un día para ver la sesión.">
             {days.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin sesiones planificadas.</div> : (
               <div>
                 {days.map((w) => (
                   <div key={w.id} style={row}>
-                    <span><strong style={{ textTransform: "capitalize" }}>{fmtDay(w.date, false).replace(".", "")}</strong> · {STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}</span>
+                    <Link href={`/workouts/${w.id}`} style={{ color: "inherit", textDecoration: "none" }}><strong style={{ textTransform: "capitalize" }}>{fmtDay(w.date, false).replace(".", "")}</strong> · {STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey} <span style={{ color: "var(--teal)" }}>›</span></Link>
                     <span style={{ color: "var(--text-muted)" }}>{(w.workoutLibraryKey === "gym" || w.workoutLibraryKey === "flexibility") ? "" : `${mins(w.blocksJson)} min · TSS ${Math.round(w.estimatedTss ?? 0)} · `}{STATUS_ES[w.status] ?? w.status}</span>
                   </div>
                 ))}
