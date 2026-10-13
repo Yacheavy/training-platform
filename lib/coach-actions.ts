@@ -141,3 +141,22 @@ export async function coachDeleteFutureBlock(athleteId: string, formData: FormDa
     return { error: e instanceof Error && e.message ? e.message : "No se pudo eliminar el bloque." };
   }
 }
+
+/**
+ * Preferencia de mail de las salidas de UN alumno (con IA, solo resumen o sin mail). Es la preferencia de ese alumno: no toca la del entrenador.
+ * El alumno también puede cambiarla desde sus Ajustes; vale la última que se guardó.
+ */
+export async function coachSetStudentEmail(athleteId: string, formData: FormData): Promise<{ error: string } | void> {
+  try {
+    await authorize(athleteId);
+    const mode = String(formData.get("mode") ?? "");
+    if (mode !== "AI" && mode !== "SUMMARY" && mode !== "OFF") return { error: "Opción no válida." };
+    await prisma.user.update({
+      where: { id: athleteId },
+      data: mode === "OFF" ? { emailAnalysis: false } : { emailAnalysis: true, emailKind: mode },
+    });
+    refresh(athleteId);
+  } catch (e) {
+    return { error: e instanceof Error && e.message ? e.message : "No se pudo guardar la preferencia." };
+  }
+}

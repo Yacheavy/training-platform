@@ -272,8 +272,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </>
       )}
 
+      {tab === "cuenta" && (
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Mails</h2>
+        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>{access.isCoach ? "Mis mails" : "Mails"}</h2>
         <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.6, margin: "0 0 12px" }}>
           Cuando terminás una salida de bici de una hora o más y cargás (o omitís) la nutrición, te mandamos por mail el análisis o el resumen de la sesión, el que elijas abajo. Llega a {user ? "tu casilla de Google" : "tu email"}.
         </p>
@@ -304,6 +305,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <SubmitButton pendingText="Enviando…" style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text)", borderRadius: "10px", padding: "7px 14px", fontSize: "12.5px", cursor: "pointer" }}>Enviarme un mail de prueba</SubmitButton>
         </ActionForm>
       </div>
+      )}
 
       <div style={cardStyle}>
         <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Acerca de {APP_NAME}</h2>

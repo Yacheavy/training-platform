@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { getCoachOverview, type StudentRow } from "@/lib/analytics";
+import { prisma } from "@/lib/prisma";
+import { ActionForm } from "@/components/ActionForm";
+import { SubmitButton } from "@/components/SubmitButton";
+import { coachSetStudentEmail } from "@/lib/coach-actions";
 
 const STATUS = {
   RED: { label: "Baja", color: "var(--red)", order: 0 },
@@ -31,6 +35,12 @@ function priority(s: StudentRow, now: number): number {
 /** Lista de alumnos del entrenador (se muestra en la pestaña Alumnos de Ajustes). */
 export async function StudentsList({ coachId }: { coachId: string }) {
   const rows = await getCoachOverview(coachId);
+  // Preferencia de mail de CADA alumno (la del entrenador está en su pestaña Cuenta)
+  const prefs = await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.id) } }, select: { id: true, emailAnalysis: true, emailKind: true } });
+  const mailMode = (id: string) => {
+    const u = prefs.find((p) => p.id === id);
+    return !u || u.emailAnalysis === false ? "OFF" : u.emailKind === "SUMMARY" ? "SUMMARY" : "AI";
+  };
   const now = Date.now();
   const sorted = [...rows].sort((a, b) => priority(a, now) - priority(b, now) || a.name.localeCompare(b.name));
   const count = (st: StudentRow["status"]) => rows.filter((r) => r.status === st).length;
@@ -113,6 +123,16 @@ export async function StudentsList({ coachId }: { coachId: string }) {
                     ))}
                   </div>
 
+                  <ActionForm action={coachSetStudentEmail.bind(null, s.id)} success={`Mail de ${s.name} guardado`} style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+                    <label htmlFor={`mail-${s.id}`} style={{ fontSize: "12px", color: "var(--text-muted)" }}>Mail de sus salidas</label>
+                    <select id={`mail-${s.id}`} name="mode" defaultValue={mailMode(s.id)} style={{ background: "var(--surface-3)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--text)", padding: "6px 8px", fontSize: "12.5px" }}>
+                      <option value="AI">Análisis con IA</option>
+                      <option value="SUMMARY">Solo resumen</option>
+                      <option value="OFF">Sin mail</option>
+                    </select>
+                    <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--teal)", borderRadius: "8px", padding: "5px 11px", fontSize: "12px", cursor: "pointer" }}>Guardar</SubmitButton>
+                  </ActionForm>
+
                   {warnings.length > 0 && (
                     <div style={{ marginTop: "12px", fontSize: "12px", color: "var(--amber)" }}>{warnings.join(" · ")}</div>
                   )}
@@ -124,7 +144,7 @@ export async function StudentsList({ coachId }: { coachId: string }) {
       )}
 
       <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "22px", lineHeight: 1.5 }}>
-        Estos datos de salud (HRV, FC de reposo, sueño) son de cada alumno. Antes de invitarlos, avisales qué información vas a ver y para qué, y pedí su consentimiento.
+        Estos datos de salud (HRV, FC de reposo, sueño) son de cada alumno. El tipo de mail de cada uno es solo suyo: no cambia el tuyo, y él también puede modificarlo desde sus Ajustes. Antes de invitarlos, avisales qué información vas a ver y para qué, y pedí su consentimiento.
       </p>
     </div>
   );
