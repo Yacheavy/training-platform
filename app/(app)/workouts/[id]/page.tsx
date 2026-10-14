@@ -7,6 +7,7 @@ import { requireCoachOfStudent } from "@/lib/access";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ATHLETE_TZ } from "@/lib/tz";
+import { moveWorkoutByDate } from "@/lib/calendar-actions";
 import { approveAndSendWorkout, sendWorkoutToIntervals, regenerateWorkout, alternativeWorkout, moveWorkoutIndoor } from "@/lib/workout-actions";
 import { VARIANTS, EVIDENCE_LABELS, FAMILY_LABELS } from "@/lib/training-engine/variants";
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
@@ -278,6 +279,13 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           <ActionForm action={alternativeWorkout} success="Variante cambiada">
             <input type="hidden" name="workoutId" value={workout.id} />
             <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Otra variante</SubmitButton>
+          </ActionForm>
+        )}
+        {workout.status !== "COMPLETED" && (
+          <ActionForm action={moveWorkoutByDate} success="Sesión movida" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+            <input type="hidden" name="workoutId" value={workout.id} />
+            <input type="date" name="date" required defaultValue={workout.date.toISOString().slice(0, 10)} aria-label="Nuevo día" style={{ background: "var(--surface-3)", border: "1px solid var(--border)", borderRadius: "8px", padding: "8px 10px", color: "var(--text)", fontSize: "13px" }} />
+            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Mover de día</SubmitButton>
           </ActionForm>
         )}
         {workout.status !== "COMPLETED" && !offBike && workout.environment !== "indoor" && (

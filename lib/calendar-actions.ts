@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { pushWorkoutToIntervals } from "@/lib/push-workout";
 import { revalidatePath } from "next/cache";
-import { dayStartLocal } from "@/lib/tz";
+import { dayStartLocal, dayRangeLocal } from "@/lib/tz";
 
 export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
   const session = await auth();
@@ -70,4 +70,30 @@ export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+}
+/**
+ * Mover una sesión a otro día desde un selector de fecha (alternativa a arrastrar, que no anda bien en el celular).
+ * Si ese día ya tiene una sesión se intercambian, igual que al arrastrar.
+ */
+export async function moveWorkoutByDate(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+  const workoutId = String(formData.get("workoutId"));
+  const day = String(formData.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("Elegí una fecha");
+
+  const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
+  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+
+  const target = new Date(`${day}T12:00:00Z`);
+  const { start, end } = dayRangeLocal(target);
+  const other = await prisma.generatedWorkout.findFirst({
+    where: { athleteId: session.user.id, date: { gte: start, lt: end }, id: { not: workoutId } },
+  });
+  if (other) {
+    await swapWorkouts(workoutId, other.id);
+  } else {
+    await moveWorkoutToDate(workoutId, target.toISOString());
+  }
+  revalidatePath(`/workouts/${workoutId}`);
 }
