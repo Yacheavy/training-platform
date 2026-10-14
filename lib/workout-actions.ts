@@ -10,6 +10,7 @@ import { calculateTss, calculateKilojoules, type WorkoutBlock } from "@/lib/trai
 import { calculateFueling } from "@/lib/training-engine/fueling";
 import type { Prisma } from "@/app/generated/prisma";
 import { isOffBike } from "@/lib/training-engine/off-bike";
+import { dayRangeLocal } from "@/lib/tz";
 
 export async function approveWorkout(formData: FormData) {
   const session = await auth();
@@ -42,6 +43,66 @@ export async function sendWorkoutToIntervals(formData: FormData) {
   await pushWorkoutToIntervals(session.user.id, workoutId);
   revalidatePath("/dashboard");
   revalidatePath(`/workouts/${workoutId}`);
+}
+
+/** Un solo paso: aprueba la sesión (si hacía falta) y la envía a Intervals. */
+export async function approveAndSendWorkout(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+
+  const workoutId = String(formData.get("workoutId"));
+  const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
+  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!["PLANNED", "SUGGESTED", "EDITED", "APPROVED"].includes(workout.status)) throw new Error("Esta sesión ya fue enviada o completada");
+
+  if (workout.status !== "APPROVED" && workout.status !== "EDITED") {
+    await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { status: "APPROVED", approvedAt: new Date() } });
+  }
+  // Si Intervals falla queda aprobada: se puede reintentar sin perder nada
+  await pushWorkoutToIntervals(session.user.id, workoutId);
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath(`/workouts/${workoutId}`);
+}
+
+/**
+ * «Enviar la semana»: aprueba y envía a Intervals todas las sesiones pendientes de hoy y los 6 días siguientes.
+ * Las que ya están en Intervals no se tocan (los cambios posteriores las actualizan solos). Las completadas tampoco.
+ */
+export async function sendWeekToIntervals(): Promise<{ error: string } | { sent: number }> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autenticado");
+  const athleteId = session.user.id;
+
+  const { start } = dayRangeLocal(new Date());
+  const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const pending = await prisma.generatedWorkout.findMany({
+    where: { athleteId, date: { gte: start, lt: end }, status: { in: ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"] } },
+    orderBy: { date: "asc" },
+    select: { id: true, status: true },
+  });
+  if (pending.length === 0) return { error: "No hay sesiones pendientes de enviar en los próximos 7 días" };
+
+  let sent = 0;
+  const failed: string[] = [];
+  for (const w of pending) {
+    try {
+      if (w.status === "PLANNED" || w.status === "SUGGESTED") {
+        await prisma.generatedWorkout.update({ where: { id: w.id }, data: { status: "APPROVED", approvedAt: new Date() } });
+      }
+      await pushWorkoutToIntervals(athleteId, w.id);
+      sent++;
+    } catch (err) {
+      console.error("Envío de la semana: falló una sesión:", err);
+      failed.push(err instanceof Error ? err.message : "error");
+    }
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  if (failed.length > 0) {
+    return { error: `Se enviaron ${sent} de ${pending.length}. ${failed[0]}. Las que faltan quedaron aprobadas: probá de nuevo.` };
+  }
+  return { sent };
 }
 
 /**

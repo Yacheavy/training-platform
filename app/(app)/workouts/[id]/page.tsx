@@ -7,7 +7,7 @@ import { requireCoachOfStudent } from "@/lib/access";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ATHLETE_TZ } from "@/lib/tz";
-import { approveWorkout, sendWorkoutToIntervals, regenerateWorkout, alternativeWorkout, moveWorkoutIndoor } from "@/lib/workout-actions";
+import { approveAndSendWorkout, sendWorkoutToIntervals, regenerateWorkout, alternativeWorkout, moveWorkoutIndoor } from "@/lib/workout-actions";
 import { VARIANTS, EVIDENCE_LABELS, FAMILY_LABELS } from "@/lib/training-engine/variants";
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
 import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
@@ -256,9 +256,9 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
           Pedir ajustes en el chat
         </PendingLink>
         {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
-          <ActionForm action={approveWorkout} success="Sesión aprobada">
+          <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Aprobar</SubmitButton>
+            <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Aprobar y enviar</SubmitButton>
           </ActionForm>
         )}
         {(workout.status === "APPROVED" || workout.status === "EDITED") && (
