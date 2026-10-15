@@ -53,9 +53,10 @@ export async function approveAndSendWorkout(formData: FormData) {
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
   if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
-  if (!["PLANNED", "SUGGESTED", "EDITED", "APPROVED"].includes(workout.status)) throw new Error("Esta sesión ya fue enviada o completada");
+  if (!["PLANNED", "SUGGESTED", "EDITED", "APPROVED", "SENT_TO_INTERVALS"].includes(workout.status)) throw new Error("Esta sesión ya fue completada");
 
-  if (workout.status !== "APPROVED" && workout.status !== "EDITED") {
+  // Una sesión ya enviada se vuelve a enviar tal cual (actualiza el mismo evento de Intervals)
+  if (workout.status === "PLANNED" || workout.status === "SUGGESTED") {
     await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { status: "APPROVED", approvedAt: new Date() } });
   }
   // Si Intervals falla queda aprobada: se puede reintentar sin perder nada

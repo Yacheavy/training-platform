@@ -269,7 +269,15 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
             <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Enviar a Intervals</SubmitButton>
           </ActionForm>
         )}
-        {workout.status === "SENT_TO_INTERVALS" && <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals</span>}
+        {workout.status === "SENT_TO_INTERVALS" && (
+          <>
+            <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals{workout.sentToIntervalsAt ? ` · ${workout.sentToIntervalsAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}</span>
+            <ActionForm action={approveAndSendWorkout} success="Sesión reenviada a Intervals">
+              <input type="hidden" name="workoutId" value={workout.id} />
+              <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-muted)", borderRadius: "8px", padding: "7px 12px", fontSize: "12px", cursor: "pointer" }}>Reenviar</SubmitButton>
+            </ActionForm>
+          </>
+        )}
         {workout.status !== "COMPLETED" && (
           <ActionForm action={regenerateWorkout} success="Sesión regenerada con tus valores actuales">
             <input type="hidden" name="workoutId" value={workout.id} />
