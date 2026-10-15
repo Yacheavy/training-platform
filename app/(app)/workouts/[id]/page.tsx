@@ -111,6 +111,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
   ]);
 
   const blocks = workout.blocksJson as unknown as Block[];
+  const totalSecAll = blocks.reduce((t, b) => t + b.durationSec, 0);
   const ftp = user?.ftp ?? null;
   const totalSec = blocks.reduce((s, b) => s + b.durationSec, 0);
   const rows = groupBlocks(blocks);
@@ -288,10 +289,10 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
             <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Mover de día</SubmitButton>
           </ActionForm>
         )}
-        {workout.status !== "COMPLETED" && !offBike && workout.environment !== "indoor" && (
+        {workout.status !== "COMPLETED" && !offBike && (workout.environment !== "indoor" || totalSecAll > 80 * 60) && (
           <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo">
             <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Pasar a rodillo</SubmitButton>
+            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Ajustar a 80 min" : "Pasar a rodillo"}</SubmitButton>
           </ActionForm>
         )}
       </div>

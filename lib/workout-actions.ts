@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { pushWorkoutToIntervals } from "@/lib/push-workout";
 import { revalidatePath } from "next/cache";
 import { generateFullPlan } from "@/lib/training-engine/generate-full-plan";
-import { adaptForIndoor } from "@/lib/training-engine/indoor";
+import { adaptForIndoor, INDOOR_MAX_MIN } from "@/lib/training-engine/indoor";
 import { calculateTss, calculateKilojoules, type WorkoutBlock } from "@/lib/training-engine/tss";
 import { calculateFueling } from "@/lib/training-engine/fueling";
 import type { Prisma } from "@/app/generated/prisma";
@@ -162,7 +162,9 @@ export async function moveWorkoutIndoor(formData: FormData) {
   if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
   if (workout.status === "COMPLETED") throw new Error("La sesión ya está completada");
   if (isOffBike(workout.workoutLibraryKey)) throw new Error("Esta sesión no es en bici: no se pasa a rodillo");
-  if (workout.environment === "indoor") throw new Error("La sesión ya está en rodillo");
+  const curSec = (workout.blocksJson as unknown as WorkoutBlock[]).reduce((t, b) => t + b.durationSec, 0);
+  // Si ya está en rodillo pero supera el tope (sesiones pasadas antes del tope de 80 min), se vuelve a ajustar
+  if (workout.environment === "indoor" && curSec <= INDOOR_MAX_MIN * 60) throw new Error("La sesión ya está en rodillo");
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } });
   if (!user?.ftp) throw new Error("Falta el FTP");
 
@@ -180,7 +182,7 @@ export async function moveWorkoutIndoor(formData: FormData) {
       suggestedCarbsG: fuel.suggestedCarbsG,
       suggestedCarbsGPerHour: fuel.suggestedCarbsGPerHour,
       requiresMultipleCarbSources: fuel.requiresMultipleCarbSources,
-      rationale: `${workout.rationale ?? ""} · ${ad.note}`.replace(/^ · /, ""),
+      rationale: `${(workout.rationale ?? "").split(" · ").filter((p) => !p.startsWith("Rodillo:") && !p.startsWith("se acortó") && !p.startsWith("los intervalos largos")).join(" · ")} · ${ad.note}`.replace(/^ · /, ""),
       status: wasConfirmed ? "APPROVED" : workout.status,
       sentToIntervalsAt: null,
     },
