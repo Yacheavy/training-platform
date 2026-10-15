@@ -20,7 +20,7 @@ export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
   const newDate = new Date(dayStartLocal(parsed).getTime() + 12 * 3600 * 1000);
 
   await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { date: newDate } });
-  if (workout.status === "SENT_TO_INTERVALS") {
+  if (["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(workout.status)) {
     try {
       await pushWorkoutToIntervals(session.user.id, workoutId);
     } catch (err) {
@@ -57,7 +57,7 @@ export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
 
   try {
     for (const w of [workoutA, workoutB]) {
-      if (w.status === "SENT_TO_INTERVALS") await pushWorkoutToIntervals(session.user.id, w.id);
+      if (["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(w.status)) await pushWorkoutToIntervals(session.user.id, w.id);
     }
   } catch (err) {
     // Se revierte: la app y Intervals no deben quedar con fechas distintas

@@ -44,7 +44,7 @@ export async function decideReadinessAdjustment(formData: FormData) {
 
     const tss = calculateTss(proposal.newBlocks, user.ftp);
     const fueling = calculateFueling(proposal.newBlocks, user.ftp);
-    const wasSent = workout.status === "SENT_TO_INTERVALS";
+    const wasSent = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(workout.status); // confirmada: debe quedar al día en Intervals
     const note = `Ajustada por tu estado de hoy (${availability.reasons.join("; ")}): ${proposal.label}`;
     await prisma.generatedWorkout.update({
       where: { id: workoutId },
@@ -57,7 +57,7 @@ export async function decideReadinessAdjustment(formData: FormData) {
         suggestedCarbsGPerHour: fueling.suggestedCarbsGPerHour,
         requiresMultipleCarbSources: fueling.requiresMultipleCarbSources,
         rationale: `${workout.rationale ?? ""} · ${note} · ${marker}`,
-        status: wasSent ? workout.status : workout.status === "APPROVED" ? "APPROVED" : "EDITED",
+        status: wasSent ? workout.status : "EDITED",
       },
     });
     if (wasSent) {

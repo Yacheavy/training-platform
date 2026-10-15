@@ -172,7 +172,7 @@ async function sendChatMessageInner(formData: FormData) {
           // Se recalcula TODO lo derivado (TSS, kJ, carbos) en el mismo paso
           const tss = calculateTss(check.blocks, me.ftp);
           const fueling = calculateFueling(check.blocks, me.ftp);
-          const wasSent = workout.status === "SENT_TO_INTERVALS";
+          const wasSent = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(workout.status); // confirmada: se actualiza también en Intervals
 
           // Si la sesión ya estaba en el calendario de Intervals, se actualiza ahí también (upsert por
           // external_id). Primero Intervals: si falla, no se toca la sesión local y no quedan distintas.

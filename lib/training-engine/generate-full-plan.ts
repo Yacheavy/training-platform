@@ -137,7 +137,8 @@ export async function generateFullPlan(
           },
         });
         created.push(key);
-        if (wasSent) resendIds.push(existing.id);
+        // Regenerar UNA sesión confirmada (aprobada/editada/enviada) la deja en Intervals al día; el plan completo solo actualiza las ya enviadas
+        if (wasSent || (opts?.replaceDate && wasConfirmed)) resendIds.push(existing.id);
         continue;
       }
       if (existing) {

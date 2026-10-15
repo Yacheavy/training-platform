@@ -111,15 +111,15 @@ export async function sendWeekToIntervals(): Promise<{ error: string } | { sent:
  * queda aprobada: hay que volver a enviarla a Intervals (se actualiza el mismo evento).
  */
 export async function regenerateWorkout(formData: FormData) {
-  await regenerateInner(formData, false);
+  return regenerateInner(formData, false);
 }
 
 /** "Otra variante": regenera la sesión del día excluyendo la variante actual. */
 export async function alternativeWorkout(formData: FormData) {
-  await regenerateInner(formData, true);
+  return regenerateInner(formData, true);
 }
 
-async function regenerateInner(formData: FormData, excludeCurrent: boolean) {
+async function regenerateInner(formData: FormData, excludeCurrent: boolean): Promise<{ error: string } | undefined> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
   const workoutId = String(formData.get("workoutId"));
@@ -144,17 +144,22 @@ async function regenerateInner(formData: FormData, excludeCurrent: boolean) {
     if (after?.workoutLibraryKey === workout.workoutLibraryKey) throw new Error("No hay otra variante disponible para este día con tus reglas (vetadas, descarga, separación entre sesiones duras)");
   }
   // Si ya estaba en Intervals, se actualiza ahí en el mismo paso (si falla, queda aprobada para reenviar)
+  let resendError: string | null = null;
   for (const id of r.resendIds) {
-    try { await pushWorkoutToIntervals(session.user.id, id); } catch (err) { console.error("Reenvío tras regenerar falló:", err); }
+    try { await pushWorkoutToIntervals(session.user.id, id); } catch (err) {
+      console.error("Reenvío tras regenerar falló:", err);
+      resendError = err instanceof Error ? err.message : "error";
+    }
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   revalidatePath(`/workouts/${workoutId}`);
+  if (resendError) return { error: `La sesión se regeneró pero no se pudo actualizar en Intervals (${resendError}). Quedó aprobada: usá «Enviar a Intervals».` };
 }
 
 /** "Pasar a rodillo": misma variante adaptada al interior (tope de duración + notas). Regenerar vuelve a ruta. */
-export async function moveWorkoutIndoor(formData: FormData) {
+export async function moveWorkoutIndoor(formData: FormData): Promise<{ error: string } | undefined> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
   const workoutId = String(formData.get("workoutId"));
@@ -170,7 +175,6 @@ export async function moveWorkoutIndoor(formData: FormData) {
 
   const ad = adaptForIndoor(workout.blocksJson as unknown as WorkoutBlock[], workout.workoutLibraryKey);
   const fuel = calculateFueling(ad.blocks, user.ftp);
-  const wasSent = workout.status === "SENT_TO_INTERVALS";
   const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(workout.status);
   await prisma.generatedWorkout.update({
     where: { id: workoutId },
@@ -187,10 +191,16 @@ export async function moveWorkoutIndoor(formData: FormData) {
       sentToIntervalsAt: null,
     },
   });
-  if (wasSent) {
-    try { await pushWorkoutToIntervals(session.user.id, workoutId); } catch (err) { console.error("Reenvío tras pasar a rodillo falló:", err); }
+  let pushError: string | null = null;
+  // Toda sesión confirmada (aprobada, editada o enviada) se actualiza en Intervals en el mismo paso
+  if (wasConfirmed) {
+    try { await pushWorkoutToIntervals(session.user.id, workoutId); } catch (err) {
+      console.error("Reenvío tras pasar a rodillo falló:", err);
+      pushError = err instanceof Error ? err.message : "error";
+    }
   }
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
   revalidatePath(`/workouts/${workoutId}`);
+  if (pushError) return { error: `Se ajustó la sesión pero no se pudo actualizar en Intervals (${pushError}). Quedó aprobada: usá «Enviar a Intervals».` };
 }
