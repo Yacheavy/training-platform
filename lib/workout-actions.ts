@@ -67,22 +67,25 @@ export async function approveAndSendWorkout(formData: FormData) {
 }
 
 /**
- * «Enviar la semana»: aprueba y envía a Intervals todas las sesiones pendientes de hoy y los 6 días siguientes.
+ * «Enviar la semana»: aprueba y envía a Intervals las sesiones pendientes de una semana (formData.weekStart = inicio en ms)
+ * o, sin ese dato, de hoy y los 6 días siguientes. Nunca toca días pasados.
  * Las que ya están en Intervals no se tocan (los cambios posteriores las actualizan solos). Las completadas tampoco.
  */
-export async function sendWeekToIntervals(): Promise<{ error: string } | { sent: number }> {
+export async function sendWeekToIntervals(formData?: FormData): Promise<{ error: string } | { sent: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
   const athleteId = session.user.id;
 
-  const { start } = dayRangeLocal(new Date());
-  const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const today = dayRangeLocal(new Date()).start;
+  const ws = Number(formData?.get("weekStart"));
+  const from = Number.isFinite(ws) && ws > 0 ? new Date(Math.max(ws, today.getTime())) : today;
+  const end = Number.isFinite(ws) && ws > 0 ? new Date(ws + 7 * 24 * 60 * 60 * 1000) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
   const pending = await prisma.generatedWorkout.findMany({
-    where: { athleteId, date: { gte: start, lt: end }, status: { in: ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"] } },
+    where: { athleteId, date: { gte: from, lt: end }, status: { in: ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"] } },
     orderBy: { date: "asc" },
     select: { id: true, status: true },
   });
-  if (pending.length === 0) return { error: "No hay sesiones pendientes de enviar en los próximos 7 días" };
+  if (pending.length === 0) return { error: "No hay sesiones pendientes de enviar en esa semana" };
 
   let sent = 0;
   const failed: string[] = [];

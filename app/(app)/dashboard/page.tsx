@@ -8,7 +8,7 @@ import { syncIfStale } from "@/lib/intervals-sync";
 import { syncNow } from "@/lib/sync-actions";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { approveAndSendWorkout, sendWorkoutToIntervals, sendWeekToIntervals } from "@/lib/workout-actions";
+import { approveAndSendWorkout, sendWorkoutToIntervals } from "@/lib/workout-actions";
 import { LoadChart } from "@/components/LoadChart";
 import {
   getDashboardData,
@@ -72,11 +72,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const todayWorkout = await getTodayWorkout(session.user.id);
   const loadHistory = await getLoadHistory(session.user.id);
   const planWorkouts = await getPlanWorkouts(session.user.id);
-  const weekFrom = dayKeyDate(new Date()).getTime();
-  const pendingWeek = planWorkouts.filter((w) => {
-    const t = dayKeyDate(new Date(w.date)).getTime();
-    return t >= weekFrom && t < weekFrom + 7 * 86400000 && ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"].includes(w.status);
-  }).length;
   const availability = await calculateAvailability(session.user.id);
   const chatUsage = await getChatUsage(session.user.id);
   const todayStart = dayKeyDate(new Date());
@@ -121,6 +116,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const todayOffBike = todayWorkout ? isOffBike(todayWorkout.workoutLibraryKey) : false;
   // TSS calculado con la potencia normalizada estándar (como Intervals), no el valor guardado con la fórmula anterior
   const todayTss = userFtp && todayWorkout && !todayOffBike ? calculateTss(todayBlocks, userFtp) : Math.round(todayWorkout?.estimatedTss ?? 0);
+  const todayDone = todayWorkout?.status === "COMPLETED";
+  const todayActivity = todayDone && todayWorkout
+    ? await prisma.activity.findFirst({ where: { generatedWorkoutId: todayWorkout.id }, select: { id: true } })
+    : null;
   const summary = summarizeRationale(todayWorkout?.rationale, (k) => STIMULUS_LABELS[k] ?? k);
 
   const adjustment =
@@ -343,9 +342,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                   {wasAdjusted && <span className="pill pill-amber">Ajustada por tu check-in</span>}
                   {todayWorkout.environment === "indoor" && <span className="pill pill-amber">Rodillo</span>}
-                  {todayWorkout.status === "SENT_TO_INTERVALS"
-                    ? <span className="pill pill-teal">✓ En Intervals</span>
-                    : <span className="pill">Sin enviar</span>}
+                  {todayDone
+                    ? <span className="pill pill-teal">✓ Realizada</span>
+                    : todayWorkout.status === "SENT_TO_INTERVALS"
+                      ? <span className="pill pill-teal">✓ En Intervals</span>
+                      : <span className="pill">Sin enviar</span>}
                 </div>
               </div>
 
@@ -399,22 +400,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               )}
 
               <div className="today-actions">
-                {(todayWorkout.status === "SUGGESTED" || todayWorkout.status === "PLANNED") && (
+                {!todayDone && (todayWorkout.status === "SUGGESTED" || todayWorkout.status === "PLANNED") && (
                   <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals" style={{ display: "contents" }}>
                     <input type="hidden" name="workoutId" value={todayWorkout.id} />
                     <ActionButton primary>Aprobar y enviar</ActionButton>
                   </ActionForm>
                 )}
-                {(todayWorkout.status === "APPROVED" || todayWorkout.status === "EDITED") && (
+                {!todayDone && (todayWorkout.status === "APPROVED" || todayWorkout.status === "EDITED") && (
                   <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals" style={{ display: "contents" }}>
                     <input type="hidden" name="workoutId" value={todayWorkout.id} />
                     <ActionButton primary>Enviar a Intervals</ActionButton>
                   </ActionForm>
                 )}
-                <Link href={`/workouts/${todayWorkout.id}`} className="btn btn-outline">Ver detalle y cambiar</Link>
-                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} className="btn btn-outline accent">Pedir ajustes (IA)</PendingLink>
+                {todayDone && todayActivity && (
+                  <Link href={`/activities/${todayActivity.id}`} className="btn btn-primary">Ver cómo te fue (gráfico y análisis)</Link>
+                )}
+                <Link href={`/workouts/${todayWorkout.id}`} className="btn btn-outline">{todayDone ? "Ver la sesión planificada" : "Ver sesión y cambiarla"}</Link>
+                {!todayDone && <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} className="btn btn-outline accent">Pedir ajustes (IA)</PendingLink>}
               </div>
-              {!chatUsage.isCoach && (
+              {!todayDone && !chatUsage.isCoach && (
                 <div style={{ marginTop: "12px" }}>
                   <ChatQuota used={chatUsage.sentToday} limit={chatUsage.limit} compact />
                 </div>
@@ -433,14 +437,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <Section title="Tu plan">
         <Card title="Plan de entrenamiento" subtitle="Navegá semana a semana con las flechas, o deslizando en el celular.">
-          {pendingWeek > 0 && (
-            <ActionForm action={sendWeekToIntervals} success="Semana enviada a Intervals" style={{ marginBottom: "14px" }}>
-              <ActionButton primary>Enviar la semana ({pendingWeek} {pendingWeek === 1 ? "sesión" : "sesiones"})</ActionButton>
-              <div style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "6px", lineHeight: 1.45 }}>
-                Aprueba y envía a Intervals hoy y los próximos 6 días. Si después cambia algo, se actualiza la misma sesión, sin duplicar.
-              </div>
-            </ActionForm>
-          )}
           <PlanNavigator workouts={planWorkouts} nowISO={new Date().toISOString()} />
         </Card>
         <div style={{ height: "16px" }} />

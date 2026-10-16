@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ATHLETE_TZ, weekRangeLocal } from "@/lib/tz";
+import { ATHLETE_TZ, weekRangeLocal, dayStartLocal } from "@/lib/tz";
+import { ActionForm } from "./ActionForm";
+import { SubmitButton } from "./SubmitButton";
+import { sendWeekToIntervals } from "@/lib/workout-actions";
 import { WeekList } from "./WeekList";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,6 +59,9 @@ export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; n
   );
   const totalTss = Math.round(weekWorkouts.reduce((s, w) => s + (w.estimatedTss ?? 0), 0));
   const phase = weekWorkouts.find((w) => w.phase)?.phase ?? null;
+  // Sesiones de esta semana todavía sin enviar a Intervals (de hoy en adelante)
+  const todayStart = dayStartLocal(new Date(nowISO)).getTime();
+  const pendingSend = weekWorkouts.filter((w) => ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"].includes(w.status) && new Date(w.date).getTime() >= todayStart).length;
 
   const fmt = (ms: number) =>
     new Date(ms).toLocaleDateString("es-AR", { day: "numeric", month: "short", timeZone: ATHLETE_TZ });
@@ -117,6 +123,15 @@ export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; n
             Volver a esta semana
           </button>
         </div>
+      )}
+
+      {pendingSend > 0 && (
+        <ActionForm action={sendWeekToIntervals} success="Semana enviada a Intervals" style={{ marginBottom: "12px" }}>
+          <input type="hidden" name="weekStart" value={weekStart} />
+          <SubmitButton pendingText="Enviando…" style={{ width: "100%", background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "10px", padding: "11px 16px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>
+            {offset === 0 ? "Enviar lo que falta de esta semana" : "Enviar esta semana a Intervals"} ({pendingSend} {pendingSend === 1 ? "sesión" : "sesiones"})
+          </SubmitButton>
+        </ActionForm>
       )}
 
       <div key={offset} className="week-fade" style={{ ["--week-shift" as string]: `${dir * 10}px` }}>
