@@ -667,3 +667,10 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .splash-pulse { animation: none; }
 }
+
+/* Detalle de sesión: acciones secundarias plegadas */
+.session-more { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.session-more summary { cursor: pointer; list-style: none; font-size: 13.5px; font-weight: 500; color: var(--text); display: flex; justify-content: space-between; align-items: center; }
+.session-more summary::-webkit-details-marker { display: none; }
+.session-more summary::after { content: "▾"; color: var(--text-muted); }
+.session-more[open] summary::after { content: "▴"; }

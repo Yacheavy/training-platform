@@ -253,61 +253,81 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       )}
 
       {!readOnly && (
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-        <PendingLink href={`/chat?workoutId=${workout.id}`} className="btn btn-outline accent">
-          Pedir ajustes en el chat
-        </PendingLink>
-        {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
-          <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals">
-            <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Aprobar y enviar</SubmitButton>
-          </ActionForm>
-        )}
-        {(workout.status === "APPROVED" || workout.status === "EDITED") && (
-          <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
-            <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>Enviar a Intervals</SubmitButton>
-          </ActionForm>
-        )}
-        {workout.status === "SENT_TO_INTERVALS" && (
-          <>
-            <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals{workout.sentToIntervalsAt ? ` · ${workout.sentToIntervalsAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}</span>
-            <ActionForm action={approveAndSendWorkout} success="Sesión reenviada a Intervals">
+      <div style={{ display: "grid", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+          {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
+            <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals">
               <input type="hidden" name="workoutId" value={workout.id} />
-              <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-muted)", borderRadius: "8px", padding: "7px 12px", fontSize: "12px", cursor: "pointer" }}>Reenviar</SubmitButton>
+              <SubmitButton style={primaryBtn}>Aprobar y enviar</SubmitButton>
             </ActionForm>
-          </>
-        )}
+          )}
+          {(workout.status === "APPROVED" || workout.status === "EDITED") && (
+            <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
+              <input type="hidden" name="workoutId" value={workout.id} />
+              <SubmitButton style={primaryBtn}>Enviar a Intervals</SubmitButton>
+            </ActionForm>
+          )}
+          {workout.status === "SENT_TO_INTERVALS" && (
+            <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviado a Intervals{workout.sentToIntervalsAt ? ` · ${workout.sentToIntervalsAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}</span>
+          )}
+          <PendingLink href={`/chat?workoutId=${workout.id}`} className="btn btn-outline accent">
+            Pedir ajustes en el chat
+          </PendingLink>
+        </div>
+
         {workout.status !== "COMPLETED" && (
-          <ActionForm action={regenerateWorkout} success="Sesión regenerada con tus valores actuales">
-            <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Volver a ruta (regenerar)" : "Regenerar esta sesión"}</SubmitButton>
-          </ActionForm>
-        )}
-        {workout.status !== "COMPLETED" && !offBike && !workout.workoutLibraryKey.startsWith("ftp_test") && (
-          <ActionForm action={alternativeWorkout} success="Variante cambiada">
-            <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Otra variante</SubmitButton>
-          </ActionForm>
-        )}
-        {workout.status !== "COMPLETED" && (
-          <ActionForm action={moveWorkoutByDate} success="Sesión movida" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-            <input type="hidden" name="workoutId" value={workout.id} />
-            <input type="date" name="date" required defaultValue={workout.date.toISOString().slice(0, 10)} aria-label="Nuevo día" style={{ background: "var(--surface-3)", border: "1px solid var(--border)", borderRadius: "8px", padding: "8px 10px", color: "var(--text)", fontSize: "13px" }} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>Mover de día</SubmitButton>
-          </ActionForm>
-        )}
-        {workout.status !== "COMPLETED" && !offBike && (workout.environment !== "indoor" || totalSecAll > 80 * 60) && (
-          <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo">
-            <input type="hidden" name="workoutId" value={workout.id} />
-            <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" }}>{workout.environment === "indoor" ? "Ajustar a 80 min" : "Pasar a rodillo"}</SubmitButton>
-          </ActionForm>
+          <details className="session-more">
+            <summary>Cambiar esta sesión</summary>
+            <div style={{ display: "grid", gap: "10px", marginTop: "12px" }}>
+              <div style={{ fontSize: "12px", color: "var(--text-dim)", lineHeight: 1.45 }}>
+                Si la sesión ya está en Intervals, cualquier cambio la actualiza ahí solo.
+              </div>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                {!offBike && !workout.workoutLibraryKey.startsWith("ftp_test") && (
+                  <ActionForm action={alternativeWorkout} success="Variante cambiada">
+                    <input type="hidden" name="workoutId" value={workout.id} />
+                    <SubmitButton style={ghostBtn}>Otra variante</SubmitButton>
+                  </ActionForm>
+                )}
+                {!offBike && workout.environment !== "indoor" && (
+                  <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo">
+                    <input type="hidden" name="workoutId" value={workout.id} />
+                    <SubmitButton style={ghostBtn}>Pasar a rodillo</SubmitButton>
+                  </ActionForm>
+                )}
+                {!offBike && workout.environment === "indoor" && totalSecAll > 80 * 60 && (
+                  <ActionForm action={moveWorkoutIndoor} success="Sesión ajustada a 80 min">
+                    <input type="hidden" name="workoutId" value={workout.id} />
+                    <SubmitButton style={ghostBtn}>Ajustar a 80 min</SubmitButton>
+                  </ActionForm>
+                )}
+                <ActionForm action={regenerateWorkout} success="Sesión regenerada con tus valores actuales">
+                  <input type="hidden" name="workoutId" value={workout.id} />
+                  <SubmitButton style={ghostBtn}>{workout.environment === "indoor" ? "Volver a ruta" : "Rehacer con mis valores actuales"}</SubmitButton>
+                </ActionForm>
+              </div>
+              <ActionForm action={moveWorkoutByDate} success="Sesión movida" style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <input type="hidden" name="workoutId" value={workout.id} />
+                <input type="date" name="date" required defaultValue={workout.date.toISOString().slice(0, 10)} aria-label="Nuevo día" style={{ background: "var(--surface-3)", border: "1px solid var(--border)", borderRadius: "8px", padding: "8px 10px", color: "var(--text)", fontSize: "13px" }} />
+                <SubmitButton style={ghostBtn}>Mover de día</SubmitButton>
+              </ActionForm>
+              {workout.status === "SENT_TO_INTERVALS" && (
+                <ActionForm action={approveAndSendWorkout} success="Sesión reenviada a Intervals">
+                  <input type="hidden" name="workoutId" value={workout.id} />
+                  <SubmitButton style={{ ...ghostBtn, color: "var(--text-muted)", fontSize: "12px", padding: "7px 12px" }}>Reenviar a Intervals</SubmitButton>
+                </ActionForm>
+              )}
+            </div>
+          </details>
         )}
       </div>
       )}
     </div>
   );
 }
+
+const primaryBtn = { background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" } as const;
+const ghostBtn = { background: "transparent", border: "1px solid var(--border-strong)", color: "#E7ECF2", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", cursor: "pointer" } as const;
 
 function RowCells({ label, dur, power, strong }: { label: string; dur: string; power: string; strong?: boolean }) {
   return (
