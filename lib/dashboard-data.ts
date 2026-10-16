@@ -3,6 +3,8 @@ import { buildAvailabilityHistory } from "@/lib/training-engine/availability-sco
 import { dayKeyDate, dayRangeLocal, weekRangeLocal } from "@/lib/tz";
 import { prisma } from "@/lib/prisma";
 import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier";
+import { calculateTss } from "@/lib/training-engine/tss";
+import { isOffBike } from "@/lib/training-engine/off-bike";
 
 export async function getDashboardData(athleteId: string) {
   // Nunca "mañana": Intervals proyecta CTL/ATL a fechas futuras sin HRV/FC/sueño
@@ -125,11 +127,13 @@ export async function getCurrentWeekWorkouts(athleteId: string) {
     },
   });
 
-  return workouts.map((w) => ({
-    ...w,
-    date: w.date.toISOString(),
-    blocksJson: w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[],
-  }));
+  const ftp = (await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } }))?.ftp ?? null;
+  return workouts.map((w) => {
+    const blocks = w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[];
+    // TSS con la potencia normalizada estándar (igual que Intervals)
+    const tss = ftp && !isOffBike(w.workoutLibraryKey) ? calculateTss(blocks, ftp) : w.estimatedTss;
+    return { ...w, estimatedTss: tss, date: w.date.toISOString(), blocksJson: blocks };
+  });
 }
 
 export async function getHrvRhrHistory(athleteId: string, days: number = 7) {
@@ -202,12 +206,13 @@ export async function getPlanWorkouts(athleteId: string) {
     },
   });
 
+  const ftp = (await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } }))?.ftp ?? null;
   return workouts.map((w) => ({
     id: w.id,
     date: w.date.toISOString(),
     workoutLibraryKey: w.workoutLibraryKey,
     status: w.status as string,
-    estimatedTss: w.estimatedTss,
+    estimatedTss: ftp && !isOffBike(w.workoutLibraryKey) ? calculateTss(w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[], ftp) : w.estimatedTss,
     blocksJson: w.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[],
     phase: (w.rationale?.includes("DELOAD") ? "DELOAD" : w.rationale?.includes("TAPER") ? "TAPER" : null) as "DELOAD" | "TAPER" | null,
   }));

@@ -15,6 +15,7 @@ import { getExecutionTips } from "@/lib/training-engine/execution-tips";
 import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
 import { GymSessionView } from "@/components/GymSessionView";
 import { isOffBike } from "@/lib/training-engine/off-bike";
+import { calculateTss } from "@/lib/training-engine/tss";
 import { buildMobilitySet, type GymSession } from "@/lib/training-engine/strength";
 
 type Block = { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number; gym?: GymSession };
@@ -207,7 +208,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       <div style={card}>
         <div style={{ display: "flex", gap: "28px", flexWrap: "wrap", marginBottom: "18px" }}>
           {stat("Duración", fmt(totalSec))}
-          {!offBike && stat("TSS", `${Math.round(workout.estimatedTss ?? 0)}`)}
+          {!offBike && stat("TSS", `${ftp ? calculateTss(blocks, ftp) : Math.round(workout.estimatedTss ?? 0)}`)}
           {!offBike && stat("kJ", `${Math.round(workout.estimatedKj ?? 0)}`)}
           {!offBike && stat("Carbos", `${Math.round(workout.suggestedCarbsG ?? 0)} g`)}
           {!offBike && workout.suggestedCarbsGPerHour ? stat("Carbos/h", `${Math.round(workout.suggestedCarbsGPerHour)} g`) : null}

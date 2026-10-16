@@ -674,3 +674,20 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .session-action.accent { color: var(--teal); border-color: rgba(79,209,197,.45); background: rgba(79,209,197,.08); }
 .session-action:active { transform: scale(.98); }
 @media (min-width: 640px) { .session-actions { grid-template-columns: repeat(4, 1fr); } }
+
+/* Tarjeta «Sesión de hoy» */
+.pill { font-size: 11px; color: var(--text-muted); border: 1px solid var(--border-strong); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.pill-teal { color: var(--teal); border-color: rgba(79,209,197,.5); background: rgba(79,209,197,.08); }
+.pill-amber { color: var(--amber); border-color: rgba(232,163,61,.55); background: rgba(232,163,61,.1); }
+.today-stats { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 10px; margin: 16px 0 14px; }
+.today-why { background: rgba(0,0,0,.18); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; font-size: 13px; line-height: 1.45; color: var(--text); margin-bottom: 12px; }
+.today-why-ctx { font-size: 11.5px; color: var(--text-dim); margin-bottom: 3px; }
+.today-changes { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 7px; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
+.today-changes li { display: flex; gap: 9px; align-items: flex-start; }
+.today-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.today-more { margin-bottom: 14px; font-size: 12.5px; color: var(--text-muted); }
+.today-more summary { cursor: pointer; color: var(--teal); list-style: none; }
+.today-more summary::-webkit-details-marker { display: none; }
+.today-more ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 5px; line-height: 1.45; }
+.today-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.today-actions > * { flex: 1 1 auto; text-align: center; justify-content: center; }

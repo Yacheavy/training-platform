@@ -41,11 +41,14 @@ import { decideReadinessAdjustment } from "@/lib/readiness-actions";
 import { proposeReadinessAdjustment } from "@/lib/training-engine/readiness-adjust";
 import { Card, Section } from "@/components/Card";
 import { PendingLink } from "@/components/PendingLink";
+import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
+import { summarizeRationale, fmtShort } from "@/lib/session-summary";
+import { calculateTss } from "@/lib/training-engine/tss";
+import { isOffBike } from "@/lib/training-engine/off-bike";
 import { prisma } from "@/lib/prisma";
 import { getPendingNutrition } from "@/lib/nutrition-data";
 import { applyPlannedNutrition, skipActivityNutrition } from "@/lib/nutrition-actions";
 
-const WARN_KEYWORDS = ["⚠", "bajando", "Ya alcanzaste", "RED", "AMBER"];
 
 function ageLabel(d: Date | null): string {
   if (!d) return "";
@@ -112,12 +115,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   }
   const wasAdjusted = originalSuggestion != null && originalSuggestion !== todayWorkout?.workoutLibraryKey;
 
-  const rationaleItems = todayWorkout?.rationale
-    ? todayWorkout.rationale.split(" · ").map((text) => ({
-        text,
-        warn: WARN_KEYWORDS.some((kw) => text.includes(kw)),
-      }))
-    : [];
+  const todayBlocks = (todayWorkout?.blocksJson ?? []) as unknown as { type: string; durationSec: number; targetWatts: number }[];
+  const todaySec = todayBlocks.reduce((t, b) => t + b.durationSec, 0);
+  const userFtp = (await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } }))?.ftp ?? null;
+  const todayOffBike = todayWorkout ? isOffBike(todayWorkout.workoutLibraryKey) : false;
+  // TSS calculado con la potencia normalizada estándar (como Intervals), no el valor guardado con la fórmula anterior
+  const todayTss = userFtp && todayWorkout && !todayOffBike ? calculateTss(todayBlocks, userFtp) : Math.round(todayWorkout?.estimatedTss ?? 0);
+  const summary = summarizeRationale(todayWorkout?.rationale, (k) => STIMULUS_LABELS[k] ?? k);
 
   const adjustment =
     todayWorkout && todayWorkout.status !== "COMPLETED" && availability.status !== "GREEN" && !(todayWorkout.rationale ?? "").includes(`[CHECKIN:${availability.status}:`)
@@ -334,66 +338,87 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 flexDirection: "column",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
                 <h3 className="dash-card-title">Sesión de hoy</h3>
-                {wasAdjusted && (
-                  <span style={{ fontSize: "11px", color: "var(--amber)", background: "rgba(232,163,61,.15)", border: "1px solid var(--amber)", padding: "3px 9px", borderRadius: "6px" }}>
-                    Ajustada por tu check-in
-                  </span>
-                )}
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {wasAdjusted && <span className="pill pill-amber">Ajustada por tu check-in</span>}
+                  {todayWorkout.environment === "indoor" && <span className="pill pill-amber">Rodillo</span>}
+                  {todayWorkout.status === "SENT_TO_INTERVALS"
+                    ? <span className="pill pill-teal">✓ En Intervals</span>
+                    : <span className="pill">Sin enviar</span>}
+                </div>
               </div>
 
               {wasAdjusted ? (
-                <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
                   <span style={{ fontSize: "14px", color: "var(--text-dim)", textDecoration: "line-through" }}>{sessionLabel(originalSuggestion!)}</span>
                   <span style={{ color: "var(--text-dim)" }}>→</span>
-                  <span style={{ fontSize: "20px", fontWeight: 600 }}>{sessionLabel(todayWorkout.workoutLibraryKey)}</span>
+                  <span style={{ fontSize: "21px", fontWeight: 600 }}>{sessionLabel(todayWorkout.workoutLibraryKey)}</span>
                 </div>
               ) : (
-                <div style={{ fontSize: "20px", fontWeight: 600, marginBottom: "4px" }}>{sessionLabel(todayWorkout.workoutLibraryKey)}</div>
+                <div style={{ fontSize: "21px", fontWeight: 600 }}>{sessionLabel(todayWorkout.workoutLibraryKey)}</div>
+              )}
+              {summary.evidence && (
+                <div style={{ fontSize: "11.5px", color: "var(--text-dim)", marginTop: "3px" }}>Evidencia: {summary.evidence}</div>
               )}
 
-              <div style={{ display: "flex", gap: "22px", marginTop: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
-                <MiniStat label="TSS" value={`${Math.round(todayWorkout.estimatedTss ?? 0)}`} />
-                <MiniStat label="kJ" value={`${Math.round(todayWorkout.estimatedKj ?? 0)}`} />
-                <MiniStat label="Carbos" value={todayWorkout.suggestedCarbsG ? `${Math.round(todayWorkout.suggestedCarbsG)} g` : "—"} />
+              <div className="today-stats">
+                <MiniStat label="Duración" value={fmtShort(Math.round(todaySec / 60))} />
+                {!todayOffBike && <MiniStat label="TSS" value={`${todayTss}`} />}
+                {!todayOffBike && <MiniStat label="kJ" value={`${Math.round(todayWorkout.estimatedKj ?? 0)}`} />}
+                {!todayOffBike && <MiniStat label="Carbos" value={todayWorkout.suggestedCarbsG ? `${Math.round(todayWorkout.suggestedCarbsG)} g` : "—"} />}
               </div>
 
-              {rationaleItems.length > 0 && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "8px", marginBottom: "16px", flex: 1 }}>
-                  {rationaleItems.map((item, i) => (
-                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "11.5px", color: "var(--text-muted)", padding: "9px 10px", background: "rgba(0,0,0,.15)", borderRadius: "8px", border: "1px solid var(--border)", lineHeight: 1.4 }}>
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", marginTop: "5px", flexShrink: 0, background: item.warn ? "var(--amber)" : "var(--teal)" }} />
-                      {item.text}
-                    </div>
+              {!todayOffBike && <div style={{ marginBottom: "16px" }}><WorkoutDetailChart blocks={todayBlocks} ftp={userFtp} /></div>}
+
+              {(summary.context || summary.why) && (
+                <div className="today-why">
+                  {summary.context && <div className="today-why-ctx">{summary.context}</div>}
+                  {summary.why && <div>{summary.why}</div>}
+                </div>
+              )}
+
+              {summary.changes.length > 0 && (
+                <ul className="today-changes">
+                  {summary.changes.map((c, i) => (
+                    <li key={i}>
+                      <span className="today-dot" style={{ background: c.warn ? "var(--amber)" : "var(--teal)" }} />
+                      {c.text}
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
 
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
-                <Link href={`/workouts/${todayWorkout.id}`} className="btn btn-outline">Ver detalle completo</Link>
-                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} className="btn btn-outline accent">Pedir ajustes en el chat</PendingLink>
-              </div>
-              {!chatUsage.isCoach && (
-                <div style={{ marginBottom: "14px" }}>
-                  <ChatQuota used={chatUsage.sentToday} limit={chatUsage.limit} compact />
-                </div>
+              {summary.detail.length > 0 && (
+                <details className="today-more">
+                  <summary>Más detalle</summary>
+                  <ul>
+                    {summary.detail.map((d, i) => <li key={i}>{d}</li>)}
+                  </ul>
+                </details>
               )}
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+
+              <div className="today-actions">
                 {(todayWorkout.status === "SUGGESTED" || todayWorkout.status === "PLANNED") && (
-                  <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals">
+                  <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals" style={{ display: "contents" }}>
                     <input type="hidden" name="workoutId" value={todayWorkout.id} />
                     <ActionButton primary>Aprobar y enviar</ActionButton>
                   </ActionForm>
                 )}
                 {(todayWorkout.status === "APPROVED" || todayWorkout.status === "EDITED") && (
-                  <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals">
+                  <ActionForm action={sendWorkoutToIntervals} success="Sesión enviada a Intervals" style={{ display: "contents" }}>
                     <input type="hidden" name="workoutId" value={todayWorkout.id} />
                     <ActionButton primary>Enviar a Intervals</ActionButton>
                   </ActionForm>
                 )}
-                {todayWorkout.status === "SENT_TO_INTERVALS" && <span style={{ color: "var(--teal)", fontSize: "13px" }}>✓ Enviada a Intervals</span>}
+                <Link href={`/workouts/${todayWorkout.id}`} className="btn btn-outline">Ver detalle y cambiar</Link>
+                <PendingLink href={`/chat?workoutId=${todayWorkout.id}`} className="btn btn-outline accent">Pedir ajustes (IA)</PendingLink>
               </div>
+              {!chatUsage.isCoach && (
+                <div style={{ marginTop: "12px" }}>
+                  <ChatQuota used={chatUsage.sentToday} limit={chatUsage.limit} compact />
+                </div>
+              )}
             </div>
           ) : (
             <Card title="Sesión de hoy" subtitle="No hay una sesión planificada para hoy.">
