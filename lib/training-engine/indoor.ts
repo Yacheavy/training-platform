@@ -43,7 +43,7 @@ function tidy(blocks: WorkoutBlock[]): WorkoutBlock[] {
 /**
  * Adapta una sesión de ruta a rodillo con un tope de 80 min. Se conserva la variante, el tipo de trabajo y las potencias;
  * para entrar en el tope se recorta en este orden:
- *  1) el relleno de Z2 y los Z2 largos (hasta 20 min cada uno);
+ *  1) el relleno de Z2, los Z2 largos (hasta 20 min cada uno) y el Z2 entre series (hasta 8 min): primero se cuida el estímulo;
  *  2) repeticiones o series del final (sin bajar de la mitad ni de 2 repeticiones);
  *  3) calentamiento y vuelta a la calma (mínimo 12 y 6 min);
  *  4) intervalos largos (≥ 20 min), hasta 15 min, con la misma potencia.
@@ -67,7 +67,9 @@ export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdapt
       .sort((a, b) => b.b.durationSec - a.b.durationSec);
     for (const { i } of idx) {
       if (excess <= 0) break;
-      const floor = out[i].type === "z2_fill" ? 0 : 20 * 60;
+      // El Z2 entre series (pegado a trabajo) puede bajar hasta 8 min antes de tocar una sola repetición; el rodaje largo, hasta 20
+      const between = out[i].type === "z2" && out.slice(0, i).some(isWork) && out.slice(i + 1).some(isWork);
+      const floor = out[i].type === "z2_fill" ? 0 : between ? 8 * 60 : 20 * 60;
       const cut = Math.min(Math.max(0, out[i].durationSec - floor), excess);
       out[i].durationSec -= cut;
       excess -= cut;
