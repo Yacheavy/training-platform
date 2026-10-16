@@ -198,7 +198,10 @@ export async function ensureActivityWeather(activityId: string): Promise<Activit
 }
 
 /** Texto para el modelo; el origen del dato va siempre explícito. */
-export function describeWeather(w: ActivityWeather): string | null {
+/** Desde esta temperatura media del sensor, una salida en rodillo se considera con calor (el sensor marca de más: pegado al cuerpo y sin viento). */
+export const INDOOR_HEAT_C = 28;
+
+export function describeWeather(w: ActivityWeather, opts?: { indoor?: boolean }): string | null {
   const parts: string[] = [];
   const r = (v: number | null | undefined, u = "") => (v == null ? null : `${Math.round(v)}${u}`);
   if (w.weather) {
@@ -217,6 +220,12 @@ export function describeWeather(w: ActivityWeather): string | null {
   if (w.deviceTemp) {
     const d = w.deviceTemp;
     parts.push(`Temperatura medida por el sensor del dispositivo del atleta: media ${r(d.avg, " °C")}${d.min != null && d.max != null ? ` (${Math.round(d.min)}–${Math.round(d.max)} °C)` : ""}; esos sensores suelen marcar de más al sol o pegados al cuerpo.`);
+    if (opts?.indoor && d.avg != null && d.avg >= INDOOR_HEAT_C) {
+      parts.push(
+        `Salida en rodillo con calor (sensor ≥ ${INDOOR_HEAT_C} °C de media): el calor sube la frecuencia cardíaca y el desacople potencia:FC (deriva cardiovascular) sin que cambie la forma física, y la percepción del esfuerzo es mayor para la misma potencia. ` +
+          `No atribuyas el desacople ni la FC alta solo a falta de base; compará la FC con otras salidas en rodillo con calor, no con salidas al aire libre. Puede ser entrenamiento con calor deliberado: tratalo como estímulo adicional y no como error.`
+      );
+    }
   }
   return parts.length ? parts.join("\n") : null;
 }

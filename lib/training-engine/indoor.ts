@@ -1,8 +1,16 @@
 import type { WorkoutBlock } from "./tss";
 import { VARIANTS } from "./variants";
 
-/** Tope de duración en rodillo: 1 h 20 min (criterio del entrenador; también lo limitan el calor y la sensación de esfuerzo). */
-export const INDOOR_MAX_MIN = 80;
+/**
+ * Tope de duración en rodillo (criterio del entrenador; también lo limitan el calor y la sensación de esfuerzo):
+ * 90 min si la sesión tiene intervalos o sprints, 120 min si es rodaje sin trabajo de intensidad.
+ * Una sesión más corta que el tope no se alarga ni se toca.
+ */
+export const INDOOR_CAP_QUALITY_MIN = 90;
+export const INDOOR_CAP_ENDURANCE_MIN = 120;
+export function indoorCapMin(blocks: { type: string }[]): number {
+  return blocks.some((b) => b.type === "interval") ? INDOOR_CAP_QUALITY_MIN : INDOOR_CAP_ENDURANCE_MIN;
+}
 
 export interface IndoorAdaptation {
   blocks: WorkoutBlock[];
@@ -41,7 +49,7 @@ function tidy(blocks: WorkoutBlock[]): WorkoutBlock[] {
 }
 
 /**
- * Adapta una sesión de ruta a rodillo con un tope de 80 min. Se conserva la variante, el tipo de trabajo y las potencias;
+ * Adapta una sesión de ruta a rodillo con un tope de 90 min (120 si es rodaje sin intervalos). Se conserva la variante, el tipo de trabajo y las potencias;
  * para entrar en el tope se recorta en este orden:
  *  1) el relleno de Z2, los Z2 largos (hasta 20 min cada uno) y el Z2 entre series (hasta 8 min): primero se cuida el estímulo;
  *  2) repeticiones o series del final (sin bajar de la mitad ni de 2 repeticiones);
@@ -52,7 +60,8 @@ function tidy(blocks: WorkoutBlock[]): WorkoutBlock[] {
  * fuerte y guiarse por la potencia y no por la frecuencia cardíaca (Junge 2016; evidencia fisiológica, no de rendimiento).
  */
 export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdaptation {
-  const cap = INDOOR_MAX_MIN * 60;
+  const capMin = indoorCapMin(blocks);
+  const cap = capMin * 60;
   let out = blocks.map((b) => ({ ...b }));
   const originalTotal = sum(out);
   let removedReps = 0;
@@ -131,12 +140,12 @@ export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdapt
   ];
   if (trimmedMin > 0) {
     parts.push(
-      `se acortó ${trimmedMin} min para entrar en el tope de ${INDOOR_MAX_MIN} min en rodillo` +
+      `se acortó ${trimmedMin} min para entrar en el tope de ${capMin} min en rodillo` +
         (removedReps > 0 ? ` (${removedReps} ${removedReps === 1 ? "repetición menos" : "repeticiones menos"})` : "")
     );
   }
   if (shortened > 0) parts.push(`los intervalos largos se acortaron ${Math.round(shortened / 60)} min en total (misma potencia)`);
-  if (overCap) parts.push(`no se pudo bajar de ${INDOOR_MAX_MIN} min sin desarmar la sesión: dura ${Math.round(total / 60)} min`);
+  if (overCap) parts.push(`no se pudo bajar de ${capMin} min sin desarmar la sesión: dura ${Math.round(total / 60)} min`);
   if (v?.indoor === "limited") parts.push("esta variante pierde parte de su sentido en rodillo; si podés, hacela en ruta otro día");
   return { blocks: out, note: parts.join(" · "), trimmedMin, removedReps, overCap };
 }

@@ -61,6 +61,7 @@ export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; n
   const phase = weekWorkouts.find((w) => w.phase)?.phase ?? null;
   // Sesiones de esta semana todavía sin enviar a Intervals (de hoy en adelante)
   const todayStart = dayStartLocal(new Date(nowISO)).getTime();
+  const futureInWeek = weekWorkouts.filter((w) => new Date(w.date).getTime() >= todayStart && w.status !== "COMPLETED").length;
   const pendingSend = weekWorkouts.filter((w) => ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"].includes(w.status) && new Date(w.date).getTime() >= todayStart).length;
 
   const fmt = (ms: number) =>
@@ -129,7 +130,8 @@ export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; n
         <ActionForm action={sendWeekToIntervals} success="Semana enviada a Intervals" style={{ marginBottom: "12px" }}>
           <input type="hidden" name="weekStart" value={weekStart} />
           <SubmitButton pendingText="Enviando…" style={{ width: "100%", background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "10px", padding: "11px 16px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>
-            {offset === 0 ? "Enviar lo que falta de esta semana" : "Enviar esta semana a Intervals"} ({pendingSend} {pendingSend === 1 ? "sesión" : "sesiones"})
+            {offset === 0 ? "Enviar lo que falta de esta semana" : "Enviar lo que falta de esta semana a Intervals"}
+            {" "}({pendingSend} sin enviar{futureInWeek > pendingSend ? `, ${futureInWeek - pendingSend} ya en Intervals` : ""})
           </SubmitButton>
         </ActionForm>
       )}

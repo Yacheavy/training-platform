@@ -297,7 +297,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
         if (prior.length) lines.push(`Sesiones anteriores con RPE (de la más reciente): ${prior.slice(0, 5).map((p) => `${p.label} RPE ${p.rpe}${p.ifr != null ? ` (IF ${p.ifr.toFixed(2).replace(".", ",")})` : ""}`).join("; ")}.`);
       }
       if (RIDE_TYPES_SET.has(a.type)) {
-        const wtxt = describeWeather(await ensureActivityWeather(a.id).catch(() => ({ weather: null, deviceTemp: null })));
+        const wtxt = describeWeather(await ensureActivityWeather(a.id).catch(() => ({ weather: null, deviceTemp: null })), { indoor: a.type === "VirtualRide" });
         if (wtxt) lines.push(wtxt);
       }
       if (a.deviationFlag !== "NONE") lines.push(`Desvío vs plan: ${a.deviationFlag}${a.deviationNotes ? ` — ${a.deviationNotes}` : ""}`);
