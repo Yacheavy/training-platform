@@ -7,6 +7,7 @@ import { classifyStimulusType } from "@/lib/training-engine/stimulus-classifier"
 import { STIMULUS_LABELS, ZONE_LABELS } from "@/lib/labels";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { PendingLink } from "@/components/PendingLink";
+import { ActivitySeriesCard } from "@/components/ActivitySeriesCard";
 import { Sparkle } from "@/components/Sparkle";
 import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
@@ -111,6 +112,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           ))}
         </div>
       </div>
+
+      {a.durationSec >= 300 && <ActivitySeriesCard activityId={a.id} athleteId={a.athleteId} />}
 
       {zoneTotal > 0 && (
         <div style={card}>

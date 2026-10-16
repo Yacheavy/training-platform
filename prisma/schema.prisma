@@ -118,6 +118,7 @@ model Activity {
   rawStreamsJson     Json?
   // Vueltas (laps) del archivo original o, si no hay, intervalos de Intervals.icu: { source, fetchedAt, laps[] }
   lapsJson           Json?
+  seriesJson         Json?
   /// Clima de respaldo (Open-Meteo) y chequeo de GPS; no guarda coordenadas. La sync no lo pisa
   weatherJson        Json?
   /// Percepción del atleta tras la salida, con la escala de Intervals: RPE 1-10 y sensación 1-5 (1 fuerte … 5 sin fuerzas)

@@ -199,3 +199,29 @@ export async function deleteEventByExternalId(athleteId: string, apiKey: string,
     if (e.external_id === externalId) await fetch(`${base}/events/${e.id}`, { method: "DELETE", headers: { Authorization: authHeader(apiKey) } });
   }
 }
+
+/**
+ * Streams de la actividad (1 dato por segundo) como muestras para agrupar. Se usa solo si no hay archivo FIT
+ * (p. ej. actividades que vienen de Strava). Devuelve null si Intervals no tiene streams.
+ */
+export async function getActivityStreams(apiKey: string, activityId: string) {
+  const types = "time,watts,heartrate,cadence,velocity_smooth,altitude";
+  const res = await fetch(`${INTERVALS_BASE_URL}/activity/${activityId}/streams.json?types=${types}`, { headers: { Authorization: authHeader(apiKey) }, cache: "no-store", signal: AbortSignal.timeout(20_000) });
+  if (res.status === 404 || res.status === 403 || res.status === 422) return null;
+  if (!res.ok) throw new Error(`Intervals API error: ${res.status}`);
+  const arr = (await res.json().catch(() => null)) as { type?: string; data?: unknown }[] | null;
+  if (!Array.isArray(arr)) return null;
+  const get = (t: string) => {
+    const d = arr.find((s) => s.type === t)?.data;
+    return Array.isArray(d) ? (d as unknown[]) : null;
+  };
+  const time = get("time");
+  const watts = get("watts"), hr = get("heartrate"), cad = get("cadence"), vel = get("velocity_smooth"), alt = get("altitude");
+  const n = Math.max(time?.length ?? 0, watts?.length ?? 0, hr?.length ?? 0, cad?.length ?? 0, vel?.length ?? 0, alt?.length ?? 0);
+  if (n < 2) return null;
+  const n1 = (a: unknown[] | null, i: number) => (a && typeof a[i] === "number" && Number.isFinite(a[i] as number) ? (a[i] as number) : null);
+  return Array.from({ length: n }, (_, i) => {
+    const v = n1(vel, i);
+    return { t: (n1(time, i) ?? i) * 1000, power: n1(watts, i), hr: n1(hr, i), cadence: n1(cad, i), speed: v != null ? v * 3.6 : null, altitude: n1(alt, i) };
+  });
+}
