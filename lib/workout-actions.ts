@@ -9,6 +9,7 @@ import { adaptForIndoor, indoorCapMin } from "@/lib/training-engine/indoor";
 import { calculateTss, calculateKilojoules, type WorkoutBlock } from "@/lib/training-engine/tss";
 import { calculateFueling } from "@/lib/training-engine/fueling";
 import type { Prisma } from "@/app/generated/prisma";
+import { VARIANTS } from "@/lib/training-engine/variants";
 import { isOffBike } from "@/lib/training-engine/off-bike";
 import { dayRangeLocal } from "@/lib/tz";
 
@@ -136,12 +137,17 @@ async function regenerateInner(formData: FormData, excludeCurrent: boolean): Pro
   });
   if (!block) throw new Error("Esa fecha no pertenece a ningún bloque de entrenamiento");
 
-  const r = await generateFullPlan(block.id, {
-    athleteId: session.user.id,
-    fromDate: workout.date,
-    replaceDate: workout.date,
-    excludeKeys: excludeCurrent ? [workout.workoutLibraryKey] : undefined,
-  });
+  const indoor = workout.environment === "indoor";
+  // En rodillo, «Otra variante» sigue en rodillo y prefiere variantes que funcionan bien adentro (si no hay otra, usa cualquiera)
+  const limited = indoor && excludeCurrent ? Object.values(VARIANTS).filter((v) => v.indoor === "limited").map((v) => v.key) : [];
+  const run = (exclude: string[] | undefined) =>
+    generateFullPlan(block.id, { athleteId: workout.athleteId, fromDate: workout.date, replaceDate: workout.date, excludeKeys: exclude, keepIndoor: indoor });
+  const base = excludeCurrent ? [workout.workoutLibraryKey] : undefined;
+  let r = await run(excludeCurrent && limited.length ? [...base!, ...limited] : base);
+  if (r.created > 0 && excludeCurrent && limited.length) {
+    const chk = await prisma.generatedWorkout.findUnique({ where: { id: workoutId }, select: { workoutLibraryKey: true } });
+    if (chk?.workoutLibraryKey === workout.workoutLibraryKey) r = await run(base);
+  }
   if (r.created === 0) throw new Error("El plan actual no tiene una sesión para ese día (revisá la plantilla semanal)");
   if (excludeCurrent) {
     const after = await prisma.generatedWorkout.findUnique({ where: { id: workoutId }, select: { workoutLibraryKey: true } });

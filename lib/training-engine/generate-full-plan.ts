@@ -15,7 +15,7 @@ export type PlanDb = typeof defaultDb;
 
 export async function generateFullPlan(
   trainingBlockId: string,
-  opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[]; now?: Date; coachNote?: string },
+  opts?: { fromDate?: Date; athleteId?: string; replaceDate?: Date; replaceAll?: boolean; excludeKeys?: string[]; keepIndoor?: boolean; now?: Date; coachNote?: string },
   prisma: PlanDb = defaultDb,
 ) {
   const block = await prisma.trainingBlock.findUnique({ where: { id: trainingBlockId } });
@@ -114,8 +114,8 @@ export async function generateFullPlan(
       if (existing && replacing && existing.status !== "COMPLETED" && !(opts?.replaceAll && !opts?.replaceDate && existing.status === "EDITED")) {
         const wasSent = existing.status === "SENT_TO_INTERVALS";
         const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(existing.status);
-        // Regenerar el PLAN respeta que el día se pasó a rodillo (una restricción real, p. ej. lluvia); regenerar UNA sesión vuelve a ruta a propósito
-        const keepIndoor = existing.environment === "indoor" && !opts?.replaceDate && !isOffBike(day.stimulusType);
+        // Regenerar el PLAN respeta que el día se pasó a rodillo (una restricción real, p. ej. lluvia); «Otra variante» también (keepIndoor); «Regenerar» una sola sesión vuelve a ruta
+        const keepIndoor = existing.environment === "indoor" && (!opts?.replaceDate || !!opts?.keepIndoor) && !isOffBike(day.stimulusType);
         const ind = keepIndoor ? adaptForIndoor(day.blocks, day.stimulusType) : null;
         const outBlocks = ind ? ind.blocks : day.blocks;
         const outFuel = ind ? calculateFueling(ind.blocks, user.ftp) : day.fueling;
