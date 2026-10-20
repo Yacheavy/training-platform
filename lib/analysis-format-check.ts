@@ -30,6 +30,8 @@ else {
   eq("sin texto antes", p.intro, []);
 }
 eq("texto sin secciones → null", parseAnalysis("Un párrafo suelto.\n\nOtro párrafo."), null);
+eq("título nuevo: qué dice", parseAnalysis("### Qué dice esta sesión\nAlgo.")?.sections[0].key, "good");
+eq("título nuevo: qué haría", parseAnalysis("### Qué haría\nAlgo.")?.sections[0].key, "next");
 eq("título en negrita reconocido", parseAnalysis("**Para mirar**\nAlgo.")?.sections[0].key, "watch");
 eq("título desconocido → other", parseAnalysis("### Clima\nNublado.")?.sections[0].key, "other");
 eq("sin acentos ni mayúsculas", parseAnalysis("## LO QUE SALIO BIEN\nok")?.sections[0].key, "good");

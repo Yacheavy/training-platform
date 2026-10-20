@@ -1,4 +1,5 @@
 import { ensureActivityLaps, describeLaps, sustainedEfforts } from "@/lib/laps";
+import { buildSessionInsights } from "@/lib/session-insights";
 import { comparePlanVsReal } from "@/lib/plan-vs-real";
 import { ensureActivityWeather, describeWeather } from "@/lib/weather";
 import { describeRatings, readRatings, validRpe, ifRatio } from "@/lib/ratings";
@@ -325,6 +326,10 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
         );
       } else {
         lines.push(`Sin sesión planificada asociada (actividad libre o todavía no vinculada): no afirmes qué estaba planificado.`);
+      }
+      if (RIDE_TYPES_SET.has(a.type)) {
+        const ins = await buildSessionInsights(a, user?.ftp, lapsData).catch((e) => { console.error("buildSessionInsights falló", e); return ""; });
+        if (ins) lines.push(ins);
       }
       focusParts.push(lines.join("\n"));
     }

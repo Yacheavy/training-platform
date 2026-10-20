@@ -1,5 +1,5 @@
 /**
- * Estructura del análisis de una sesión: tres secciones con título («### Lo que salió bien», «### Para mirar», «### Lo que sigue»).
+ * Estructura del análisis de una sesión: tres secciones con título («### Qué dice esta sesión», «### Para mirar», «### Qué haría»; se aceptan también los títulos anteriores).
  * Lo comparten el chat (que lo dibuja con íconos) y el mail. Si el texto no trae secciones, devuelve null y se muestra como texto corrido.
  */
 export type SectionKey = "good" | "watch" | "next" | "other";
@@ -19,9 +19,9 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 
 function keyFor(heading: string): SectionKey {
   const n = norm(heading);
-  if (/\b(salio bien|lo bueno|bien)\b/.test(n)) return "good";
+  if (/\b(salio bien|lo bueno|bien|dice esta sesion|que dice)\b/.test(n)) return "good";
   if (/\b(para mirar|a mirar|mirar|atencion|ojo)\b/.test(n)) return "watch";
-  if (/\b(sigue|proximos|proximo|de ahora|que hacer)\b/.test(n)) return "next";
+  if (/\b(sigue|proximos|proximo|de ahora|que hacer|que haria|haria)\b/.test(n)) return "next";
   return "other";
 }
 
