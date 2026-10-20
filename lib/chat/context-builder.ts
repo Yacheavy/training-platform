@@ -288,7 +288,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
       if (rated) {
         lines.push(`Percepción del atleta tras la salida (la cargó él): ${rated}. El RPE va de 1 (nada) a 10 (máximo); la sensación, de «fuerte» a «sin fuerzas».`);
         const prevRated = await prisma.activity.findMany({
-          where: { athleteId, id: { not: a.id }, date: { lt: a.date }, rpe: { not: null } },
+          where: { athleteId, id: { not: a.id }, date: { lt: a.date }, rpe: { not: null }, type: RIDE_TYPES_SET.has(a.type) ? { in: [...RIDE_TYPES_SET] } : a.type },
           orderBy: { date: "desc" },
           take: 6,
           select: { rpe: true, feel: true, intensityFactor: true, date: true, name: true },

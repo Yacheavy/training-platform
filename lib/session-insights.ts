@@ -128,7 +128,10 @@ export async function buildSessionInsights(a: ActivityForInsights, ftp: number |
   }
   const th = thirds(stored?.power5, stored?.laps ?? []);
   if (th) {
-    lines.push(`Reparto por tercios de la salida (potencia media incluyendo paradas${th.hr.some((x) => x != null) ? " / FC media" : ""}): ${th.w.map((w, i) => `${i + 1}º ${w} W${th.hr[i] != null ? ` / ${th.hr[i]} lpm` : ""}`).join("; ")}.`);
+    const lastLap = stored?.laps?.[stored.laps.length - 1];
+    const allAvg = mean(stored!.power5!);
+    const softEnd = lastLap && lastLap.avgW != null && lastLap.durSec >= 480 && lastLap.avgW < 0.6 * allAvg ? ` La última vuelta (${Math.round(lastLap.durSec / 60)} min a ${lastLap.avgW} W) es suave y cae casi toda en el último tercio: esa baja es un final tranquilo o enfriamiento, no fatiga.` : "";
+    lines.push(`Reparto por tercios de la salida (potencia media incluyendo paradas${th.hr.some((x) => x != null) ? " / FC media" : ""}): ${th.w.map((w, i) => `${i + 1}º ${w} W${th.hr[i] != null ? ` / ${th.hr[i]} lpm` : ""}`).join("; ")}.${softEnd}`);
   }
 
   // Comparación con sesiones anteriores del mismo tipo (solo con datos ya guardados: no se baja nada nuevo)
@@ -137,12 +140,16 @@ export async function buildSessionInsights(a: ActivityForInsights, ftp: number |
   const cands = await prisma.activity.findMany({
     where: { athleteId: a.athleteId, id: { not: a.id }, type: a.type, date: { lt: a.date, gte: since } },
     orderBy: { date: "desc" },
-    take: 40,
+    take: 60,
     select: { date: true, name: true, tss: true, intensityFactor: true, normalizedPower: true, avgHr: true, decouplingPct: true, rawStreamsJson: true, lapsJson: true, durationSec: true },
   });
   const priors: PriorSession[] = cands
     .filter((c) => classifyStimulusType({ type: a.type, name: c.name, intensityFactor: c.intensityFactor, rawStreamsJson: c.rawStreamsJson }) === kind)
-    .filter((c) => c.durationSec >= a.durationSec * 0.5 && c.durationSec <= a.durationSec * 1.8)
+    .filter((c) => c.durationSec >= a.durationSec * 0.6 && c.durationSec <= a.durationSec * 1.6)
+    .filter((c) => {
+      const ci = ifOf(c.intensityFactor), ai = ifOf(a.intensityFactor);
+      return ci == null || ai == null || Math.abs(ci - ai) <= 0.1;
+    })
     .slice(0, 3)
     .map((c) => ({
       date: dateKeyLocal(c.date),
@@ -153,6 +160,12 @@ export async function buildSessionInsights(a: ActivityForInsights, ftp: number |
       stats: effortStats(c.lapsJson as unknown as StoredLaps | null, f),
     }));
   lines.push(...compareWithPrior({ ifr: ifOf(a.intensityFactor), tss: a.tss, decoupling: a.decouplingPct, ef: a.normalizedPower && a.avgHr ? a.normalizedPower / a.avgHr : null, stats }, priors));
+
+  // Salidas largas recientes de cualquier tipo: muestran cuánto varía el desacople y evitan hablar de «patrón» con dos o tres casos mal elegidos
+  if (a.durationSec >= 5400) {
+    const longs = cands.filter((c) => c.durationSec >= 5400 && c.decouplingPct != null).slice(0, 6);
+    if (longs.length) lines.push(`Otras salidas de 90 min o más (últimos 120 días, las más recientes): ${longs.map((c) => `${dateKeyLocal(c.date)} ${Math.round(c.durationSec / 60)} min, IF ${ar(ifOf(c.intensityFactor) ?? 0, 2)}, desacople ${ar(c.decouplingPct!, 1)}%`).join(" | ")}. Antes de hablar de «patrón» mirá cuántas de estas muestran lo mismo y cuántas no; son salidas de distinta estructura.`);
+  }
 
   // Carga de la semana
   const end = new Date(a.date.getTime() + 12 * 3600 * 1000);
