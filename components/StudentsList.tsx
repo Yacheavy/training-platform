@@ -36,13 +36,14 @@ function priority(s: StudentRow, now: number): number {
 export async function StudentsList({ coachId }: { coachId: string }) {
   const rows = await getCoachOverview(coachId);
   // Preferencia de mail de CADA alumno (la del entrenador está en su pestaña Cuenta)
-  const prefs = await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.id) } }, select: { id: true, emailAnalysis: true, emailKind: true } });
+  const prefs = await prisma.user.findMany({ where: { id: { in: rows.map((r) => r.id) } }, select: { id: true, emailAnalysis: true, emailKind: true, onboardingSubmittedAt: true, onboardingReviewedAt: true } });
+  const toReview = (id: string) => { const u = prefs.find((p) => p.id === id); return !!u?.onboardingSubmittedAt && !u.onboardingReviewedAt; };
   const mailMode = (id: string) => {
     const u = prefs.find((p) => p.id === id);
     return !u || u.emailAnalysis === false ? "OFF" : u.emailKind === "SUMMARY" ? "SUMMARY" : "AI";
   };
   const now = Date.now();
-  const sorted = [...rows].sort((a, b) => priority(a, now) - priority(b, now) || a.name.localeCompare(b.name));
+  const sorted = [...rows].sort((a, b) => (toReview(a.id) ? -1 : 0) - (toReview(b.id) ? -1 : 0) || priority(a, now) - priority(b, now) || a.name.localeCompare(b.name));
   const count = (st: StudentRow["status"]) => rows.filter((r) => r.status === st).length;
   const noData = rows.filter((r) => !r.hasIntervals || (daysSince(r.lastSync, now) ?? 99) >= 3).length;
 
@@ -92,6 +93,7 @@ export async function StudentsList({ coachId }: { coachId: string }) {
                     <div>
                       <Link href={`/alumnos/${s.id}`} style={{ fontSize: "15px", fontWeight: 600, color: "inherit", textDecoration: "none" }}>{s.name} →</Link>
                       <span style={{ fontSize: "12px", color: "var(--text-dim)", marginLeft: "8px" }}>{s.email}</span>
+                      {toReview(s.id) && <Link href={`/alumnos/${s.id}`} style={{ marginLeft: "8px", fontSize: "11px", fontWeight: 600, color: "var(--amber)", border: "1px solid var(--amber)", borderRadius: "999px", padding: "2px 9px", textDecoration: "none" }}>Configuración para revisar</Link>}
                       <div style={{ marginTop: "8px" }}>
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                           <Link href={`/alumnos/${s.id}/calendario`} className="btn btn-outline btn-sm">Calendario</Link>

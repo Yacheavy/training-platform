@@ -92,6 +92,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const upcomingBlocks = await getUpcomingBlocks(session.user.id);
   const pendingNutrition = await getPendingNutrition(session.user.id).catch(() => []);
 
+  // Puesta en marcha guiada: solo alumnos (el entrenador no la necesita)
+  const me = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, ftp: true, onboardingSubmittedAt: true, onboardingReviewedAt: true } });
+  const [tplDays, goalCount] = me?.role === "COACH" ? [0, 0] : await Promise.all([
+    prisma.trainingTemplateSlot.count({ where: { athleteId: session.user.id, stimulusType: "cycling" } }),
+    prisma.athleteGoal.count({ where: { athleteId: session.user.id } }),
+  ]);
+  const showSetup = me != null && me.role !== "COACH" && !me.onboardingSubmittedAt && !needsIntervals;
+  const setupItems: [string, boolean][] = [
+    ["FTP cargado", !!me?.ftp],
+    ["Semana tipo configurada", tplDays > 0],
+    ["Objetivo cargado", goalCount > 0],
+    ["Enviado a tu coach para revisar", false],
+  ];
+  const reviewNote =
+    me?.onboardingSubmittedAt && !me.onboardingReviewedAt
+      ? "Tu configuración está en revisión: tu coach la va a mirar y puede corregirla."
+      : me?.onboardingReviewedAt && Date.now() - me.onboardingReviewedAt.getTime() < 7 * 86400000
+        ? "✓ Tu coach revisó tu configuración."
+        : null;
+
   // Mismo criterio que el semáforo (no un número distinto con el mismo nombre): media de 7 días contra tu línea base (o los 6 días previos si todavía no hay base)
   const hrvTrend =
     availability.hrvDeltaPct != null
@@ -210,6 +230,23 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           connectAction={connectIntervals}
           laterAction={postponeIntervalsPrompt}
         />
+      )}
+      {showSetup && (
+        <div className="dash-card" style={{ marginBottom: "16px", borderColor: "var(--teal)" }}>
+          <h3 className="dash-card-title">Primeros pasos: poné en marcha tu entrenamiento</h3>
+          <ul style={{ listStyle: "none", margin: "10px 0 14px", padding: 0, display: "grid", gap: "6px", fontSize: "13.5px" }}>
+            {setupItems.map(([t, ok]) => (
+              <li key={t} style={{ display: "flex", gap: "9px", alignItems: "center", color: ok ? "var(--text-muted)" : "var(--text)" }}>
+                <span aria-hidden style={{ width: "18px", height: "18px", borderRadius: "50%", border: `1.5px solid ${ok ? "var(--teal)" : "var(--border-strong, #3a4656)"}`, background: ok ? "var(--teal)" : "transparent", color: "#08201C", fontSize: "11px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{ok ? "✓" : ""}</span>
+                {t}
+              </li>
+            ))}
+          </ul>
+          <Link href="/bienvenida" className="btn btn-primary">{tplDays > 0 || goalCount > 0 || me?.ftp ? "Seguir con la configuración" : "Empezar (3 minutos)"}</Link>
+        </div>
+      )}
+      {!showSetup && reviewNote && (
+        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "14px" }}>{reviewNote}</div>
       )}
       <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>

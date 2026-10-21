@@ -17,6 +17,9 @@ import { dateKeyLocal, dayKeyDate } from "@/lib/tz";
 import { getChatUsage } from "@/lib/chat/usage";
 import { getNutritionSummary } from "@/lib/nutrition-data";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
+import { ActionForm } from "@/components/ActionForm";
+import { SubmitButton } from "@/components/SubmitButton";
+import { markOnboardingReviewed } from "@/lib/onboarding-actions";
 
 const STATUS_ES: Record<string, string> = {
   PLANNED: "Planificada", SUGGESTED: "Sugerida", EDITED: "Editada", APPROVED: "Aprobada", SENT_TO_INTERVALS: "Enviada", COMPLETED: "Completada",
@@ -53,6 +56,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   ]);
   const days = upcoming.filter((w) => dateKeyLocal(w.date) >= todayKey);
 
+  // Configuración que cargó el alumno (para revisarla y corregirla)
+  const [cfgUser, cfgSlots, cfgGoals] = await Promise.all([
+    prisma.user.findUnique({ where: { id }, select: { weight: true, trainingBackground: true, currentStateNote: true, preferences: true, onboardingSubmittedAt: true, onboardingReviewedAt: true } }),
+    prisma.trainingTemplateSlot.findMany({ where: { athleteId: id } }),
+    prisma.athleteGoal.findMany({ where: { athleteId: id }, orderBy: { eventDate: "asc" }, take: 5 }),
+  ]);
+  const DAY_ES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+  const TYPE_ES: Record<string, string> = { cycling: "Bici", gym: "Gimnasio", flexibility: "Movilidad", rest: "Descanso" };
+  const cfgDays = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ d, s: cfgSlots.find((x) => x.dayOfWeek === d) }));
+  const needsReview = !!cfgUser?.onboardingSubmittedAt && !cfgUser.onboardingReviewedAt;
+
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
   const l28 = load.slice(-28);
   const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string; sub?: string }[] = [
@@ -78,6 +92,38 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px" }}>
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}
       </div>
+
+      {(cfgUser?.onboardingSubmittedAt || cfgSlots.length > 0) && (
+        <div className="dash-card" style={{ marginBottom: "16px", borderColor: needsReview ? "var(--amber)" : undefined }}>
+          <h3 className="dash-card-title">
+            Configuración del alumno {needsReview ? "· para revisar" : cfgUser?.onboardingReviewedAt ? "· revisada" : ""}
+          </h3>
+          <div style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "6px 0 10px" }}>
+            {cfgUser?.onboardingSubmittedAt ? `Enviada el ${cfgUser.onboardingSubmittedAt.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" })}.` : "El alumno todavía no la envió."} FTP {student.ftp ?? "sin definir"}{cfgUser?.weight ? ` · ${cfgUser.weight} kg` : ""}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))", gap: "8px", marginBottom: "10px" }}>
+            {cfgDays.map(({ d, s: sl }) => (
+              <div key={d} style={{ border: "1px solid var(--border)", borderRadius: "10px", padding: "7px 9px", fontSize: "12px", opacity: !sl || sl.stimulusType === "rest" ? 0.6 : 1 }}>
+                <div style={{ color: "var(--text-dim)" }}>{DAY_ES[d]}</div>
+                <div style={{ fontWeight: 600 }}>{TYPE_ES[sl?.stimulusType ?? "rest"] ?? sl?.stimulusType}{sl?.isQualityDay ? " · calidad" : ""}</div>
+                {sl?.targetDurationMin ? <div style={{ color: "var(--text-muted)" }}>{sl.targetDurationMin} min</div> : null}
+              </div>
+            ))}
+          </div>
+          {cfgGoals.length > 0 && <div style={{ fontSize: "12.5px", marginBottom: "6px" }}><b>Objetivos:</b> {cfgGoals.map((g) => `${g.name}${g.eventDate ? ` (${g.eventDate.toISOString().slice(0, 10)}, ${g.priority})` : ""}`).join(" · ")}</div>}
+          {cfgUser?.currentStateNote && <div style={{ fontSize: "12.5px", marginBottom: "6px" }}><b>Lesiones o molestias:</b> {cfgUser.currentStateNote}</div>}
+          {cfgUser?.preferences && <div style={{ fontSize: "12.5px", marginBottom: "6px" }}><b>Límites y preferencias:</b> {cfgUser.preferences}</div>}
+          {cfgUser?.trainingBackground && <div style={{ fontSize: "12.5px", marginBottom: "6px" }}><b>Experiencia:</b> {cfgUser.trainingBackground}</div>}
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center", marginTop: "12px" }}>
+            <Link href={`/alumnos/${id}/planificacion`} className="btn btn-outline btn-sm">Corregir semana y objetivos</Link>
+            {needsReview && (
+              <ActionForm action={markOnboardingReviewed.bind(null, id)} success="Marcada como revisada">
+                <SubmitButton className="btn btn-primary btn-sm">Marcar como revisada</SubmitButton>
+              </ActionForm>
+            )}
+          </div>
+        </div>
+      )}
 
       <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} />
 

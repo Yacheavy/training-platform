@@ -45,6 +45,11 @@ model User {
   powerCurveSyncedAt DateTime?
   sportSettingsJson Json?
 
+  /// Puesta en marcha guiada: el alumno terminó el asistente (se envía al coach), el coach lo revisó, o lo dejó para después
+  onboardingSubmittedAt DateTime?
+  onboardingReviewedAt  DateTime?
+  onboardingSkippedAt   DateTime?
+
   trainingBackground String? @db.Text
   currentStateNote    String? @db.Text
   currentStateUpdatedAt DateTime?
