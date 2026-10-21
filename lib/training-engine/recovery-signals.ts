@@ -146,6 +146,11 @@ export interface AcuteWarning {
   hrvPct: number | null;
   rhrDiff: number | null;
   message: string | null;
+  /** Hoy, por separado: HRV ≤ −1,5 DE de tu línea base / FC de reposo ≥ +2 DE (aunque no coincidan). */
+  hrvLowToday: boolean;
+  rhrHighToday: boolean;
+  hrvPctToday: number | null;
+  rhrDiffToday: number | null;
 }
 
 /**
@@ -158,17 +163,29 @@ export function acuteWarning(points: DailyPoint[], todayKey: Date): AcuteWarning
   const t = todayKey.getTime();
   let daysIn7 = 0;
   let todayRes: { hrvPct: number; rhrDiff: number } | null = null;
+  let tl = { hrvLow: false, rhrHigh: false, hrvPct: null as number | null, rhrDiff: null as number | null };
   for (let back = 0; back < 7; back++) {
     const day = t - back * DAY_MS;
     const p = points.find((x) => x.date.getTime() === day);
-    if (!p || p.hrv == null || p.hrv <= 0 || p.restingHr == null || p.restingHr <= 0) continue;
+    if (!p || p.hrv == null || p.hrv <= 0 || p.restingHr == null || p.restingHr <= 0) {
+      if (back === 0 && p) {
+        // Hoy con solo uno de los dos datos: se evalúa por separado
+        const base0 = points.filter((x) => x.date.getTime() >= day - 60 * DAY_MS && x.date.getTime() <= day - DAY_MS);
+        if (p.hrv != null && p.hrv > 0) { const hv = base0.map((x) => x.hrv).filter((v): v is number => v != null && v > 0).map(Math.log); if (hv.length >= MIN_BASELINE_DAYS) { const m = mean(hv), s2 = sd(hv); tl.hrvLow = s2 > 0 && Math.log(p.hrv) <= m - 1.5 * s2; tl.hrvPct = (p.hrv / Math.exp(m) - 1) * 100; } }
+        if (p.restingHr != null && p.restingHr > 0) { const rv = base0.map((x) => x.restingHr).filter((v): v is number => v != null && v > 0); if (rv.length >= MIN_BASELINE_DAYS) { const m = mean(rv), s2 = sd(rv); tl.rhrHigh = s2 > 0 && p.restingHr >= m + 2 * s2; tl.rhrDiff = p.restingHr - m; } }
+      }
+      continue;
+    }
     const base = points.filter((x) => x.date.getTime() >= day - 60 * DAY_MS && x.date.getTime() <= day - DAY_MS);
     const hv = base.map((x) => x.hrv).filter((v): v is number => v != null && v > 0).map(Math.log);
     const rv = base.map((x) => x.restingHr).filter((v): v is number => v != null && v > 0);
     if (hv.length < MIN_BASELINE_DAYS || rv.length < MIN_BASELINE_DAYS) continue;
     const hm = mean(hv), hs = sd(hv), rm = mean(rv), rs = sd(rv);
     if (!(hs > 0) || !(rs > 0)) continue;
-    const hot = Math.log(p.hrv) <= hm - 1.5 * hs && p.restingHr >= rm + 2 * rs;
+    const hrvLow = Math.log(p.hrv) <= hm - 1.5 * hs;
+    const rhrHigh = p.restingHr >= rm + 2 * rs;
+    if (back === 0) tl = { hrvLow, rhrHigh, hrvPct: (p.hrv / Math.exp(hm) - 1) * 100, rhrDiff: p.restingHr - rm };
+    const hot = hrvLow && rhrHigh;
     if (hot) {
       daysIn7++;
       if (back === 0) todayRes = { hrvPct: (p.hrv / Math.exp(hm) - 1) * 100, rhrDiff: p.restingHr - rm };
@@ -177,5 +194,5 @@ export function acuteWarning(points: DailyPoint[], todayKey: Date): AcuteWarning
   const message = todayRes
     ? `Hoy coinciden HRV muy bajo (${Math.abs(todayRes.hrvPct).toFixed(0)}% bajo tu línea base) y FC de reposo alta (+${todayRes.rhrDiff.toFixed(1)} lpm)${daysIn7 > 1 ? `; ya pasó ${daysIn7} de los últimos 7 días` : ""}. Prestá atención a cómo te sentís (sueño, estrés, molestias) y evitá sumar carga extra si se repite.`
     : null;
-  return { today: !!todayRes, daysIn7, hrvPct: todayRes?.hrvPct ?? null, rhrDiff: todayRes?.rhrDiff ?? null, message };
+  return { today: !!todayRes, daysIn7, hrvPct: todayRes?.hrvPct ?? null, rhrDiff: todayRes?.rhrDiff ?? null, message, hrvLowToday: tl.hrvLow, rhrHighToday: tl.rhrHigh, hrvPctToday: tl.hrvPct, rhrDiffToday: tl.rhrDiff };
 }

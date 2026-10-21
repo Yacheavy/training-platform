@@ -572,6 +572,8 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .avail-chip { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--border, rgba(255,255,255,.08)); }
 .avail-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #4FD1C5; box-sizing: border-box; }
 .avail-chip.alert .avail-dot { background: #E8A33D; }
+.avail-chip.watch .avail-dot { background: transparent; border: 2px solid #E8A33D; }
+.avail-chip.watch .avail-chip-state { color: #E8A33D; }
 .avail-chip.nodata .avail-dot { background: transparent; border: 1.5px solid var(--text-muted); }
 .avail-chip-name { display: block; font-size: 13px; font-weight: 600; }
 .avail-chip-state { display: block; font-size: 12px; color: var(--text-muted); }

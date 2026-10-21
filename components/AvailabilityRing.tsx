@@ -92,7 +92,7 @@ export function AvailabilityRing({
               <span className="avail-dot" aria-hidden="true" />
               <span>
                 <span className="avail-chip-name">{c.label}</span>
-                <span className="avail-chip-state">{c.state === "alert" ? "En alerta" : c.state === "nodata" ? "Sin dato hoy" : okText(c)}</span>
+                <span className="avail-chip-state">{c.state === "alert" ? "En alerta" : c.state === "watch" ? (c.detail ?? "Hoy fuera de lo habitual") : c.state === "nodata" ? "Sin dato hoy" : okText(c)}</span>
               </span>
             </li>
           ))}

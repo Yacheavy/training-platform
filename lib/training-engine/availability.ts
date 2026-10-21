@@ -96,7 +96,13 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   }
   const alertReasons = [...ev.alertReasons];
   if (wellnessAgeDays != null && wellnessAgeDays >= 1) alertReasons.unshift(reasons[0]);
-  const chips = signalChips({ hrvSig, rhrSig, checkin: checkinToday, tsb, minTsb }, ev);
+  const acute = acuteWarning(history, todayKey);
+  // El chip usa la media de 7 días (estable). Si hoy el dato se sale mucho de lo tuyo pero la media es normal, se avisa en el propio chip para que no diga solo «Normal»
+  const chips = signalChips({ hrvSig, rhrSig, checkin: checkinToday, tsb, minTsb }, ev).map((c): SignalChip => {
+    if (c.key === "hrv" && c.state === "ok" && acute.hrvLowToday && acute.hrvPctToday != null) return { ...c, state: "watch", detail: `Hoy ${Math.abs(acute.hrvPctToday).toFixed(0)}% bajo · media de 7 días normal` };
+    if (c.key === "resting_hr" && c.state === "ok" && acute.rhrHighToday && acute.rhrDiffToday != null) return { ...c, state: "watch", detail: `Hoy +${acute.rhrDiffToday.toFixed(0)} lpm · media de 7 días normal` };
+    return c;
+  });
   const sources = recoverySources({ hrvSig, rhrSig, checkin: checkinToday });
   const insufficient = sources.length === 0 && status === "GREEN";
   const scoreDetail = scoreAvailability({ status, hrvDeltaPct, restingHrDeltaAbs, tsb, checkin: checkinToday });
@@ -122,6 +128,6 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     wellnessAgeDays,
     sources,
     insufficient,
-    acute: acuteWarning(history, todayKey),
+    acute,
   };
 }

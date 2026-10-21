@@ -35,11 +35,14 @@ export interface Evaluation {
   tsbAlert: boolean;
 }
 
-export type ChipState = "alert" | "ok" | "nodata";
+/** watch = la señal NO está en alerta (la media de 7 días es normal) pero el dato de hoy se sale mucho de lo tuyo. */
+export type ChipState = "alert" | "watch" | "ok" | "nodata";
 export interface SignalChip {
   key: "hrv" | "resting_hr" | "checkin" | "tsb";
   label: string;
   state: ChipState;
+  /** Texto del estado cuando es «watch». */
+  detail?: string;
 }
 
 /** Qué señales de RECUPERACIÓN hay hoy (HRV, FC de reposo, check-in). Sin ninguna, el semáforo no tiene de dónde decidir. */
