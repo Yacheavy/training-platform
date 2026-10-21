@@ -30,7 +30,7 @@ export default async function CalendarPage({
   return (
     <div className="page-container">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: 0 }}>
+        <h1 className="page-title" style={{ margin: 0 }}>
           {monthNames[month]} {year}
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>

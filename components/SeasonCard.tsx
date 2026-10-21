@@ -3,7 +3,7 @@ import { SubmitButton } from "./SubmitButton";
 import type { SeasonState } from "@/lib/season-data";
 
 const OBJ_LABEL: Record<string, string> = { base: "Base", umbral: "Umbral", vo2max: "VO2max", tapering: "Puesta a punto" };
-const OBJ_COLOR: Record<string, string> = { vo2max: "#E5636A", umbral: "#E8A33D", base: "#4FD1C5", tapering: "#6FA8DC" };
+const OBJ_COLOR: Record<string, string> = { vo2max: "var(--red)", umbral: "var(--amber)", base: "var(--teal)", tapering: "var(--blue)" };
 const fmtKey = (k: string) => new Date(k + "T00:00:00Z").toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 const ms = (k: string) => new Date(k + "T00:00:00Z").getTime();
@@ -89,7 +89,7 @@ export function SeasonCard({
   );
   return (
     <div style={cardStyle}>
-      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Temporada</h2>
+      <h2 className="card-title">Temporada</h2>
       <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "0 0 16px" }}>
         La app propone los bloques que faltan para llegar a tu objetivo principal (prioridad A, el más cercano). El orden de las fases es
         convención de práctica: no hay ensayos que respalden un orden o un modelo de periodización sobre otro en ciclistas entrenados.

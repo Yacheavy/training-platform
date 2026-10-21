@@ -33,7 +33,7 @@ export default async function StudentCalendarPage({ params, searchParams }: { pa
     <div className="page-container">
       <Link href={`/alumnos/${id}`} style={{ color: "var(--teal)", fontSize: "12.5px", textDecoration: "none" }}>← {student.name ?? student.email}</Link>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap", margin: "12px 0 20px" }}>
-        <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: 0 }}>
+        <h1 className="page-title" style={{ margin: 0 }}>
           {monthNames[month]} {year}
           <span style={{ display: "block", fontSize: "13px", fontWeight: 400, color: "var(--text-muted)", letterSpacing: 0, marginTop: "2px" }}>Plan de {student.name ?? student.email}</span>
         </h1>

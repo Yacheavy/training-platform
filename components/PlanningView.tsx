@@ -1,4 +1,5 @@
 import { TemplateEditor } from "@/components/TemplateEditor";
+import { cardStyle, btnStyle } from "@/components/ui-styles";
 import { GoalsCard } from "@/components/GoalsCard";
 import { SeasonCard } from "@/components/SeasonCard";
 import { PlanStyleCard } from "@/components/ThresholdsCard";
@@ -34,8 +35,6 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
   const proposedNext = !next && season.proposal.blocks.length ? season.proposal.blocks[0] : null;
   const activeObjective = current?.objective ?? null;
 
-  const cardStyle = { background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px -12px rgba(0,0,0,.5)", borderRadius: "var(--radius)", padding: "22px", marginBottom: "20px" };
-  const btnStyle = { background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", border: "none", borderRadius: "12px", padding: "10px 18px", boxShadow: "0 6px 16px -8px rgba(79,209,197,.6)", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
   
   const warnings: string[] = [];
   if (!user?.ftp) warnings.push(coach ? "Este alumno todavía no cargó su FTP: sin eso no se pueden generar sesiones (lo carga él en Ajustes)." : "Falta tu FTP: sin eso no se pueden generar sesiones.");
@@ -59,7 +58,7 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
 
   return (
     <div className="page-container-narrow" style={{ minHeight: "100vh", fontFamily: "var(--font-display)" }}>
-      <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", marginBottom: "18px" }}>{coach ? `Planificación de ${coach.studentName}` : "Planificación"}</h1>
+      <h1 className="page-title" style={{ marginBottom: "18px" }}>{coach ? `Planificación de ${coach.studentName}` : "Planificación"}</h1>
       {coach && (
         <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "-8px 0 18px", lineHeight: 1.6 }}>
           Estás editando el plan de tu alumno: sus objetivos, la temporada, su semana tipo y su estilo de plan. Las sesiones nuevas llevan la etiqueta «Armado por tu coach» y, cuando regenerás el plan o la temporada, le llega un email. Él también puede ajustar su plan; el último cambio manda.
@@ -106,7 +105,7 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
             </>
           ) : proposedNext ? (
             <>
-              <div style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.01em" }}>{OBJ_LABEL[proposedNext.objective]} <span style={{ fontSize: "11px", color: "#E8A33D", fontWeight: 400 }}>(propuesta)</span></div>
+              <div style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.01em" }}>{OBJ_LABEL[proposedNext.objective]} <span style={{ fontSize: "11px", color: "var(--amber)", fontWeight: 400 }}>(propuesta)</span></div>
               <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>desde {fmtKey(proposedNext.startKey)} · todavía no creada</div>
             </>
           ) : (
@@ -116,13 +115,13 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
       </div>
 
       {warnings.length > 0 && (
-        <div style={{ ...cardStyle, borderColor: "#6B5A2A", fontSize: "12.5px", color: "#E8A33D" }}>
+        <div style={{ ...cardStyle, borderColor: "#6B5A2A", fontSize: "12.5px", color: "var(--amber)" }}>
           {warnings.map((w) => (
             <div key={w}>{w}</div>
           ))}
           {!coach && user?.ftp && !user?.pvo2maxWatts && (
             <div style={{ marginTop: "6px" }}>
-              <Link href="/settings" style={{ color: "#4FD1C5", textDecoration: "none" }}>Cargarla en Ajustes → Cuenta</Link>
+              <Link href="/settings" style={{ color: "var(--teal)", textDecoration: "none" }}>Cargarla en Ajustes → Cuenta</Link>
             </div>
           )}
         </div>
@@ -157,7 +156,7 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
       {/* 3. Semana tipo */}
       {/* Plantilla semanal */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Días de entrenamiento</h2>
+        <h2 className="card-title">Días de entrenamiento</h2>
         <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>
           Elegí qué hacés cada día, cuáles son de calidad (intensidad) y cuánto duran. Se guarda todo junto con un solo botón; después regenerá el plan para aplicarlo.
         </p>
@@ -174,7 +173,7 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
 
       {/* Aplicar los cambios */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Plan de entrenamiento</h2>
+        <h2 className="card-title">Plan de entrenamiento</h2>
         <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>
           Si cambiaste los días de la plantilla, el FTP o la potencia en VO2max, regenerá las sesiones planificadas para que las usen. Se reemplazan todas las sesiones
           desde hoy, también las aprobadas o enviadas (las enviadas se actualizan solas en Intervals). No se tocan las del pasado, las completadas ni las editadas a mano. Si cambiás la potencia, guardá primero y recién después regenerá.
@@ -183,10 +182,10 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
           <SubmitButton style={btnStyle}>Regenerar plan desde hoy</SubmitButton>
         </ActionForm>
         {sp.regenerated != null && (
-          <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>
+          <div style={{ fontSize: "12px", color: "var(--teal)", marginTop: "10px" }}>
             Listo: {sp.regenerated} sesiones nuevas.{Number(sp.resent) > 0 ? ` ${sp.resent} sesión(es) ya enviadas se actualizaron en Intervals.` : ""}{Number(sp.failed) > 0 ? ` ${sp.failed} no se pudieron reenviar a Intervals: abrilas y tocá «Enviar a Intervals».` : ""}{Number(sp.kept) > 0 ? ` ${sp.kept} sesión(es) editadas a mano se conservaron (usá «Regenerar esta sesión» si querés rehacerlas).` : ""}{sp.warnings ? ` ${sp.warnings} advertencia(s) del validador — avisame.` : ""}
-            {Number(sp.skipped) > 0 && <span style={{ color: "#E8A33D" }}> {sp.skipped} día(s) no se pudieron guardar: volvé a regenerar.</span>}
-            {sp.blockerr && <span style={{ color: "#E8A33D" }}> No se pudo regenerar: {sp.blockerr}. Volvé a intentar.</span>}
+            {Number(sp.skipped) > 0 && <span style={{ color: "var(--amber)" }}> {sp.skipped} día(s) no se pudieron guardar: volvé a regenerar.</span>}
+            {sp.blockerr && <span style={{ color: "var(--amber)" }}> No se pudo regenerar: {sp.blockerr}. Volvé a intentar.</span>}
           </div>
         )}
       </div>

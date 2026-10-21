@@ -20,6 +20,11 @@
   --font-mono: var(--font-geist-sans), system-ui, sans-serif; /* números en la misma familia, tabulares */
   --grad-card: linear-gradient(160deg, #1B2430 0%, #151C26 100%);
   --radius: 18px;
+  /* Escala de radios: campos y botones chicos / controles / tarjetas */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  color-scheme: dark; /* selectores de fecha, listas desplegables y barras de scroll nativas en oscuro */
 }
 
 * {
@@ -804,3 +809,15 @@ details.checkin > summary::-webkit-details-marker { display: none; }
 .sk-card { height: 190px; border-radius: 20px; margin-bottom: 16px; }
 .sk-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px; }
 .sk-tile { height: 84px; border-radius: 14px; }
+
+/* ───────── Uniformidad ───────── */
+/* Título de página: mismo tamaño en todas las pantallas */
+.page-title { font-size: 24px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; margin: 0; }
+@media (max-width: 768px) { .page-title { font-size: 22px; } }
+/* Foco visible y consistente en todos los campos (el borde pasa a turquesa) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):focus-visible, select:focus-visible, textarea:focus-visible {
+  border-color: var(--teal) !important; box-shadow: 0 0 0 3px rgba(79, 209, 197, 0.16); outline: none;
+}
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+input:disabled, select:disabled, textarea:disabled { opacity: .5; cursor: not-allowed; }
+.card-title { font-size: 15px; font-weight: 600; letter-spacing: -0.005em; margin: 0 0 6px; }

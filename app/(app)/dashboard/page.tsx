@@ -251,7 +251,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       )}
       <div style={{ marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 600, letterSpacing: "-0.01em", margin: 0 }}>Hola, {session.user.name?.split(" ")[0]}</h1>
+          <h1 className="page-title" style={{ margin: 0 }}>Hola, {session.user.name?.split(" ")[0]}</h1>
           <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "6px" }}>
             {data.hrvDate ? `Último dato de recuperación: ${ageLabel(data.hrvDate).replace(/[()]/g, "")}` : "Todavía no hay datos de recuperación"}
           </div>
@@ -335,7 +335,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         )}
         {adjustment && todayWorkout && (
-          <div className="dash-card" style={{ marginBottom: "14px", borderColor: availability.status === "RED" ? "var(--red, #E5636A)" : "var(--amber)" }}>
+          <div className="dash-card" style={{ marginBottom: "14px", borderColor: availability.status === "RED" ? "var(--red, var(--red))" : "var(--amber)" }}>
             <h3 className="dash-card-title">Ajuste sugerido por tu estado de hoy ({availability.status === "RED" ? "semáforo rojo" : "semáforo ámbar"})</h3>
             <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, margin: "8px 0 12px" }}>
               {availability.reasons.join(" · ")}

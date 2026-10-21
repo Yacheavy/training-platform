@@ -3,9 +3,9 @@ import type { SignalChip } from "@/lib/training-engine/availability-score";
 type Status = "GREEN" | "AMBER" | "RED";
 
 const META: Record<Status, { color: string; soft: string; label: string; advice: string }> = {
-  GREEN: { color: "#4FD1C5", soft: "rgba(79,209,197,.14)", label: "Disponibilidad alta", advice: "Podés hacer la sesión como está planificada." },
-  AMBER: { color: "#E8A33D", soft: "rgba(232,163,61,.14)", label: "Disponibilidad moderada", advice: "Hacé la sesión con cuidado; si el cuerpo no responde, bajá la intensidad." },
-  RED: { color: "#E5636A", soft: "rgba(229,99,106,.14)", label: "Disponibilidad baja", advice: "Priorizá recuperar: rodaje suave o descanso." },
+  GREEN: { color: "var(--teal)", soft: "rgba(79,209,197,.14)", label: "Disponibilidad alta", advice: "Podés hacer la sesión como está planificada." },
+  AMBER: { color: "var(--amber)", soft: "rgba(232,163,61,.14)", label: "Disponibilidad moderada", advice: "Hacé la sesión con cuidado; si el cuerpo no responde, bajá la intensidad." },
+  RED: { color: "var(--red)", soft: "rgba(229,99,106,.14)", label: "Disponibilidad baja", advice: "Priorizá recuperar: rodaje suave o descanso." },
 };
 
 // Arco de 270° (de 135° a 405°), abierto abajo.

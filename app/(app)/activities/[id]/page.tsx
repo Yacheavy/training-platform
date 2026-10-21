@@ -83,7 +83,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "capitalize" }}>{dateLabel} · {timeLabel}</div>
-          <h1 style={{ fontSize: "21px", fontWeight: 600, margin: "3px 0" }}>{a.name ?? a.type}</h1>
+          <h1 className="page-title" style={{ margin: "3px 0" }}>{a.name ?? a.type}</h1>
           {a.type === "Ride" && (
             <span style={{ fontSize: "11px", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px" }}>
               {STIMULUS_LABELS[stimulus] ?? stimulus}

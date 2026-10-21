@@ -146,7 +146,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       <div style={{ margin: "14px 0 20px" }}>
         {readOnly && student && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "4px" }}>Sesión de {student.name ?? student.email} · solo lectura</div>}
         <div style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "capitalize" }}>{dateLabel}</div>
-        <h1 style={{ fontSize: "22px", fontWeight: 600, margin: "4px 0" }}>{TYPE_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}</h1>
+        <h1 className="page-title" style={{ margin: "4px 0" }}>{TYPE_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}</h1>
         <span style={{ fontSize: "11px", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px" }}>
           {STATUS_LABELS[workout.status] ?? workout.status}
         </span>

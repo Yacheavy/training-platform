@@ -16,7 +16,7 @@ export async function AiUsageCard() {
   const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "16px 18px" } as const;
   return (
     <div style={{ ...card, marginBottom: "20px" }}>
-      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Consumo de la IA</h2>
+      <h2 className="card-title">Consumo de la IA</h2>
       <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "0 0 14px", lineHeight: 1.5 }}>
         Tokens y dinero estimado del chat y los análisis, de vos y de todos tus alumnos.
       </p>

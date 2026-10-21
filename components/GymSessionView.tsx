@@ -6,7 +6,7 @@ const CAT: Record<ExCategory, { label: string; color: string }> = {
   fuerza: { label: "Fuerza", color: "#B79BEF" },
   potencia: { label: "Potencia", color: "#F0A35E" },
   core: { label: "Core", color: "#5BDDD1" },
-  propiocepcion: { label: "Propiocepción", color: "#6FA8DC" },
+  propiocepcion: { label: "Propiocepción", color: "var(--blue)" },
 };
 
 const card = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "14px", padding: "20px", marginBottom: "16px" } as const;

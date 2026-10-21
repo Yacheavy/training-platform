@@ -61,7 +61,7 @@ export function Toaster() {
           key={t.id}
           className="toast-in"
           style={{
-            background: "var(--surface-2, #242F3B)",
+            background: "var(--surface-2, var(--surface-3))",
             border: `1px solid ${COLORS[t.kind]}`,
             color: "var(--text)",
             borderRadius: "10px",

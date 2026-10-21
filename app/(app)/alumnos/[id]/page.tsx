@@ -70,11 +70,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
   const l28 = load.slice(-28);
   const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string; sub?: string }[] = [
-    { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", spark: l28.map((d) => d.ctl), color: "#6FA8DC" },
+    { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", spark: l28.map((d) => d.ctl), color: "var(--blue)" },
     { label: "Fatiga (ATL)", value: data.atl?.toFixed(1) ?? "—", spark: l28.map((d) => d.atl), color: "#B58CE0" },
     { label: "Forma (TSB)", value: data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—", spark: l28.map((d) => d.tsb) },
     { label: "HRV", value: data.hrvToday?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.hrv) },
-    { label: "FC reposo", value: data.restingHr?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "#E8A33D" },
+    { label: "FC reposo", value: data.restingHr?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "var(--amber)" },
     { label: "Sueño", value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—", sub: data.sleepTrend ?? undefined },
   ];
   const row = { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" as const, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.05)", fontSize: "13px" };
@@ -88,7 +88,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         <Link href={`/alumnos/${id}/planificacion`} style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", borderRadius: "12px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>Planificación del alumno →</Link>
         </div>
       </div>
-      <h1 style={{ fontSize: "24px", fontWeight: 600, letterSpacing: "-0.02em", margin: "12px 0 4px" }}>{student.name ?? student.email}</h1>
+      <h1 className="page-title" style={{ margin: "12px 0 4px" }}>{student.name ?? student.email}</h1>
       <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px" }}>
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}
       </div>

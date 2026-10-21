@@ -2,11 +2,8 @@ import { ActionForm } from "./ActionForm";
 import { SubmitButton } from "./SubmitButton";
 import { saveActivityNutrition, applyPlannedNutrition } from "@/lib/nutrition-actions";
 
-const inputStyle = {
-  width: "100%", background: "var(--surface-2, transparent)", border: "1px solid var(--border)", borderRadius: "8px",
-  padding: "8px 10px", color: "inherit", fontFamily: "var(--font-mono)", fontSize: "14px",
-} as const;
-const labelStyle = { fontSize: "11px", color: "var(--text-dim)", display: "block", marginBottom: "4px" } as const;
+import { inputStyle as baseInput, labelStyle } from "./ui-styles";
+const inputStyle = { ...baseInput, fontFamily: "var(--font-mono)" } as const;
 
 export interface NutritionFormValues {
   carbsG: number | null;

@@ -47,7 +47,7 @@ export function RecoveryRulesCard({
   const t = thresholds ?? {};
   return (
     <div style={cardStyle}>
-      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Alertas de recuperación</h2>
+      <h2 className="card-title">Alertas de recuperación</h2>
       <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "0 0 20px" }}>
         Con estos valores la app decide cuándo recomendar descanso. Los valores sugeridos funcionan bien para empezar.
       </p>
@@ -103,7 +103,7 @@ export function PlanStyleCard({
   const t = thresholds ?? {};
   return (
     <div style={cardStyle}>
-      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Estilo del plan</h2>
+      <h2 className="card-title">Estilo del plan</h2>
       <p style={{ fontSize: "12.5px", color: "var(--text-muted)", margin: "0 0 20px" }}>
         Cómo se arman las semanas: cuándo se testea el FTP, cada cuánto se descarga, qué VO2max se hace y cuánta variedad hay. Después de guardar, regenerá el plan para aplicarlo.
       </p>

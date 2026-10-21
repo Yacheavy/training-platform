@@ -1,4 +1,5 @@
 import { CREATOR, APP_NAME, CONSENT_VERSION } from "@/lib/brand";
+import { cardStyle, inputStyle, labelStyle, btnStyle } from "@/components/ui-styles";
 import { setEmailAnalysis, sendTestEmail } from "@/lib/email-actions";
 import { StudentsList } from "@/components/StudentsList";
 import { AiUsageCard } from "@/components/AiUsageCard";
@@ -25,23 +26,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const access = await getAccessData(session.user.id);
   const tab = sp.tab === "alumnos" && access.isCoach ? "alumnos" : "cuenta";
 
-  const cardStyle = { background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.06)", boxShadow: "0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px -12px rgba(0,0,0,.5)", borderRadius: "var(--radius)", padding: "22px", marginBottom: "20px" };
-  const labelStyle = { fontSize: "11px", color: "#8A97A6", marginBottom: "6px", display: "block" };
-  const inputStyle = { background: "#242F3B", border: "1px solid #2A3441", borderRadius: "7px", color: "#E7ECF2", padding: "7px 9px", fontSize: "13px", width: "100%" };
-  const btnStyle = { background: "#4FD1C5", color: "#0A1310", border: "none", borderRadius: "8px", padding: "9px 16px", fontSize: "13px", fontWeight: 600, cursor: "pointer" };
   const tabStyle = (active: boolean) => ({
     padding: "7px 16px",
     borderRadius: "999px",
     fontSize: "13px",
     textDecoration: "none",
-    border: "1px solid #2A3441",
+    border: "1px solid var(--border)",
     background: active ? "rgba(79,209,197,.12)" : "transparent",
-    color: active ? "#4FD1C5" : "#8A97A6",
+    color: active ? "var(--teal)" : "var(--text-muted)",
   });
 
   return (
     <div className="page-container-narrow" style={{ minHeight: "100vh", fontFamily: "var(--font-display)" }}>
-      <h1 style={{ fontSize: "22px", fontWeight: 600, marginBottom: "16px" }}>Ajustes</h1>
+      <h1 className="page-title" style={{ marginBottom: "16px" }}>Ajustes</h1>
       {access.isCoach && (
         <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
           <Link href="/settings" style={tabStyle(tab === "cuenta")}>Cuenta</Link>
@@ -52,38 +49,38 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "alumnos" && access.isCoach && (
         <>
         <div style={cardStyle}>
-          <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Alumnos</h2>
-          <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+          <h2 className="card-title">Alumnos</h2>
+          <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>
             Al invitar, le llega un mail con los pasos para entrar, instalar la app y conectar Intervals. Solo pueden entrar las cuentas de Google cuyo email figure acá. Cada alumno ve únicamente sus propios datos y conecta su propio Intervals.
           </p>
           <ActionForm action={inviteAthlete} success={null} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
             <input name="email" type="email" placeholder="email@gmail.com" style={{ ...inputStyle, flex: "1 1 220px", width: "auto" }} required />
             <SubmitButton style={btnStyle}>Invitar</SubmitButton>
           </ActionForm>
-          {sp.invite === "sent" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada y mail enviado, con los pasos para entrar e instalar la app.</div>}
-          {sp.invite === "resent" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación reenviada.</div>}
-          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginBottom: "10px" }}>Invitación guardada (el envío de mails no está configurado). Avisale que entre con esa cuenta de Google.</div>}
-          {sp.invite === "mailfail" && <div style={{ fontSize: "12px", color: "#E8A33D", marginBottom: "10px" }}>La invitación está guardada pero no se pudo enviar el mail. Probá «Reenviar» en un rato o avisale vos.</div>}
-          {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginBottom: "10px" }}>Ese email no es válido.</div>}
+          {sp.invite === "sent" && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "10px" }}>Invitación guardada y mail enviado, con los pasos para entrar e instalar la app.</div>}
+          {sp.invite === "resent" && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "10px" }}>Invitación reenviada.</div>}
+          {sp.invite === "ok" && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "10px" }}>Invitación guardada (el envío de mails no está configurado). Avisale que entre con esa cuenta de Google.</div>}
+          {sp.invite === "mailfail" && <div style={{ fontSize: "12px", color: "var(--amber)", marginBottom: "10px" }}>La invitación está guardada pero no se pudo enviar el mail. Probá «Reenviar» en un rato o avisale vos.</div>}
+          {sp.invite === "invalid" && <div style={{ fontSize: "12px", color: "var(--red)", marginBottom: "10px" }}>Ese email no es válido.</div>}
           {access.invites.map((i) => (
-            <div key={i.email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid #2A3441", fontSize: "13px" }}>
+            <div key={i.email} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", padding: "8px 0", borderTop: "1px solid var(--border)", fontSize: "13px" }}>
               <div>
                 {i.email}
-                <span style={{ color: "#5A6673", fontSize: "11px", marginLeft: "8px" }}>{i.joined ? `ingresó${i.name ? ` · ${i.name}` : ""}` : "pendiente de ingresar"}</span>
+                <span style={{ color: "var(--text-dim)", fontSize: "11px", marginLeft: "8px" }}>{i.joined ? `ingresó${i.name ? ` · ${i.name}` : ""}` : "pendiente de ingresar"}</span>
               </div>
               {i.isCoach ? (
-                <span style={{ color: "#5A6673", fontSize: "11px" }}>Entrenador</span>
+                <span style={{ color: "var(--text-dim)", fontSize: "11px" }}>Entrenador</span>
               ) : (
                 <div style={{ display: "flex", gap: "6px" }}>
                   {!i.joined && (
                     <ActionForm action={resendInvite} success={null}>
                       <input type="hidden" name="email" value={i.email} />
-                      <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#4FD1C5", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Reenviar</SubmitButton>
+                      <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--teal)", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Reenviar</SubmitButton>
                     </ActionForm>
                   )}
                   <ActionForm action={removeInvite} success="Invitación eliminada" confirm="¿Quitar esta invitación? Si el alumno ya ingresó, se le cierra la sesión (sus datos se conservan).">
                     <input type="hidden" name="email" value={i.email} />
-                    <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "#E5636A", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
+                    <SubmitButton style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--red)", borderRadius: "6px", padding: "3px 9px", fontSize: "11px", cursor: "pointer" }}>Quitar</SubmitButton>
                   </ActionForm>
                 </div>
               )}
@@ -99,18 +96,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <>
       {/* Conexión con Intervals (cada persona usa su propia cuenta) */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Conexión con Intervals.icu</h2>
-        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "14px" }}>
+        <h2 className="card-title">Conexión con Intervals.icu</h2>
+        <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>
           En Intervals: Settings → Developer Settings → API Key. Pegá tu Athlete ID (por ejemplo i12345) y la clave. Se guardan cifradas y solo se usan para traer tus datos y enviar tus sesiones.
         </p>
         {access.intervals.connected || access.intervals.usingLegacyEnv ? (
           <div style={{ fontSize: "12.5px", marginBottom: "12px" }}>
-            <span style={{ color: "#4FD1C5" }}>✓ Conectado</span>
+            <span style={{ color: "var(--teal)" }}>✓ Conectado</span>
             {access.intervals.athleteId ? ` (${access.intervals.athleteId})` : " (configuración del servidor)"}
             {access.intervals.lastSyncAt ? ` · última sincronización: ${new Date(access.intervals.lastSyncAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}
           </div>
         ) : (
-          <div style={{ fontSize: "12.5px", color: "#E8A33D", marginBottom: "12px" }}>Todavía no conectaste Intervals: no vas a ver tus actividades ni tu HRV.</div>
+          <div style={{ fontSize: "12.5px", color: "var(--amber)", marginBottom: "12px" }}>Todavía no conectaste Intervals: no vas a ver tus actividades ni tu HRV.</div>
         )}
         <ActionForm action={connectIntervals} success={null} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
           <div>
@@ -123,19 +120,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
           <SubmitButton style={{ ...btnStyle, gridColumn: "1 / -1" }}>{access.intervals.connected ? "Reemplazar clave" : "Conectar"}</SubmitButton>
         </ActionForm>
-        {sp.intervals === "ok" && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Conectado. Ya trajimos el último año; si querés más historial, usá el botón de abajo.</div>}
-        {sp.intervals === "invalid" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Revisá el Athlete ID (ej. i12345) y la clave.</div>}
-        {sp.intervals === "rejected" && <div style={{ fontSize: "12px", color: "#E5636A", marginTop: "10px" }}>Intervals rechazó esas credenciales. Verificá que sean las tuyas.</div>}
-        {sp.history != null && <div style={{ fontSize: "12px", color: "#4FD1C5", marginTop: "10px" }}>Historial sincronizado: {sp.history} actividades.{Number(sp.historyErrors) > 0 ? ` (${sp.historyErrors} errores: revisá la conexión con Intervals y repetí.)` : ""}</div>}
+        {sp.intervals === "ok" && <div style={{ fontSize: "12px", color: "var(--teal)", marginTop: "10px" }}>Conectado. Ya trajimos el último año; si querés más historial, usá el botón de abajo.</div>}
+        {sp.intervals === "invalid" && <div style={{ fontSize: "12px", color: "var(--red)", marginTop: "10px" }}>Revisá el Athlete ID (ej. i12345) y la clave.</div>}
+        {sp.intervals === "rejected" && <div style={{ fontSize: "12px", color: "var(--red)", marginTop: "10px" }}>Intervals rechazó esas credenciales. Verificá que sean las tuyas.</div>}
+        {sp.history != null && <div style={{ fontSize: "12px", color: "var(--teal)", marginTop: "10px" }}>Historial sincronizado: {sp.history} actividades.{Number(sp.historyErrors) > 0 ? ` (${sp.historyErrors} errores: revisá la conexión con Intervals y repetí.)` : ""}</div>}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
           {(access.intervals.connected || access.intervals.usingLegacyEnv) && (
             <ActionForm action={syncFullHistory} success={null}>
-              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</SubmitButton>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", boxShadow: "none", color: "var(--text-muted)", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Traer historial completo (hasta 5 años)</SubmitButton>
             </ActionForm>
           )}
           {access.intervals.connected && (
             <ActionForm action={disconnectIntervals} success="Intervals desconectado" confirm="¿Desconectar Intervals? La app deja de leer tus datos y de enviar sesiones hasta que lo vuelvas a conectar.">
-              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#E5636A", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Desconectar</SubmitButton>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", boxShadow: "none", color: "var(--red)", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>Desconectar</SubmitButton>
             </ActionForm>
           )}
         </div>
@@ -155,8 +152,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ];
         return (
           <div style={cardStyle}>
-            <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Rendimiento</h2>
-            <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "16px" }}>
+            <h2 className="card-title">Rendimiento</h2>
+            <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "16px" }}>
               Editá tus valores a mano o copiá los de Intervals. El HIIT usa el 100% de la potencia en VO2max y la recuperación el 50%; sin ese dato usa un % del FTP.
               Cambiar el FTP no regenera un plan ya creado.
             </p>
@@ -166,7 +163,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <div key={f.name}>
                   <label style={labelStyle}>{f.label}</label>
                   <input name={f.name} type="number" defaultValue={f.value ?? ""} style={inputStyle} />
-                  <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "4px" }}>
+                  <div style={{ fontSize: "10px", color: "var(--text-dim)", marginTop: "4px" }}>
                     {f.name === "pvo2maxWatts" && user?.pvo2maxUpdatedAt
                       ? `${user.pvo2maxSource === "intervals-5min" ? "Desde Intervals" : "Manual"} · ${new Date(user.pvo2maxUpdatedAt).toLocaleDateString("es-AR")}`
                       : f.name === "ftp" && user?.ftpUpdatedAt
@@ -183,7 +180,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 f.remote != null && f.remote !== f.value ? (
                   <ActionForm key={f.name} action={applyIntervalsValue} success="Valor aplicado">
                     <input type="hidden" name="field" value={f.name} />
-                    <SubmitButton style={{ ...btnStyle, background: "transparent", color: f.value != null && f.remote < f.value ? "#E8A33D" : "#4FD1C5", border: f.value != null && f.remote < f.value ? "1px solid #E8A33D" : "1px solid #2A3441", fontSize: "12px", padding: "6px 10px" }}>
+                    <SubmitButton style={{ ...btnStyle, background: "transparent", boxShadow: "none", color: f.value != null && f.remote < f.value ? "var(--amber)" : "var(--teal)", border: f.value != null && f.remote < f.value ? "1px solid var(--amber)" : "1px solid var(--border)", fontSize: "12px", padding: "6px 10px" }}>
                       {f.value != null && f.remote < f.value ? `⚠ Intervals es MENOR que tu valor (${f.value} ${f.unit}): aplicarlo lo baja · ` : ""}Intervals: {f.remote} {f.unit}{f.remoteLabel ? ` (${f.remoteLabel})` : ""} → usar en {f.label.split(" (")[0]}
                     </SubmitButton>
                   </ActionForm>
@@ -191,29 +188,29 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               )}
             </div>
 
-            <div style={{ fontSize: "11px", color: "#8A97A6", marginBottom: "8px" }}>Curva de potencia — mejores esfuerzos, últimos 90 días</div>
+            <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "8px" }}>Curva de potencia — mejores esfuerzos, últimos 90 días</div>
             {curve?.points?.length ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                 {curve.points.map((p) => (
-                  <div key={p.secs} style={{ background: "#242F3B", borderRadius: "8px", padding: "8px 12px", minWidth: "78px" }}>
-                    <div style={{ fontSize: "10px", color: "#8A97A6" }}>{DURATION_LABEL[p.secs] ?? `${p.secs}s`}</div>
+                  <div key={p.secs} style={{ background: "var(--surface-3)", borderRadius: "8px", padding: "8px 12px", minWidth: "78px" }}>
+                    <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{DURATION_LABEL[p.secs] ?? `${p.secs}s`}</div>
                     <div style={{ fontSize: "16px", fontWeight: 600 }}>{p.watts} W</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: "12px", color: "#8A97A6" }}>
+              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
                 {curve?.error ? `${curve.error}. Respuesta recibida: ${curve.sample}` : "Todavía no se trajo la curva. Se actualiza sola con la sincronización, o tocá el botón."}
               </div>
             )}
             {ss?.error && (
-              <div style={{ fontSize: "11px", color: "#8A97A6", marginTop: "10px" }}>Configuración de deporte: {ss.error}. Respuesta recibida: {ss.sample}</div>
+              <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "10px" }}>Configuración de deporte: {ss.error}. Respuesta recibida: {ss.sample}</div>
             )}
-            <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "10px" }}>
+            <div style={{ fontSize: "10px", color: "var(--text-dim)", marginTop: "10px" }}>
               {user?.powerCurveSyncedAt ? `Última lectura de Intervals: ${new Date(user.powerCurveSyncedAt).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : "Sin lectura de Intervals todavía"}
             </div>
             <ActionForm action={refreshMetricsNow} success="Datos de Intervals actualizados" style={{ marginTop: "8px" }}>
-              <SubmitButton style={{ ...btnStyle, background: "transparent", color: "#8A97A6", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>
+              <SubmitButton style={{ ...btnStyle, background: "transparent", boxShadow: "none", color: "var(--text-muted)", border: "1px solid var(--border-strong)", fontSize: "12px", padding: "6px 10px" }}>
                 Leer de Intervals ahora
               </SubmitButton>
             </ActionForm>
@@ -223,8 +220,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {/* Perfil del atleta */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "16px" }}>Tu perfil</h2>
-        <p style={{ fontSize: "11.5px", color: "#5A6673", marginBottom: "16px" }}>
+        <h2 className="card-title" style={{ marginBottom: "16px" }}>Tu perfil</h2>
+        <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "16px" }}>
           Esto le da contexto real al chat sobre quién sos — actualizalo cuando sientas que cambió algo, no hace falta que sea diario.
         </p>
         <ActionForm action={saveProfile} success="Perfil guardado" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -246,7 +243,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               style={{ ...inputStyle, minHeight: "70px", resize: "vertical" as const }}
             />
             {user?.currentStateUpdatedAt && (
-              <div style={{ fontSize: "10px", color: "#5A6673", marginTop: "4px" }}>
+              <div style={{ fontSize: "10px", color: "var(--text-dim)", marginTop: "4px" }}>
                 Última actualización: {new Date(user.currentStateUpdatedAt).toLocaleDateString("es-AR")}
               </div>
             )}
@@ -274,25 +271,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {tab === "cuenta" && (
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>{access.isCoach ? "Mis mails" : "Mails"}</h2>
+        <h2 className="card-title">{access.isCoach ? "Mis mails" : "Mails"}</h2>
         <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.6, margin: "0 0 12px" }}>
           Cuando terminás una salida de bici de una hora o más y cargás (o omitís) la nutrición, te mandamos por mail el análisis o el resumen de la sesión, el que elijas abajo. Llega a {user ? "tu casilla de Google" : "tu email"}.
         </p>
         <ActionForm action={setEmailAnalysis} success="Preferencia guardada" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
-            <input type="checkbox" name="enabled" defaultChecked={user?.emailAnalysis ?? true} style={{ width: "17px", height: "17px", accentColor: "#4FD1C5" }} />
+            <input type="checkbox" name="enabled" defaultChecked={user?.emailAnalysis ?? true} style={{ width: "17px", height: "17px", accentColor: "var(--teal)" }} />
             Recibir un mail de cada salida
           </label>
           <div role="radiogroup" aria-label="Tipo de mail" style={{ display: "flex", flexDirection: "column", gap: "8px", paddingLeft: "2px" }}>
             <label style={{ display: "flex", alignItems: "flex-start", gap: "9px", fontSize: "13px", cursor: "pointer" }}>
-              <input type="radio" name="kind" value="AI" defaultChecked={(user?.emailKind ?? "AI") !== "SUMMARY"} style={{ marginTop: "3px", accentColor: "#4FD1C5" }} />
+              <input type="radio" name="kind" value="AI" defaultChecked={(user?.emailKind ?? "AI") !== "SUMMARY"} style={{ marginTop: "3px", accentColor: "var(--teal)" }} />
               <span>
                 <b style={{ fontWeight: 600 }}>Análisis con IA</b>
                 <span style={{ display: "block", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.5 }}>Una lectura de la salida en tres partes: lo que salió bien, lo que conviene mirar y lo que sigue.</span>
               </span>
             </label>
             <label style={{ display: "flex", alignItems: "flex-start", gap: "9px", fontSize: "13px", cursor: "pointer" }}>
-              <input type="radio" name="kind" value="SUMMARY" defaultChecked={user?.emailKind === "SUMMARY"} style={{ marginTop: "3px", accentColor: "#4FD1C5" }} />
+              <input type="radio" name="kind" value="SUMMARY" defaultChecked={user?.emailKind === "SUMMARY"} style={{ marginTop: "3px", accentColor: "var(--teal)" }} />
               <span>
                 <b style={{ fontWeight: 600 }}>Solo resumen de la actividad</b>
                 <span style={{ display: "block", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.5 }}>Los datos de la salida, el plan contra lo real, la nutrición y el clima. Sin IA.</span>
@@ -308,7 +305,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       )}
 
       <div style={cardStyle}>
-        <h2 style={{ fontSize: "14px", marginBottom: "6px" }}>Acerca de {APP_NAME}</h2>
+        <h2 className="card-title">Acerca de {APP_NAME}</h2>
         <p style={{ fontSize: "12.5px", color: "var(--text-muted)", lineHeight: 1.6, margin: "0 0 10px" }}>
           Creada por <b style={{ color: "var(--text)" }}>{CREATOR.name}</b>, {CREATOR.role.toLowerCase()}. Si algo falla o tenés una duda, escribime.
         </p>

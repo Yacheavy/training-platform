@@ -3,16 +3,7 @@
 import { ActionForm } from "./ActionForm";
 import { SubmitButton } from "./SubmitButton";
 
-const input = {
-  width: "100%",
-  background: "var(--surface-3)",
-  border: "1px solid var(--border)",
-  borderRadius: "12px",
-  padding: "12px 14px",
-  color: "var(--text)",
-  fontSize: "15px",
-  outline: "none",
-} as const;
+import { inputStyle as input } from "./ui-styles";
 
 /** Bienvenida: pide conectar Intervals la primera vez (el alumno puede posponerlo). */
 export function ConnectIntervalsModal({

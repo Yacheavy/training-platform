@@ -51,7 +51,7 @@ export async function StudentsList({ coachId }: { coachId: string }) {
 
   return (
     <div style={{ marginBottom: "20px" }}>
-      <h2 style={{ fontSize: "16px", fontWeight: 600, margin: "0 0 4px" }}>Cómo está cada alumno</h2>
+      <h2 className="card-title">Cómo está cada alumno</h2>
       <p style={{ fontSize: "13px", color: "var(--text-muted)", margin: "0 0 18px" }}>
         Cómo está cada alumno hoy, ordenados por quién necesita más atención.
       </p>
