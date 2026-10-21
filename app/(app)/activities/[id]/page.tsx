@@ -59,6 +59,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     ["Trabajo", a.kilojoules ? `${Math.round(a.kilojoules)} kJ` : null],
     ["Desnivel", a.elevationGainM ? `${Math.round(a.elevationGainM)} m` : null],
     ["Factor de eficiencia", a.efficiencyFactor ? a.efficiencyFactor.toFixed(2) : null],
+    ["Balance izq./der.", a.powerBalanceLeft != null && a.powerBalanceLeft > 0 && a.powerBalanceLeft < 100 ? `${a.powerBalanceLeft.toFixed(1).replace(".", ",")} / ${(100 - a.powerBalanceLeft).toFixed(1).replace(".", ",")} %` : null],
     ["Desacople Pw:HR", a.decouplingPct != null ? `${a.decouplingPct.toFixed(1)} %` : null],
   ];
   const shown = metrics.filter(([, v]) => v != null) as [string, string][];

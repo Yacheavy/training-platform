@@ -53,6 +53,7 @@ export async function sendActivityAnalysis(activityId: string): Promise<Analysis
       .catch((e) => console.error("No se pudo registrar el consumo del análisis", e));
     const clean = text.replace(/```json_blocks[\s\S]*?```/g, "").trim();
     if (!clean) throw new Error("El análisis salió vacío");
+    await prisma.activity.update({ where: { id: a.id }, data: { analysisText: clean } }).catch((e) => console.error("No se pudo guardar el texto del análisis", e));
     const when = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
     const day = a.date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", timeZone: "UTC" });
     const title = `Análisis de tu salida del ${day}: ${a.name ?? "salida de bici"}`;

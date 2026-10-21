@@ -135,6 +135,8 @@ model Activity {
   nutritionFollowedPlan Boolean?  // true si se cargó con el botón 'consumí lo planificado'
   nutritionLoggedAt     DateTime?
   analysisEmailSentAt   DateTime?
+  /// Texto del último análisis con IA enviado por mail (para poder revisarlo)
+  analysisText          String?
   intervalsCarbsG       Float?    // carbs_ingested de Intervals (si lo trae); el manual tiene prioridad
 
   createdAt         DateTime @default(now())

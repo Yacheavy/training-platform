@@ -2,7 +2,7 @@
 // Ejecutar: npx tsx lib/activity-series-check.ts
 import { gzipSync } from "node:zlib";
 import { FitEncoder, FitBaseType } from "fit-file-parser/encoder";
-import { parseFitSeries, bucketSamples, stepFor } from "./activity-series";
+import { parseFitSeries, bucketSamples, stepFor, leftBalance } from "./activity-series";
 
 const start = new Date("2026-10-08T12:00:00Z");
 const enc = new FitEncoder();
@@ -17,6 +17,11 @@ for (let s = 0; s < DUR; s++) {
     { number: 4, size: 1, baseType: FitBaseType.Uint8, value: hard ? 95 : 85 },
     { number: 6, size: 2, baseType: FitBaseType.Uint16, value: 8333 },
     { number: 2, size: 2, baseType: FitBaseType.Uint16, value: (100 + 500) * 5 },
+    { number: 30, size: 1, baseType: FitBaseType.Uint8, value: 0x80 | 48 }, // 48 % derecha → 52 % izquierda
+    { number: 43, size: 1, baseType: FitBaseType.Uint8, value: hard ? 150 : 140 }, // TE izq. (escala 2): 75 % / 70 %
+    { number: 44, size: 1, baseType: FitBaseType.Uint8, value: 130 }, // TE der. 65 %
+    { number: 45, size: 1, baseType: FitBaseType.Uint8, value: 44 }, // PS izq. 22 %
+    { number: 46, size: 1, baseType: FitBaseType.Uint8, value: 40 }, // PS der. 20 %
   ]);
 }
 const bytes = enc.close();
@@ -34,8 +39,17 @@ const bytes = enc.close();
     check(s.hr[10] === 125 && s.hr[150] === 170, `${name}: FC ${s.hr[10]}/${s.hr[150]}`);
     check(s.cadence[10] === 85 && s.cadence[150] === 95, `${name}: cadencia ${s.cadence[10]}/${s.cadence[150]}`);
     check(s.speed[10] != null && Math.abs((s.speed[10] as number) - 30) < 0.3, `${name}: velocidad ${s.speed[10]} (esperada ~30 km/h)`);
+    const d = s.dynamics;
+    check(!!d, `${name}: sin dinámica`);
+    if (d) {
+      check(d.balanceLeft != null && Math.abs(d.balanceLeft - 52) < 0.2, `${name}: balance ${d.balanceLeft}`);
+      check(d.teRight != null && Math.abs(d.teRight - 65) < 0.2, `${name}: TE der. ${d.teRight}`);
+      check(d.psLeft != null && Math.abs(d.psLeft - 22) < 0.2, `${name}: PS izq. ${d.psLeft}`);
+      check(d.byCadence.length === 2, `${name}: rangos de cadencia ${d.byCadence.map((x) => x.label).join("|")}`);
+    }
     check(s.altitude[10] != null && Math.abs((s.altitude[10] as number) - 100) < 1, `${name}: altitud ${s.altitude[10]} (esperada ~100 m)`);
   }
+  check(leftBalance(0x80 | 48) === 52 && leftBalance({ value: 47, right: false }) === 47 && leftBalance({ value: 47, right: true }) === 53 && leftBalance(0xff) === null && leftBalance(null) === null, "leftBalance");
   // Salida larga: el paso crece para no pasar de ~2200 puntos
   check(stepFor(3 * 3600) === 5 && stepFor(6 * 3600) === 10 && stepFor(12 * 3600) === 20, `paso para salidas largas: ${stepFor(3 * 3600)}/${stepFor(6 * 3600)}/${stepFor(12 * 3600)}`);
   // Huecos: sin dato en un tramo queda null y no 0

@@ -16,6 +16,21 @@ export interface ActivitySeries {
   speed: (number | null)[];
   /** metros */
   altitude: (number | null)[];
+  /** Dinámica de pedaleo del archivo FIT (medidores de potencia por pierna). null = el archivo no la trae; ausente = todavía no se leyó. */
+  dynamics?: PedalDynamics | null;
+}
+
+export interface DynamicsBin { label: string; seconds: number; avgW: number | null; teLeft: number | null; teRight: number | null; psLeft: number | null; psRight: number | null; balanceLeft: number | null }
+export interface PedalDynamics {
+  /** Segundos con potencia > 0 y al menos una de estas métricas. */
+  seconds: number;
+  balanceLeft: number | null;
+  teLeft: number | null;
+  teRight: number | null;
+  psLeft: number | null;
+  psRight: number | null;
+  /** Por rango de cadencia (solo rangos con 2 min o más pedaleando). */
+  byCadence: DynamicsBin[];
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -27,6 +42,42 @@ export function stepFor(durationSec: number): number {
 }
 
 interface Sample { t: number; power: number | null; hr: number | null; cadence: number | null; speed: number | null; altitude: number | null }
+interface DynSample { power: number | null; cadence: number | null; teL: number | null; teR: number | null; psL: number | null; psR: number | null; balL: number | null }
+
+/** left_right_balance del FIT: puede venir como número (bit 0x80 = el valor es el % de la pierna derecha) o como objeto {value, right}. Devuelve % de la pierna izquierda. */
+export function leftBalance(v: unknown): number | null {
+  if (v && typeof v === "object") {
+    const o = v as { value?: unknown; right?: unknown };
+    const val = num(o.value);
+    if (val == null || val < 0 || val > 100) return null;
+    return o.right === true ? 100 - val : val;
+  }
+  const n = num(v);
+  if (n == null) return null;
+  if (n === 0xffff || n === 0xff) return null;
+  if (n & 0x80) { const r = n & 0x7f; return r > 100 ? null : 100 - r; }
+  return n <= 100 ? n : null;
+}
+
+const CAD_BINS: [number, number, string][] = [[1, 70, "menos de 70 rpm"], [70, 80, "70–79 rpm"], [80, 90, "80–89 rpm"], [90, 100, "90–99 rpm"], [100, 999, "100 rpm o más"]];
+
+/** Promedios de la dinámica de pedaleo (solo con potencia > 0). null si el archivo no trae TE/PS ni balance. */
+export function summarizeDynamics(rows: DynSample[]): PedalDynamics | null {
+  const valid = rows.filter((r) => r.power != null && r.power > 0 && (r.teL != null || r.teR != null || r.psL != null || r.psR != null || r.balL != null));
+  if (valid.length < 60) return null;
+  const avg = (get: (r: DynSample) => number | null, set: DynSample[] = valid) => {
+    const v = set.map(get).filter((x): x is number => x != null);
+    return v.length >= 30 ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
+  };
+  const byCadence: DynamicsBin[] = [];
+  for (const [lo, hi, label] of CAD_BINS) {
+    const set = valid.filter((r) => r.cadence != null && r.cadence >= lo && r.cadence < hi);
+    if (set.length < 120) continue;
+    byCadence.push({ label, seconds: set.length, avgW: avg((r) => r.power, set), teLeft: avg((r) => r.teL, set), teRight: avg((r) => r.teR, set), psLeft: avg((r) => r.psL, set), psRight: avg((r) => r.psR, set), balanceLeft: avg((r) => r.balL, set) });
+  }
+  const out: PedalDynamics = { seconds: valid.length, balanceLeft: avg((r) => r.balL), teLeft: avg((r) => r.teL), teRight: avg((r) => r.teR), psLeft: avg((r) => r.psL), psRight: avg((r) => r.psR), byCadence };
+  return [out.balanceLeft, out.teLeft, out.teRight, out.psLeft, out.psRight].every((x) => x == null) ? null : out;
+}
 
 /** Agrupa muestras (cualquier frecuencia) en baldes de `step` s promediando lo que haya; huecos = null. */
 export function bucketSamples(samples: Sample[], step: number): Omit<ActivitySeries, "source" | "fetchedAt"> | null {
@@ -61,6 +112,7 @@ export async function parseFitSeries(input: Uint8Array, durationSec: number): Pr
   if (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b) buf = gunzipSync(buf);
   const data = await new FitParser({ mode: "list", force: true }).parseAsync(buf);
   const samples: Sample[] = [];
+  const dyn: DynSample[] = [];
   for (const r of (data.records ?? []) as Record<string, unknown>[]) {
     const t = r.timestamp instanceof Date ? r.timestamp.getTime() : null;
     if (t == null) continue;
@@ -73,10 +125,17 @@ export async function parseFitSeries(input: Uint8Array, durationSec: number): Pr
       speed: sp != null ? sp * 3.6 : null, // m/s → km/h
       altitude: num(r.enhanced_altitude) ?? num(r.altitude),
     });
+    const psC = num(r.combined_pedal_smoothness);
+    dyn.push({
+      power: num(r.power), cadence: num(r.cadence),
+      teL: num(r.left_torque_effectiveness), teR: num(r.right_torque_effectiveness),
+      psL: num(r.left_pedal_smoothness) ?? psC, psR: num(r.right_pedal_smoothness) ?? psC,
+      balL: leftBalance(r.left_right_balance),
+    });
   }
   samples.sort((a, b) => a.t - b.t);
   const out = bucketSamples(samples, stepFor(durationSec));
-  return out && hasData(out) ? out : null;
+  return out && hasData(out) ? { ...out, dynamics: summarizeDynamics(dyn) } : null;
 }
 
 const hasData = (s: Omit<ActivitySeries, "source" | "fetchedAt">) => [s.power, s.hr, s.cadence, s.speed, s.altitude].some((a) => a.some((v) => v != null));
@@ -90,13 +149,16 @@ export async function ensureActivitySeries(activityId: string): Promise<Activity
   const a = await prisma.activity.findUnique({ where: { id: activityId }, select: { id: true, athleteId: true, intervalsActivityId: true, durationSec: true, seriesJson: true } });
   if (!a) return null;
   const cached = a.seriesJson as unknown as ActivitySeries | null;
-  if (cached) return cached.source === "none" ? null : cached;
+  if (cached && !(cached.source === "fit" && cached.dynamics === undefined)) return cached.source === "none" ? null : cached;
   const creds = await getIntervalsCreds(a.athleteId);
-  if (!creds) return null;
+  if (!creds) return cached && cached.source !== "none" ? cached : null;
 
   let parsed: Omit<ActivitySeries, "source" | "fetchedAt"> | null = null;
   let source: ActivitySeries["source"] = "none";
-  const file = await getActivityFile(creds.apiKey, a.intervalsActivityId);
+  const refresh = !!cached && cached.source !== "none";
+  // Al releer una serie ya guardada (solo para sumar la dinámica), un error de red no debe romper la pantalla: se devuelve lo guardado
+  const file = refresh ? await getActivityFile(creds.apiKey, a.intervalsActivityId).catch(() => undefined) : await getActivityFile(creds.apiKey, a.intervalsActivityId);
+  if (refresh && file === undefined) return cached;
   if (file) {
     try {
       parsed = await parseFitSeries(file, a.durationSec);
@@ -104,6 +166,11 @@ export async function ensureActivitySeries(activityId: string): Promise<Activity
     } catch (e) {
       console.error("No se pudieron leer las series del FIT", a.id, e);
     }
+  }
+  if (refresh && !parsed) {
+    const keep = { ...(cached as ActivitySeries), dynamics: null };
+    await prisma.activity.update({ where: { id: a.id }, data: { seriesJson: keep as object } });
+    return keep;
   }
   if (!parsed) {
     const samples = await getActivityStreams(creds.apiKey, a.intervalsActivityId);
