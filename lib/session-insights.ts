@@ -134,6 +134,15 @@ export async function buildSessionInsights(a: ActivityForInsights, ftp: number |
     lines.push(`Reparto por tercios de la salida (potencia media incluyendo paradas${th.hr.some((x) => x != null) ? " / FC media" : ""}): ${th.w.map((w, i) => `${i + 1}º ${w} W${th.hr[i] != null ? ` / ${th.hr[i]} lpm` : ""}`).join("; ")}.${softEnd}`);
   }
 
+  // Desacople Pw:HR: compara la primera mitad con la segunda; si la intensidad se concentró en una de las dos, el número no mide fatiga
+  const p5 = stored?.power5;
+  if (p5 && p5.length * 5 >= 40 * 60 && a.decouplingPct != null) {
+    const half = Math.floor(p5.length / 2);
+    const w1 = mean(p5.slice(0, half)), w2 = mean(p5.slice(half));
+    const rel = (w1 - w2) / ((w1 + w2) / 2);
+    if (Math.abs(rel) >= 0.2) lines.push(`Desacople Pw:HR de ${ar(a.decouplingPct, 1)}%: NO es interpretable como fatiga en esta sesión, porque la potencia media de la ${rel > 0 ? "primera" : "segunda"} mitad (${Math.round(rel > 0 ? w1 : w2)} W) es mucho mayor que la de la otra (${Math.round(rel > 0 ? w2 : w1)} W); el desacople compara las dos mitades y acá refleja cómo se repartió la intensidad. No lo uses como señal ni como causa de nada, y no lo compares con el de sesiones de otra estructura.`);
+  }
+
   // Comparación con sesiones anteriores del mismo tipo (solo con datos ya guardados: no se baja nada nuevo)
   const kind = classifyStimulusType({ type: a.type, name: a.name, intensityFactor: a.intensityFactor, rawStreamsJson: a.rawStreamsJson });
   const since = new Date(a.date.getTime() - 120 * 86400000);

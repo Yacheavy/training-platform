@@ -78,6 +78,13 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
     `DISPONIBILIDAD HOY: ${availability.insufficient ? "SIN DATOS SUFICIENTES (no hay HRV, FC de reposo ni check-in; no la presentes como verde ni inventes un puntaje)" : availability.status} — HRV hoy ${availability.hrvToday ?? "sin dato"}, media 7d ${availability.hrvAvg7d?.toFixed(1) ?? "sin dato"}, TSB ${availability.tsb?.toFixed(1) ?? "sin dato"}. Razones: ${availability.reasons.join("; ")}`
   );
 
+  // HRV y FC de reposo de los últimos días, juntos: un día con HRV bajo Y FC de reposo alta es más informativo que cada dato suelto, y si se repite es un patrón
+  const recent = await prisma.wellness.findMany({ where: { athleteId, date: { gte: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) } }, orderBy: { date: "desc" }, select: { date: true, hrv: true, restingHr: true } });
+  if (recent.length) {
+    const rhrBits = availability.restingHrToday != null ? ` FC de reposo hoy ${availability.restingHrToday} lpm (media 7d ${availability.restingHrAvg7d?.toFixed(1) ?? "sin dato"}${availability.restingHrDeltaAbs != null ? `, ${availability.restingHrDeltaAbs >= 0 ? "+" : "−"}${Math.abs(availability.restingHrDeltaAbs).toFixed(1)} lpm vs tu línea base` : ""}).` : "";
+    parts.push(`HRV Y FC DE REPOSO DE LOS ÚLTIMOS DÍAS (más reciente primero): ${recent.map((w) => `${dateKeyLocal(w.date)} HRV ${w.hrv ?? "s/d"} / FC ${w.restingHr ?? "s/d"}`).join("; ")}.${rhrBits} El semáforo usa la media móvil de 7 días contra tu línea base, por eso un día aislado muy bajo puede no moverlo. Si HRV bajo y FC de reposo alta coinciden el mismo día (y más si se repite en la semana), mencionalo: es un dato más fuerte que cada uno por separado, y decilo con su grado de certeza.`);
+  }
+
   // Sueño: solo si es notable (poco o muy mal calificado); si está normal no se menciona para no repetir el dashboard
   const sleepRow = await prisma.wellness.findFirst({
     where: { athleteId, sleepHours: { not: null }, date: { gte: new Date(dayKeyDate(new Date()).getTime() - 24 * 60 * 60 * 1000), lte: dayKeyDate(new Date()) } },
