@@ -3,7 +3,8 @@ import { SubmitButton } from "./SubmitButton";
 import type { SeasonState } from "@/lib/season-data";
 
 const OBJ_LABEL: Record<string, string> = { base: "Base", umbral: "Umbral", vo2max: "VO2max", tapering: "Puesta a punto" };
-const OBJ_COLOR: Record<string, string> = { vo2max: "var(--red)", umbral: "var(--amber)", base: "var(--teal)", tapering: "var(--blue)" };
+// Hex a propósito: el degradé de la barra les pega la transparencia (${c}AA), y eso no funciona con var(--...)
+const OBJ_COLOR: Record<string, string> = { vo2max: "#E5636A", umbral: "#E8A33D", base: "#4FD1C5", tapering: "#6FA8DC" };
 const fmtKey = (k: string) => new Date(k + "T00:00:00Z").toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 const ms = (k: string) => new Date(k + "T00:00:00Z").getTime();
@@ -53,13 +54,13 @@ function SeasonTimeline({ state }: { state: SeasonState }) {
           );
         })}
         {ms(state.todayKey) >= min && ms(state.todayKey) <= max && (
-          <div style={{ position: "absolute", left: pos(state.todayKey), top: "6px", bottom: "0", width: "2px", background: "var(--text)", opacity: 0.7, borderRadius: "1px" }}>
-            <span style={{ position: "absolute", top: "-6px", left: "-12px", fontSize: "10px", color: "var(--text)" }}>hoy</span>
+          <div style={{ position: "absolute", left: pos(state.todayKey), top: "15px", bottom: "0", width: "2px", background: "var(--text)", opacity: 0.7, borderRadius: "1px" }}>
+            <span style={{ position: "absolute", top: "-15px", left: "-12px", fontSize: "10px", lineHeight: "12px", color: "var(--text)" }}>hoy</span>
           </div>
         )}
         {state.goal && (
-          <div style={{ position: "absolute", left: pos(state.goal.dateKey), top: "6px", bottom: "0", width: "2px", background: "var(--teal)", borderRadius: "1px" }}>
-            <span style={{ position: "absolute", top: "-6px", right: "6px", fontSize: "10px", color: "var(--teal)", whiteSpace: "nowrap" }}>{state.goal.name}</span>
+          <div style={{ position: "absolute", left: pos(state.goal.dateKey), top: "15px", bottom: "0", width: "2px", background: "var(--teal)", borderRadius: "1px" }}>
+            <span style={{ position: "absolute", top: "-15px", right: "6px", fontSize: "10px", lineHeight: "12px", color: "var(--teal)", whiteSpace: "nowrap" }}>{state.goal.name}</span>
           </div>
         )}
       </div>
