@@ -31,9 +31,24 @@ const STEPS = ["Tu bici", "Tu semana", "Tu objetivo", "Tus límites", "Resumen"]
 const box: React.CSSProperties = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "20px", marginBottom: "14px" };
 const input: React.CSSProperties = { width: "100%", background: "var(--surface-3)", border: "1px solid var(--border)", borderRadius: "12px", padding: "12px 14px", color: "var(--text)", fontSize: "15px", outline: "none" };
 const label: React.CSSProperties = { display: "block", fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "6px" };
+function SourceNote({ value, remote, unit, what, onUse }: { value: string; remote: number | null; unit: string; what: string; onUse: () => void }) {
+  if (remote == null) return null;
+  const same = value.trim() === String(remote);
+  return same ? (
+    <div style={{ fontSize: "12px", color: "var(--teal)" }}>✓ Viene de tu Intervals ({what}). Podés cambiarlo.</div>
+  ) : (
+    <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+      Tu Intervals tiene {remote} {unit} ({what}). <button type="button" onClick={onUse} style={{ background: "none", border: "none", padding: 0, color: "var(--teal)", textDecoration: "underline", cursor: "pointer", fontSize: "12px" }}>Usar ese valor</button>
+    </div>
+  );
+}
+
 const pill = (on: boolean): React.CSSProperties => ({ padding: "8px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", border: `1px solid ${on ? "var(--teal)" : "var(--border)"}`, background: on ? "rgba(79,209,197,.14)" : "transparent", color: on ? "var(--teal)" : "var(--text-muted)" });
 
-export function OnboardingWizard({ initial, coachName, hasCoach, name }: { initial: OnboardingPayload; coachName: string | null; hasCoach: boolean; name: string }) {
+/** Valores leídos de Intervals (FTP de la configuración de ciclismo y mejor esfuerzo de 5 min de los últimos 90 días) */
+export type IntervalsValues = { ftp: number | null; p5: number | null } | null;
+
+export function OnboardingWizard({ initial, coachName, hasCoach, name, intervals = null }: { initial: OnboardingPayload; coachName: string | null; hasCoach: boolean; name: string; intervals?: IntervalsValues }) {
   const [step, setStep] = useState(1);
   const [p, setP] = useState<OnboardingPayload>(initial);
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +116,16 @@ export function OnboardingWizard({ initial, coachName, hasCoach, name }: { initi
       {step === 1 && (
         <div style={box}>
           <h1 style={{ fontSize: "20px", fontWeight: 600, margin: "0 0 6px" }}>Hola{name ? `, ${name}` : ""}. Empecemos por tu bici</h1>
-          <p style={{ fontSize: "13.5px", color: "var(--text-muted)", lineHeight: 1.55, margin: "0 0 16px" }}>Con tu FTP la app calcula la potencia de cada intervalo. Si no lo sabés, dejalo vacío y lo define tu coach.</p>
+          <p style={{ fontSize: "13.5px", color: "var(--text-muted)", lineHeight: 1.55, margin: "0 0 16px" }}>
+            {intervals && (intervals.ftp || intervals.p5) ? "Traje estos datos de tu Intervals. Revisalos: si no son los que querés usar, los podés cambiar a mano." : "Con tu FTP la app calcula la potencia de cada intervalo. Si no lo sabés, dejalo vacío y lo define tu coach."}
+          </p>
           <label style={label} htmlFor="ob-ftp">FTP (watts)</label>
-          <input id="ob-ftp" style={{ ...input, marginBottom: "14px" }} inputMode="numeric" value={p.ftp} onChange={(e) => set({ ftp: e.target.value })} placeholder="Por ejemplo 230" />
+          <input id="ob-ftp" style={{ ...input, marginBottom: "6px" }} inputMode="numeric" value={p.ftp} onChange={(e) => set({ ftp: e.target.value })} placeholder="Por ejemplo 230" />
+          <SourceNote value={p.ftp} remote={intervals?.ftp ?? null} unit="W" what="FTP" onUse={() => set({ ftp: String(intervals?.ftp) })} />
+          <label style={{ ...label, marginTop: "12px" }} htmlFor="ob-p5">Potencia de 5 minutos (watts)</label>
+          <input id="ob-p5" style={{ ...input, marginBottom: "6px" }} inputMode="numeric" value={p.p5} onChange={(e) => set({ p5: e.target.value })} placeholder="Tu mejor esfuerzo de 5 min" />
+          <SourceNote value={p.p5} remote={intervals?.p5 ?? null} unit="W" what="mejor esfuerzo de 5 min de los últimos 90 días" onUse={() => set({ p5: String(intervals?.p5) })} />
+          <div style={{ fontSize: "12px", color: "var(--text-dim)", margin: "4px 0 14px", lineHeight: 1.45 }}>Se usa para calcular la potencia de los intervalos de VO2max. Si nunca hiciste un esfuerzo máximo de 5 min, dejalo vacío.</div>
           <label style={label} htmlFor="ob-w">Peso (kg)</label>
           <input id="ob-w" style={input} inputMode="decimal" value={p.weight} onChange={(e) => set({ weight: e.target.value })} placeholder="Por ejemplo 62" />
         </div>
@@ -156,11 +178,28 @@ export function OnboardingWizard({ initial, coachName, hasCoach, name }: { initi
       {step === 3 && (
         <div style={box}>
           <h1 style={{ fontSize: "20px", fontWeight: 600, margin: "0 0 6px" }}>Tu objetivo</h1>
-          <p style={{ fontSize: "13.5px", color: "var(--text-muted)", lineHeight: 1.55, margin: "0 0 14px" }}>El plan se arma hacia una fecha. Si todavía no tenés carrera, elegí mejorar en general; después podés sumarla en Ajustes.</p>
+          <p style={{ fontSize: "13.5px", color: "var(--text-muted)", lineHeight: 1.55, margin: "0 0 14px" }}>El plan se arma hacia una fecha o una meta. Elegí lo que mejor te describe; después podés sumar más en Ajustes.</p>
           <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
             <button type="button" style={pill(p.goal.mode === "event")} onClick={() => set({ goal: { ...p.goal, mode: "event" } })}>Tengo una carrera</button>
+            <button type="button" style={pill(p.goal.mode === "performance")} onClick={() => set({ goal: { ...p.goal, mode: "performance" } })}>Meta de rendimiento</button>
             <button type="button" style={pill(p.goal.mode === "general")} onClick={() => set({ goal: { ...p.goal, mode: "general" } })}>Mejorar en general</button>
           </div>
+          {p.goal.mode === "performance" && (
+            <>
+              <div style={label}>¿Qué querés mejorar?</div>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "12px", flexWrap: "wrap" }}>
+                {([["ftp", "FTP"], ["p5", "Potencia de 5 min"], ["weight", "Peso"]] as const).map(([k, t]) => <button key={k} type="button" style={pill(p.goal.metric === k)} onClick={() => set({ goal: { ...p.goal, metric: k } })}>{t}</button>)}
+              </div>
+              <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "10px" }}>
+                Hoy: <b style={{ color: "var(--text)" }}>{(p.goal.metric === "ftp" ? p.ftp : p.goal.metric === "p5" ? p.p5 : p.weight) || "sin dato"}{(p.goal.metric === "ftp" ? p.ftp : p.goal.metric === "p5" ? p.p5 : p.weight) ? (p.goal.metric === "weight" ? " kg" : " W") : ""}</b>
+                {!(p.goal.metric === "ftp" ? p.ftp : p.goal.metric === "p5" ? p.p5 : p.weight) && " · cargalo en el paso «Tu bici» (volvé con «Atrás»)"}
+              </div>
+              <label style={label} htmlFor="ob-gt">Tu meta ({p.goal.metric === "weight" ? "kg" : "watts"})</label>
+              <input id="ob-gt" style={{ ...input, marginBottom: "12px" }} inputMode="decimal" value={p.goal.target} onChange={(e) => set({ goal: { ...p.goal, target: e.target.value } })} placeholder={p.goal.metric === "weight" ? "Por ejemplo 65" : "Por ejemplo 300"} />
+              <label style={label} htmlFor="ob-gd2">¿Para cuándo? (opcional)</label>
+              <input id="ob-gd2" type="date" style={input} value={p.goal.date} onChange={(e) => set({ goal: { ...p.goal, date: e.target.value } })} />
+            </>
+          )}
           {p.goal.mode === "event" && (
             <>
               <label style={label} htmlFor="ob-gn">Nombre de la carrera</label>
@@ -201,9 +240,9 @@ export function OnboardingWizard({ initial, coachName, hasCoach, name }: { initi
         <div style={box}>
           <h1 style={{ fontSize: "20px", fontWeight: 600, margin: "0 0 12px" }}>Revisá y enviá</h1>
           {[
-            ["Bici", `${p.ftp ? `FTP ${p.ftp} W` : "FTP sin definir (lo define tu coach)"}${p.weight ? ` · ${p.weight} kg` : ""}`],
+            ["Bici", `${p.ftp ? `FTP ${p.ftp} W` : "FTP sin definir (lo define tu coach)"}${p.p5 ? ` · 5 min ${p.p5} W` : ""}${p.weight ? ` · ${p.weight} kg` : ""}`],
             ["Semana", `${cycling.length} días de bici · ${quality.length} de calidad · ${Math.floor(totalMin / 60)} h ${String(totalMin % 60).padStart(2, "0")} min${longest ? ` · larga el ${DAY_NAMES[longest.dayOfWeek].toLowerCase()}` : ""}`],
-            ["Objetivo", p.goal.mode === "event" ? `${p.goal.name || "—"} · ${p.goal.date || "sin fecha"} · prioridad ${p.goal.priority}` : "Mejorar en general"],
+            ["Objetivo", p.goal.mode === "event" ? `${p.goal.name || "—"} · ${p.goal.date || "sin fecha"} · prioridad ${p.goal.priority}` : p.goal.mode === "performance" ? `Meta: ${p.goal.metric === "ftp" ? "FTP" : p.goal.metric === "p5" ? "potencia de 5 min" : "peso"} a ${p.goal.target || "—"} ${p.goal.metric === "weight" ? "kg" : "W"}${p.goal.date ? ` para el ${p.goal.date}` : ""}` : "Mejorar en general"],
             ["Límites", [p.injuries, p.preferences].filter(Boolean).join(" · ") || "Sin límites cargados"],
           ].map(([k, v]) => (
             <div key={k} style={{ display: "flex", gap: "12px", padding: "9px 0", borderTop: "1px solid var(--border)", fontSize: "13.5px" }}>

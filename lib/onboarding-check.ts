@@ -71,7 +71,7 @@ let problems = 0;
 const check = (ok: boolean, msg: string) => { if (!ok) { problems++; console.log("FALLA:", msg); } };
 const D = (dayOfWeek: number, type: P["days"][number]["type"], min: number, quality = false) => ({ dayOfWeek, type, quality, min: type === "rest" ? "" : String(min) });
 const restWeek = () => [1, 2, 3, 4, 5, 6, 0].map((d) => D(d, "rest", 0));
-const base = (over: Partial<P> = {}): P => ({ ftp: "", weight: "", days: restWeek(), goal: { mode: "general", name: "", date: "", priority: "A", profile: "" }, background: "", injuries: "", preferences: "", ...over });
+const base = (over: Partial<P> = {}): P => ({ ftp: "", p5: "", weight: "", days: restWeek(), goal: { mode: "general", name: "", date: "", priority: "A", profile: "", metric: "ftp", target: "" }, background: "", injuries: "", preferences: "", ...over });
 const addUser = (id: string, name: string, email: string, extra: Row = {}) => { db.users.set(id, { id, name, email, role: "ATHLETE", ftp: null, weight: null, coachId: null, ...extra }); db.invites.push({ email, invitedById: coachId }); };
 const as = (id: string | null) => { currentUser = id; };
 const run = async (step: number, p: P) => actions.saveOnboardingStep(step, p);
@@ -107,7 +107,7 @@ function planFor(id: string, ftp: number) {
   const comp = base({
     ftp: "280", weight: "68,5",
     days: [D(1, "gym", 60), D(2, "cycling", 90, true), D(3, "cycling", 60, true), D(4, "rest", 0), D(5, "gym", 45), D(6, "cycling", 240), D(0, "cycling", 120)],
-    goal: { mode: "event", name: "Gran Fondo Test", date: "2027-02-14", priority: "A", profile: "fondo" },
+    goal: { mode: "event", name: "Gran Fondo Test", date: "2027-02-14", priority: "A", profile: "fondo", metric: "ftp", target: "" },
     injuries: "Rodilla derecha", preferences: "Sin rodillo los domingos", background: "5 años en ruta",
   });
   for (const s of [1, 2, 3, 4]) check(err(await run(s, comp)) === null, `competitivo paso ${s}: ${err(await run(s, comp))}`);
@@ -133,17 +133,45 @@ function planFor(id: string, ftp: number) {
   check(!!err(await run(2, base())), "semana sin ningún día de bici se rechaza");
   check(!!err(await run(2, base({ days: [D(2, "cycling", 10), ...[1, 3, 4, 5, 6, 0].map((d) => D(d, "rest", 0))] }))), "bici de 10 min se rechaza");
   check(!!err(await run(2, base({ days: [D(2, "cycling", 700), ...[1, 3, 4, 5, 6, 0].map((d) => D(d, "rest", 0))] }))), "bici de 700 min se rechaza");
-  check(!!err(await run(3, base({ goal: { mode: "event", name: "", date: "2027-01-01", priority: "A", profile: "" } }))), "carrera sin nombre se rechaza");
-  check(!!err(await run(3, base({ goal: { mode: "event", name: "X", date: "mañana", priority: "A", profile: "" } }))), "fecha inválida se rechaza");
+  check(!!err(await run(3, base({ goal: { mode: "event", name: "", date: "2027-01-01", priority: "A", profile: "", metric: "ftp", target: "" } }))), "carrera sin nombre se rechaza");
+  check(!!err(await run(3, base({ goal: { mode: "event", name: "X", date: "mañana", priority: "A", profile: "", metric: "ftp", target: "" } }))), "fecha inválida se rechaza");
   check(db.users.get("u_bad")!.ftp === null && db.slots.filter((s) => s.athleteId === "u_bad").length === 0, "lo inválido no guarda nada");
   check(!!err(await actions.submitOnboarding()), "no se puede enviar sin días de bici");
   // Prioridad y perfil raros se normalizan, no rompen
-  check(err(await run(3, base({ goal: { mode: "event", name: "Rara", date: "2027-03-01", priority: "Z" as any, profile: "volcan" } }))) === null, "prioridad/perfil desconocidos no rompen");
+  check(err(await run(3, base({ goal: { mode: "event", name: "Rara", date: "2027-03-01", priority: "Z" as any, profile: "volcan", metric: "ftp", target: "" } }))) === null, "prioridad/perfil desconocidos no rompen");
   const rara = db.goals.find((g) => g.name === "Rara")!;
   check(rara.priority === "B" && (rara.courseProfile ?? null) === null, `normaliza prioridad/perfil (${rara.priority}/${rara.courseProfile})`);
   // Texto largo se recorta
   await run(4, base({ preferences: "x".repeat(5000) }));
   check(db.users.get("u_bad")!.preferences.length === 2000, "texto largo se recorta a 2000");
+
+
+  // ── 3b. FTP y 5 min traídos de Intervals, pisables a mano ───────────────────────────
+  addUser("u_int", "Desde Intervals", "int@test.com", { powerCurveJson: { points: [{ secs: 300, watts: 310 }] } });
+  as("u_int");
+  await run(1, base({ ftp: "290", p5: "310" }));
+  check(db.users.get("u_int")!.ftp === 290 && db.users.get("u_int")!.pvo2maxWatts === 310, "guarda FTP y 5 min");
+  check(db.users.get("u_int")!.pvo2maxSource === "intervals-5min", `5 min igual al de Intervals se marca «desde Intervals» (${db.users.get("u_int")!.pvo2maxSource})`);
+  await run(1, base({ ftp: "290", p5: "325" }));
+  check(db.users.get("u_int")!.pvo2maxWatts === 325 && db.users.get("u_int")!.pvo2maxSource === "manual", "5 min pisado a mano se marca manual");
+  check(!!err(await run(1, base({ p5: "30" }))) && !!err(await run(1, base({ p5: "2000" }))), "5 min fuera de rango se rechaza");
+  check(err(await run(1, base({ ftp: "290", p5: "" }))) === null && db.users.get("u_int")!.pvo2maxWatts === 325, "5 min vacío no borra el valor guardado");
+
+  // ── 3c. Metas de rendimiento ──────────────────────────────────────────────────────
+  const perf = (metric: "ftp" | "p5" | "weight", target: string, date = ""): P => base({ ftp: "290", p5: "310", weight: "70", goal: { mode: "performance", name: "", date, priority: "A", profile: "", metric, target } });
+  check(err(await run(3, perf("ftp", "300"))) === null, "meta FTP 290→300");
+  const g = db.goals.find((x) => x.athleteId === "u_int" && x.goalType === "PERFORMANCE")!;
+  check(!!g && g.name === "Subir FTP a 300 W" && g.baselineValue === 290 && g.targetValue === 300 && /ftp/i.test(g.metric) && g.priority === "B", `meta guardada bien (${JSON.stringify(g)})`);
+  await run(3, perf("ftp", "300")); await run(3, perf("ftp", "300"));
+  check(db.goals.filter((x) => x.athleteId === "u_int" && x.goalType === "PERFORMANCE").length === 1, "meta repetida no se duplica");
+  check(!!err(await run(3, perf("ftp", "280"))), "meta de potencia menor o igual a la actual se rechaza");
+  check(!!err(await run(3, perf("ftp", "900"))), "meta fuera de rango se rechaza");
+  check(!!err(await run(3, perf("ftp", ""))), "meta vacía se rechaza");
+  check(err(await run(3, perf("p5", "340", "2027-03-01"))) === null && db.goals.some((x) => x.name === "Subir potencia de 5 min a 340 W" && x.eventDate), "meta de 5 min con fecha");
+  check(err(await run(3, perf("weight", "66,5"))) === null && db.goals.some((x) => x.name === "Llegar a 66.5 kg" && x.baselineValue === 70), "meta de peso (baja)");
+  check(!!err(await run(3, perf("weight", "70"))), "meta de peso igual al actual se rechaza");
+  check(!!err(await run(3, { ...perf("ftp", "300"), ftp: "" })), "meta FTP sin FTP actual pide cargarlo");
+  check(db.goals.filter((x) => x.athleteId === "u_int" && x.goalType === "EVENT").length === 0, "las metas de rendimiento no crean carreras");
 
   // ── 4. Seguridad: un alumno no toca a otro ─────────────────────────────────────────
   addUser("u_a", "A", "a@test.com", { ftp: 200 });

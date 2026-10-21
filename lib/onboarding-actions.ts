@@ -12,9 +12,11 @@ import { layoutEmail } from "@/lib/email/template";
 
 export interface OnboardingPayload {
   ftp: string;
+  /** Mejor potencia de 5 min (la que se usa como potencia en VO2max) */
+  p5: string;
   weight: string;
   days: { dayOfWeek: number; type: "cycling" | "gym" | "flexibility" | "rest"; quality: boolean; min: string }[];
-  goal: { mode: "event" | "general"; name: string; date: string; priority: "A" | "B" | "C"; profile: string };
+  goal: { mode: "event" | "performance" | "general"; name: string; date: string; priority: "A" | "B" | "C"; profile: string; metric: "ftp" | "p5" | "weight"; target: string };
   background: string;
   injuries: string;
   preferences: string;
@@ -41,10 +43,18 @@ export async function saveOnboardingStep(step: number, p: OnboardingPayload): Pr
       const weight = Number.isFinite(wRaw) && wRaw >= 30 && wRaw <= 200 ? Math.round(wRaw * 10) / 10 : null;
       if (p.ftp.trim() && ftp == null) return { error: "El FTP tiene que estar entre 50 y 600 W" };
       if (p.weight.trim() && weight == null) return { error: "El peso tiene que estar entre 30 y 200 kg" };
-      const cur = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } });
+      const p5 = intIn(p.p5 ?? "", 80, 1500);
+      if ((p.p5 ?? "").trim() && p5 == null) return { error: "La potencia de 5 min tiene que estar entre 80 y 1500 W" };
+      const cur = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true, pvo2maxWatts: true, powerCurveJson: true } });
+      // Si coincide con el mejor esfuerzo de 5 min de Intervals queda marcado como «desde Intervals»; si lo cambió a mano, como manual
+      const best5 = (cur?.powerCurveJson as { points?: { secs: number; watts: number }[] } | null)?.points?.find((x) => x.secs === 300)?.watts ?? null;
       await prisma.user.update({
         where: { id: athleteId },
-        data: { ...(ftp != null && ftp !== cur?.ftp ? { ftp, ftpUpdatedAt: new Date() } : {}), ...(weight != null ? { weight } : {}) },
+        data: {
+          ...(ftp != null && ftp !== cur?.ftp ? { ftp, ftpUpdatedAt: new Date() } : {}),
+          ...(p5 != null && p5 !== cur?.pvo2maxWatts ? { pvo2maxWatts: p5, pvo2maxUpdatedAt: new Date(), pvo2maxSource: p5 === best5 ? "intervals-5min" : "manual" } : {}),
+          ...(weight != null ? { weight } : {}),
+        },
       });
     } else if (step === 2) {
       const fd = new FormData();
@@ -67,6 +77,30 @@ export async function saveOnboardingStep(step: number, p: OnboardingPayload): Pr
         fd.set("priority", p.goal.priority);
         fd.set("courseProfile", p.goal.profile);
         const exists = await prisma.athleteGoal.findFirst({ where: { athleteId, goalType: "EVENT", name: p.goal.name.trim().slice(0, 120), eventDate: new Date(p.goal.date) }, select: { id: true } });
+        if (!exists) await addGoalCore(athleteId, fd);
+      } else if (p.goal.mode === "performance") {
+        const M = {
+          ftp: { label: "W de FTP", lo: 50, hi: 600, from: intIn(p.ftp, 50, 600), verb: "Subir FTP a", unit: "W", power: true },
+          p5: { label: "W en 5 min", lo: 80, hi: 1500, from: intIn(p.p5 ?? "", 80, 1500), verb: "Subir potencia de 5 min a", unit: "W", power: true },
+          weight: { label: "kg de peso", lo: 30, hi: 200, from: (() => { const n = Number(String(p.weight).replace(",", ".")); return Number.isFinite(n) && n >= 30 && n <= 200 ? n : null; })(), verb: "Llegar a", unit: "kg", power: false },
+        }[p.goal.metric] ?? null;
+        if (!M) return { error: "Elegí qué querés mejorar" };
+        const target = Number(String(p.goal.target).replace(",", "."));
+        if (!Number.isFinite(target) || target < M.lo || target > M.hi) return { error: `La meta tiene que estar entre ${M.lo} y ${M.hi} ${M.unit}` };
+        if (M.from == null) return { error: "Para fijar esta meta primero cargá tu valor actual en el paso «Tu bici»" };
+        if (M.power && target <= M.from) return { error: `La meta tiene que ser mayor que tu valor actual (${M.from} ${M.unit})` };
+        if (!M.power && target === M.from) return { error: "La meta tiene que ser distinta de tu peso actual" };
+        const name = `${M.verb} ${target} ${M.unit}`;
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(p.goal.date) ? p.goal.date : "";
+        const fd = new FormData();
+        fd.set("goalType", "PERFORMANCE");
+        fd.set("name", name);
+        fd.set("metric", M.label);
+        fd.set("baselineValue", String(M.from));
+        fd.set("targetValue", String(target));
+        fd.set("priority", "B");
+        if (date) fd.set("eventDate", date);
+        const exists = await prisma.athleteGoal.findFirst({ where: { athleteId, goalType: "PERFORMANCE", name, eventDate: date ? new Date(date) : null }, select: { id: true } });
         if (!exists) await addGoalCore(athleteId, fd);
       }
     } else if (step === 4) {
