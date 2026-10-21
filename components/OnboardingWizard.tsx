@@ -220,11 +220,11 @@ export function OnboardingWizard({ initial, coachName, hasCoach, name }: { initi
       {error && <div role="alert" style={{ color: "var(--red)", fontSize: "13px", marginBottom: "10px" }}>{error}</div>}
 
       <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-        {step > 1 && <button type="button" className="btn" disabled={pending} onClick={() => { setError(null); setStep(step - 1); }}>Atrás</button>}
+        {step > 1 && <button type="button" className="btn btn-outline" disabled={pending} onClick={() => { setError(null); setStep(step - 1); }}>Atrás</button>}
         <button type="button" className="btn btn-primary" disabled={pending} onClick={next}>
           {pending ? "Guardando…" : step === 5 ? (hasCoach ? "Enviar a mi coach" : "Terminar") : "Siguiente"}
         </button>
-        <button type="button" className="btn" disabled={pending} style={{ marginLeft: "auto", fontSize: "12.5px", color: "var(--text-dim)" }} onClick={() => start(async () => { await skipOnboarding(); window.location.href = "/dashboard"; })}>
+        <button type="button" className="btn btn-outline" disabled={pending} style={{ marginLeft: "auto", fontSize: "12.5px", color: "var(--text-dim)" }} onClick={() => start(async () => { await skipOnboarding(); window.location.href = "/dashboard"; })}>
           Lo hago después
         </button>
       </div>

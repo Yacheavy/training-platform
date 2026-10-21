@@ -29,7 +29,7 @@ export function FirstTimeTip({ id, title, children, linkText = "¿Cómo se lee e
     <div role="note" style={{ background: "rgba(79,209,197,.08)", border: "1px solid rgba(79,209,197,.35)", borderRadius: "14px", padding: "14px 16px", margin: "0 0 14px" }}>
       <div style={{ fontSize: "13.5px", fontWeight: 600, marginBottom: "6px" }}>{title}</div>
       <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.55 }}>{children}</div>
-      <button type="button" onClick={close} className="btn btn-sm" style={{ marginTop: "10px" }}>Entendido</button>
+      <button type="button" onClick={close} className="btn btn-outline btn-sm" style={{ marginTop: "10px" }}>Entendido</button>
     </div>
   );
 }
