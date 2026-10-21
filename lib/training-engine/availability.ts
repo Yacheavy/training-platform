@@ -1,6 +1,6 @@
 import { dayKeyDate } from "../tz";
 import { prisma } from "@/lib/prisma";
-import { hrvSignal, restingHrSignal, type SignalMethod } from "./recovery-signals";
+import { hrvSignal, restingHrSignal, acuteWarning, type AcuteWarning, type SignalMethod } from "./recovery-signals";
 import { evaluateAvailability, recoverySources, scoreAvailability, signalChips, type ScoreResult, type SignalChip } from "./availability-score";
 
 export interface AvailabilityResult {
@@ -30,6 +30,8 @@ export interface AvailabilityResult {
   sources: string[];
   /** Sin ninguna señal de recuperación y sin alerta de carga: el semáforo en verde no significa nada y no se muestra como tal. */
   insufficient: boolean;
+  /** Día con HRV muy bajo y FC de reposo muy alta a la vez: aviso de atención, no cambia el semáforo. */
+  acute: AcuteWarning;
 }
 
 /**
@@ -120,5 +122,6 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     wellnessAgeDays,
     sources,
     insufficient,
+    acute: acuteWarning(history, todayKey),
   };
 }

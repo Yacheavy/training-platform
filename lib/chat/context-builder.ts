@@ -78,6 +78,8 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
     `DISPONIBILIDAD HOY: ${availability.insufficient ? "SIN DATOS SUFICIENTES (no hay HRV, FC de reposo ni check-in; no la presentes como verde ni inventes un puntaje)" : availability.status} — HRV hoy ${availability.hrvToday ?? "sin dato"}, media 7d ${availability.hrvAvg7d?.toFixed(1) ?? "sin dato"}, TSB ${availability.tsb?.toFixed(1) ?? "sin dato"}. Razones: ${availability.reasons.join("; ")}`
   );
 
+  if (availability.acute.message) parts.push(`AVISO DE ATENCIÓN (calculado): ${availability.acute.message} Mencionalo con su grado de certeza; es un criterio práctico del sistema y no cambia el semáforo.`);
+
   // HRV y FC de reposo de los últimos días, juntos: un día con HRV bajo Y FC de reposo alta es más informativo que cada dato suelto, y si se repite es un patrón
   const recent = await prisma.wellness.findMany({ where: { athleteId, date: { gte: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000) } }, orderBy: { date: "desc" }, select: { date: true, hrv: true, restingHr: true } });
   if (recent.length) {

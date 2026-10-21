@@ -220,6 +220,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} />
+      {availability.acute.message && (
+        <div className="dash-card" style={{ marginBottom: "14px", borderColor: "var(--amber)" }}>
+          <h3 className="dash-card-title">Prestá atención</h3>
+          <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, marginTop: "8px" }}>{availability.acute.message}</div>
+          <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "8px" }}>Aviso con criterio práctico del sistema (no de un ensayo): no cambia el semáforo. Un día aislado puede deberse al sueño, al alcohol o al reloj.</div>
+        </div>
+      )}
 
       <Section title="Cómo estás">
         <div className="metric-strip">

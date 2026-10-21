@@ -137,3 +137,45 @@ export function restingHrSignal(points: DailyPoint[], todayKey: Date, fallbackBp
 
   return { method: "insufficient", triggered: false, rolling7: rolling.length >= MIN_ROLLING_DAYS ? mean(rolling) : null, baseline: null, delta: null, reason: null };
 }
+
+export interface AcuteWarning {
+  /** Hoy coinciden HRV muy bajo y FC de reposo muy alta. */
+  today: boolean;
+  /** Días de los últimos 7 (incluido hoy) en que pasó. */
+  daysIn7: number;
+  hrvPct: number | null;
+  rhrDiff: number | null;
+  message: string | null;
+}
+
+/**
+ * Aviso de «prestá atención»: el día en que HRV está muy por debajo de tu línea base Y la FC de reposo muy por encima, a la vez.
+ * No cambia el semáforo (que usa medias de 7 días, más estables): solo avisa de un día que se sale de lo tuyo con las dos señales juntas.
+ * Criterio PRÁCTICO del sistema (no sale de un ensayo): LnHRV ≤ media − 1,5 DE y FC de reposo ≥ media + 2 DE, cada día contra sus 60 días previos (mín. 28 datos).
+ * Un día aislado puede ser sueño, alcohol, una enfermedad que empieza o ruido del reloj: se confirma con cómo te sentís y si se repite.
+ */
+export function acuteWarning(points: DailyPoint[], todayKey: Date): AcuteWarning {
+  const t = todayKey.getTime();
+  let daysIn7 = 0;
+  let todayRes: { hrvPct: number; rhrDiff: number } | null = null;
+  for (let back = 0; back < 7; back++) {
+    const day = t - back * DAY_MS;
+    const p = points.find((x) => x.date.getTime() === day);
+    if (!p || p.hrv == null || p.hrv <= 0 || p.restingHr == null || p.restingHr <= 0) continue;
+    const base = points.filter((x) => x.date.getTime() >= day - 60 * DAY_MS && x.date.getTime() <= day - DAY_MS);
+    const hv = base.map((x) => x.hrv).filter((v): v is number => v != null && v > 0).map(Math.log);
+    const rv = base.map((x) => x.restingHr).filter((v): v is number => v != null && v > 0);
+    if (hv.length < MIN_BASELINE_DAYS || rv.length < MIN_BASELINE_DAYS) continue;
+    const hm = mean(hv), hs = sd(hv), rm = mean(rv), rs = sd(rv);
+    if (!(hs > 0) || !(rs > 0)) continue;
+    const hot = Math.log(p.hrv) <= hm - 1.5 * hs && p.restingHr >= rm + 2 * rs;
+    if (hot) {
+      daysIn7++;
+      if (back === 0) todayRes = { hrvPct: (p.hrv / Math.exp(hm) - 1) * 100, rhrDiff: p.restingHr - rm };
+    }
+  }
+  const message = todayRes
+    ? `Hoy coinciden HRV muy bajo (${Math.abs(todayRes.hrvPct).toFixed(0)}% bajo tu línea base) y FC de reposo alta (+${todayRes.rhrDiff.toFixed(1)} lpm)${daysIn7 > 1 ? `; ya pasó ${daysIn7} de los últimos 7 días` : ""}. Prestá atención a cómo te sentís (sueño, estrés, molestias) y evitá sumar carga extra si se repite.`
+    : null;
+  return { today: !!todayRes, daysIn7, hrvPct: todayRes?.hrvPct ?? null, rhrDiff: todayRes?.rhrDiff ?? null, message };
+}
