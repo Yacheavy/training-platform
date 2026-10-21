@@ -25,7 +25,7 @@ export default async function WelcomePage() {
   // Trae FTP y mejor potencia de 5 min de Intervals (si está conectado y los datos tienen más de 6 h); si tarda o falla, sigue con lo que haya
   let fresh = user;
   if (user.intervalsAthleteId) {
-    const stale = !user.powerCurveSyncedAt || Date.now() - user.powerCurveSyncedAt.getTime() > 6 * 3600_000;
+    const stale = !user.powerCurveSyncedAt || new Date().getTime() - user.powerCurveSyncedAt.getTime() > 6 * 3600_000;
     if (stale) {
       await Promise.race([refreshAthleteMetrics(id).catch(() => []), new Promise((r) => setTimeout(r, 7000))]);
       fresh = (await prisma.user.findUnique({ where: { id }, select: { name: true, ftp: true, weight: true, coachId: true, email: true, pvo2maxWatts: true, sportSettingsJson: true, powerCurveJson: true, powerCurveSyncedAt: true, intervalsAthleteId: true, trainingBackground: true, currentStateNote: true, preferences: true } })) ?? user;

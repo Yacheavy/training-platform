@@ -48,7 +48,8 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     const raceWeek = days.some((d) => d.rationale.includes("MINI-TAPER") || d.stimulusType === ACTIVATION_KEY || d.stimulusType === RACE_WARMUP_KEY);
     // La semana intensificada (periodización por bloques) concentra a propósito 2 sesiones de VO2max: el tope sube al 30%
     const hardLimit = inten ? 0.3 : 0.2;
-    if (!raceWeek && total > 0 && hard / total > hardLimit) w.push(`Semana ${wk + 1}: ${Math.round((hard / total) * 100)}% del tiempo en intensidad alta (>${Math.round(hardLimit * 100)}%)`);
+    // Con un solo día de bici en la semana el reparto 80/20 no se puede diluir: esa única salida es de calidad por elección del alumno, así que la regla no aplica
+    if (!raceWeek && cyc.length > 1 && total > 0 && hard / total > hardLimit) w.push(`Semana ${wk + 1}: ${Math.round((hard / total) * 100)}% del tiempo en intensidad alta (>${Math.round(hardLimit * 100)}%)`);
   }
 
   // Separación entre sesiones duras (circular no aplica entre semanas: usa fechas reales)

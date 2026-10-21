@@ -231,6 +231,41 @@ function planFor(id: string, ftp: number) {
     check(plan.length > 0 && warnings.length === 0, `preset ${name}: plan sin advertencias ${warnings.slice(0, 2).join(" | ")}`);
   }
 
+
+  // ── 7. Atletas aleatorios: asistente completo + plan, con semanas y metas al azar ───────────
+  let seed = 20261021; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32);
+  const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
+  let fuzzOk = 0, fuzzRejected = 0;
+  for (let i = 0; i < 400; i++) {
+    const id = `u_f${i}`;
+    addUser(id, `Atleta ${i}`, `${id}@t.com`);
+    as(id);
+    const ftp = Math.round(120 + rnd() * 260);
+    const days: P["days"] = [1, 2, 3, 4, 5, 6, 0].map((d) => {
+      const t = pick(["cycling", "cycling", "cycling", "gym", "rest", "rest", "flexibility"] as const);
+      const min = t === "cycling" ? pick([45, 60, 75, 90, 120, 180, 240, 300]) : t === "rest" ? 0 : pick([20, 30, 45, 60]);
+      return D(d, t, min, t === "cycling" && rnd() < 0.4);
+    });
+    const mode = pick(["event", "performance", "general"] as const);
+    const metric = pick(["ftp", "p5", "weight"] as const);
+    const cur = metric === "ftp" ? ftp : metric === "p5" ? Math.round(ftp * 1.25) : 70;
+    const payload = base({ ftp: String(ftp), p5: String(Math.round(ftp * 1.25)), weight: "70", days, goal: { mode, name: mode === "event" ? `Carrera ${i}` : "", date: mode === "event" ? "2027-03-15" : "", priority: pick(["A", "B", "C"] as const), profile: pick(["", "llano", "montana", "fondo", "criterium"]), metric, target: String(metric === "weight" ? cur - 3 : Math.round(cur * 1.06)) } });
+    const hasBike = days.some((d) => d.type === "cycling");
+    const results = [] as (string | null)[];
+    for (const st of [1, 2, 3, 4]) results.push(err(await run(st, payload)));
+    if (!hasBike) { check(results[1] !== null, `aleatorio ${i}: sin bici debe rechazarse`); fuzzRejected++; continue; }
+    check(results.every((r) => r === null), `aleatorio ${i}: pasos rechazados sin motivo ${results.join("|")}`);
+    check(!err(await actions.submitOnboarding()), `aleatorio ${i}: envío`);
+    const { plan, warnings, tpl } = planFor(id, ftp);
+    check(plan.length > 0 && warnings.length === 0, `aleatorio ${i}: plan con advertencias ${warnings.slice(0, 2).join(" | ")} :: semana ${tpl.map((t) => `${t.dayOfWeek}${t.stimulusType[0]}${t.isQualityDay ? "Q" : ""}${t.targetDurationMin ?? ""}`).join(" ")}`);
+    const rest = new Set(tpl.filter((t) => t.stimulusType === "rest").map((t) => t.dayOfWeek));
+    for (const d of plan) if (rest.has(d.date.getUTCDay()) && d.stimulusType !== "rest") check(false, `aleatorio ${i}: sesión en día de descanso`);
+    const goals = db.goals.filter((g) => g.athleteId === id);
+    check(goals.length === (mode === "general" ? 0 : 1), `aleatorio ${i}: ${goals.length} objetivos para modo ${mode}`);
+    fuzzOk++;
+  }
+  console.log(`aleatorios: ${fuzzOk} completos, ${fuzzRejected} sin bici (rechazados como corresponde)`);
+
   console.log(problems === 0 ? "Puesta en marcha: todo bien" : `${problems} fallas`);
   process.exit(problems ? 1 : 0);
 })();

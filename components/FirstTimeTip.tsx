@@ -1,26 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 /**
  * Ayuda de «primera vez»: se muestra sola hasta que se la cierra (se recuerda en este navegador) y después queda un enlace discreto
  * para volver a verla. El recuerdo vive solo en el navegador: si no se puede guardar, simplemente vuelve a aparecer.
  */
+const listeners = new Set<() => void>();
+const memory = new Set<string>(); // si el navegador no deja guardar, al menos se recuerda mientras la pestaña esté abierta
+const seen = (id: string): boolean => {
+  if (memory.has(id)) return true;
+  try { return !!window.localStorage.getItem(`tip:${id}`); } catch { return false; }
+};
+const subscribe = (cb: () => void) => { listeners.add(cb); return () => { listeners.delete(cb); }; };
+
 export function FirstTimeTip({ id, title, children, linkText = "¿Cómo se lee esto?" }: { id: string; title: string; children: React.ReactNode; linkText?: string }) {
-  const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    try { setOpen(!window.localStorage.getItem(`tip:${id}`)); } catch { setOpen(true); }
-    setReady(true);
-  }, [id]);
+  // En el servidor no se sabe si ya la vio: no se dibuja nada hasta hidratar, así no parpadea
+  const alreadySeen = useSyncExternalStore(subscribe, () => seen(id), () => null);
+  const [reopened, setReopened] = useState(false);
+  if (alreadySeen === null) return null;
+  const open = !alreadySeen || reopened;
   const close = () => {
-    setOpen(false);
-    try { window.localStorage.setItem(`tip:${id}`, "1"); } catch { /* sin almacenamiento: vuelve a aparecer */ }
+    setReopened(false);
+    memory.add(id);
+    try { window.localStorage.setItem(`tip:${id}`, "1"); } catch { /* sin almacenamiento: queda en memoria */ }
+    listeners.forEach((l) => l());
   };
-  if (!ready) return null;
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} aria-label={`Ayuda: ${title}`} style={{ background: "none", border: "none", padding: "4px 0", margin: "0 0 10px", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}>
+      <button type="button" onClick={() => setReopened(true)} aria-label={`Ayuda: ${title}`} style={{ background: "none", border: "none", padding: "4px 0", margin: "0 0 10px", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}>
         {linkText}
       </button>
     );

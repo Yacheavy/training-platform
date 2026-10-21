@@ -171,6 +171,7 @@ export function OnboardingWizard({ initial, coachName, hasCoach, name, intervals
           {adjacent && <div style={{ fontSize: "12.5px", color: "var(--amber)", marginTop: "6px" }}>Marcaste días de calidad seguidos: hacen falta 48 h entre sesiones fuertes, así que uno pasará a rodaje suave.</div>}
           {quality.length === 0 && cycling.length > 0 && <div style={{ fontSize: "12.5px", color: "var(--amber)", marginTop: "6px" }}>No marcaste ningún día de calidad: todas las salidas serían suaves.</div>}
           {gymBeforeLong && <div style={{ fontSize: "12.5px", color: "var(--amber)", marginTop: "6px" }}>Tenés gimnasio el día antes de tu salida larga: puede llegarte cansado. Tu coach lo va a revisar.</div>}
+          {cycling.length === 1 && quality.length === 1 && <div style={{ fontSize: "12.5px", color: "var(--amber)", marginTop: "6px" }}>Con un solo día de bici, esa salida concentra toda la intensidad de la semana. Si podés, sumá un segundo día de rodaje suave; si no, tu coach lo va a tener en cuenta.</div>}
           {badMin && <div style={{ fontSize: "12.5px", color: "var(--red)", marginTop: "6px" }}>Cada día de bici necesita entre 15 y 600 minutos.</div>}
         </div>
       )}

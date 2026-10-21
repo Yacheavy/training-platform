@@ -109,7 +109,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const reviewNote =
     me?.onboardingSubmittedAt && !me.onboardingReviewedAt
       ? "Tu configuración está en revisión: tu coach la va a mirar y puede corregirla."
-      : me?.onboardingReviewedAt && Date.now() - me.onboardingReviewedAt.getTime() < 7 * 86400000
+      : me?.onboardingReviewedAt && new Date().getTime() - me.onboardingReviewedAt.getTime() < 7 * 86400000
         ? "✓ Tu coach revisó tu configuración."
         : null;
 
