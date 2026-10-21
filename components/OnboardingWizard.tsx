@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { WeekEditor, Segmented, Icon, buzz, pill, patchDay, weekStats, WeekBars, DAY_NAMES, type Day } from "./WeekEditor";
+import { WeekEditor, Segmented, Icon, buzz, patchDay, weekStats, WeekBars, DAY_NAMES, type Day } from "./WeekEditor";
 import { saveOnboardingStep, submitOnboarding, skipOnboarding, type OnboardingPayload } from "@/lib/onboarding-actions";
 
 const PROFILES = [
