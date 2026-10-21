@@ -76,9 +76,11 @@ export function AvailabilityRing({
             const [x2, y2] = pt(degAt(t), R + 11);
             return <line key={t} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--bg)" strokeWidth="2.5" />;
           })}
-          {score > 0 && <path d={arc(START, end)} fill="none" stroke={`url(#${gid})`} strokeWidth="12" strokeLinecap="round" />}
-          <circle cx={kx} cy={ky} r="9" fill="var(--bg)" opacity=".9" />
-          <circle cx={kx} cy={ky} r="5.5" fill={m.color} />
+          {score > 0 && <path className="avail-arc" pathLength={1} d={arc(START, end)} fill="none" stroke={`url(#${gid})`} strokeWidth="12" strokeLinecap="round" />}
+          <g className="avail-knob">
+            <circle cx={kx} cy={ky} r="9" fill="var(--bg)" opacity=".9" />
+            <circle cx={kx} cy={ky} r="5.5" fill={m.color} />
+          </g>
         </svg>
         <div className="avail-score">
           <div className="avail-num">{Math.round(score)}</div>

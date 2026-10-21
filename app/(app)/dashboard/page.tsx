@@ -258,10 +258,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} attention={!!availability.acute.message || availability.chips.some((c) => c.state === "watch")} />
-      <FirstTimeTip id="semaforo" title="Cómo leer tu disponibilidad" linkText="¿Cómo leer el semáforo?">
-        El número y el color resumen cómo llegás hoy, mirando tu HRV, tu FC en reposo, tu check-in y tu forma (TSB). <b>Verde:</b> hacé la sesión como está. <b>Ámbar:</b> con cuidado; si el cuerpo no responde, bajá la intensidad. <b>Rojo:</b> priorizá recuperar. Cada casilla muestra qué señal pesa, y una sola señal aislada no lo pone en rojo.
-      </FirstTimeTip>
+      <div style={{ position: "relative" }}>
+        <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} attention={!!availability.acute.message || availability.chips.some((c) => c.state === "watch")} />
+        <FirstTimeTip id="semaforo" title="Cómo leer tu disponibilidad" linkText="¿Cómo leer el semáforo?" floating>
+          El número y el color resumen cómo llegás hoy, mirando tu HRV, tu FC en reposo, tu check-in y tu forma (TSB). <b>Verde:</b> hacé la sesión como está. <b>Ámbar:</b> con cuidado; si el cuerpo no responde, bajá la intensidad. <b>Rojo:</b> priorizá recuperar. Cada casilla muestra qué señal pesa, y una sola señal aislada no lo pone en rojo.
+        </FirstTimeTip>
+      </div>
       {availability.acute.message && (
         <div className="dash-card" style={{ marginBottom: "14px", borderColor: "var(--amber)" }}>
           <h3 className="dash-card-title">Prestá atención</h3>

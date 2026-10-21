@@ -14,7 +14,8 @@ const seen = (id: string): boolean => {
 };
 const subscribe = (cb: () => void) => { listeners.add(cb); return () => { listeners.delete(cb); }; };
 
-export function FirstTimeTip({ id, title, children, linkText = "¿Cómo se lee esto?" }: { id: string; title: string; children: React.ReactNode; linkText?: string }) {
+/** floating: cuando está cerrada se muestra solo un botón «?» redondo, posicionado arriba a la derecha del contenedor (que debe ser position: relative) */
+export function FirstTimeTip({ id, title, children, linkText = "¿Cómo se lee esto?", floating = false }: { id: string; title: string; children: React.ReactNode; linkText?: string; floating?: boolean }) {
   // En el servidor no se sabe si ya la vio: no se dibuja nada hasta hidratar, así no parpadea
   const alreadySeen = useSyncExternalStore(subscribe, () => seen(id), () => null);
   const [reopened, setReopened] = useState(false);
@@ -26,6 +27,11 @@ export function FirstTimeTip({ id, title, children, linkText = "¿Cómo se lee e
     try { window.localStorage.setItem(`tip:${id}`, "1"); } catch { /* sin almacenamiento: queda en memoria */ }
     listeners.forEach((l) => l());
   };
+  if (!open && floating) {
+    return (
+      <button type="button" onClick={() => setReopened(true)} aria-label={`Ayuda: ${title}`} title={linkText} className="tip-q">?</button>
+    );
+  }
   if (!open) {
     return (
       <button type="button" onClick={() => setReopened(true)} aria-label={`Ayuda: ${title}`} style={{ background: "none", border: "none", padding: "4px 0", margin: "0 0 10px", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}>
