@@ -14,6 +14,7 @@ import { VARIANTS, EVIDENCE_LABELS, FAMILY_LABELS } from "@/lib/training-engine/
 import { getExecutionTips } from "@/lib/training-engine/execution-tips";
 import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
 import { GymSessionView } from "@/components/GymSessionView";
+import { FirstTimeTip } from "@/components/FirstTimeTip";
 import { isOffBike } from "@/lib/training-engine/off-bike";
 import { calculateTss } from "@/lib/training-engine/tss";
 import { buildMobilitySet, type GymSession } from "@/lib/training-engine/strength";
@@ -173,6 +174,11 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
               <SubmitButton style={{ ...primaryBtn, width: "100%", padding: "12px 16px", fontSize: "14px", borderRadius: "10px" }}>Enviar a Intervals</SubmitButton>
             </ActionForm>
           ) : null}
+          {workout.status !== "COMPLETED" && !offBike && (
+            <FirstTimeTip id="sesion" title="Qué hace cada botón" linkText="¿Qué hace cada botón?">
+              <b>Pasar a rodillo</b> adapta la sesión al interior: la acorta si hace falta y ajusta los intervalos. <b>Otra variante</b> cambia el tipo de sesión del día (si estaba en rodillo, sigue en rodillo). <b>Mover de día</b> la cambia de fecha. Si la sesión ya estaba en Intervals, cualquier cambio se actualiza solo allá.
+            </FirstTimeTip>
+          )}
           {workout.status !== "COMPLETED" && (
             <div className="session-actions">
               {!offBike && !workout.workoutLibraryKey.startsWith("ftp_test") && (

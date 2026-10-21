@@ -23,6 +23,7 @@ import { AvailabilityRing } from "@/components/AvailabilityRing";
 import { ChatQuota } from "@/components/ChatQuota";
 import { getChatUsage } from "@/lib/chat/usage";
 import { Sparkline } from "@/components/Sparkline";
+import { FirstTimeTip } from "@/components/FirstTimeTip";
 import { ConnectIntervalsModal } from "@/components/ConnectIntervalsModal";
 import { getAccessData } from "@/lib/access-data";
 import { connectIntervals, postponeIntervalsPrompt } from "@/lib/access-actions";
@@ -258,6 +259,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} attention={!!availability.acute.message || availability.chips.some((c) => c.state === "watch")} />
+      <FirstTimeTip id="semaforo" title="Cómo leer tu disponibilidad" linkText="¿Cómo leer el semáforo?">
+        El número y el color resumen cómo llegás hoy, mirando tu HRV, tu FC en reposo, tu check-in y tu forma (TSB). <b>Verde:</b> hacé la sesión como está. <b>Ámbar:</b> con cuidado; si el cuerpo no responde, bajá la intensidad. <b>Rojo:</b> priorizá recuperar. Cada casilla muestra qué señal pesa, y una sola señal aislada no lo pone en rojo.
+      </FirstTimeTip>
       {availability.acute.message && (
         <div className="dash-card" style={{ marginBottom: "14px", borderColor: "var(--amber)" }}>
           <h3 className="dash-card-title">Prestá atención</h3>
@@ -349,6 +353,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           </div>
         )}
+        <FirstTimeTip id="checkin" title="Para qué sirve el check-in" linkText="¿Para qué el check-in?">
+          Contá en 10 segundos cómo dormiste y cómo te sentís (de 1 a 7). Con eso el semáforo se ajusta a vos y no solo a lo que mide el reloj. Conviene hacerlo cada mañana.
+        </FirstTimeTip>
         <div className="dash-row today">
           <Card
             title="Check-in de hoy"
