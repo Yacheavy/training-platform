@@ -35,6 +35,7 @@ export function AvailabilityRing({
   insufficient = false,
   sources = [],
   ageDays = null,
+  attention = false,
 }: {
   status: Status;
   score: number;
@@ -46,6 +47,8 @@ export function AvailabilityRing({
   sources?: string[];
   /** Días desde el último dato de HRV/FC (0 = hoy). */
   ageDays?: number | null;
+  /** Hay un aviso de atención (HRV muy bajo + FC alta hoy): el consejo no puede decir solo «todo bien». */
+  attention?: boolean;
 }) {
   if (insufficient) return <InsufficientHero />;
   const m = META[status];
@@ -85,7 +88,7 @@ export function AvailabilityRing({
 
       <div className="avail-body">
         <span className="avail-pill">{m.label}</span>
-        <p className="avail-advice">{m.advice}</p>
+        <p className="avail-advice">{attention && status === "GREEN" ? "Podés hacer la sesión como está planificada, pero prestá atención a tus señales de hoy." : m.advice}</p>
         <ul className="avail-chips" aria-label="Estado de cada señal">
           {chips.map((c) => (
             <li key={c.key} className={`avail-chip ${c.state}`}>

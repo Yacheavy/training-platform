@@ -65,7 +65,7 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   });
   const history = await prisma.wellness.findMany({
     where: { athleteId, date: { gte: new Date(todayKey.getTime() - 61 * 24 * 60 * 60 * 1000), lte: todayKey } },
-    select: { date: true, hrv: true, restingHr: true },
+    select: { date: true, hrv: true, restingHr: true, sleepHours: true },
     orderBy: { date: "asc" },
   });
   const hrvSig = hrvSignal(history, todayKey, hrvDropAlertPct);
@@ -97,6 +97,14 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const alertReasons = [...ev.alertReasons];
   if (wellnessAgeDays != null && wellnessAgeDays >= 1) alertReasons.unshift(reasons[0]);
   const acute = acuteWarning(history, todayKey);
+  // Contexto del aviso: cuánto dormiste frente a lo tuyo (solo si la noche fue claramente corta)
+  const sleepToday = history.find((x) => x.date.getTime() === todayKey.getTime())?.sleepHours ?? null;
+  const sleepBase = history.filter((x) => x.date.getTime() < todayKey.getTime() && x.sleepHours != null && x.sleepHours > 0).map((x) => x.sleepHours as number);
+  if (acute.message && sleepToday != null && sleepToday > 0 && sleepBase.length >= 28) {
+    const m = sleepBase.reduce((a, b) => a + b, 0) / sleepBase.length;
+    const sd = Math.sqrt(sleepBase.reduce((a, b) => a + (b - m) ** 2, 0) / (sleepBase.length - 1));
+    if (sd > 0 && sleepToday <= m - 1.5 * sd && sleepToday < 7) acute.message += ` Además dormiste ${sleepToday.toFixed(1).replace(".", ",")} h (tu media es ${m.toFixed(1).replace(".", ",")} h).`;
+  }
   // El chip usa la media de 7 días (estable). Si hoy el dato se sale mucho de lo tuyo pero la media es normal, se avisa en el propio chip para que no diga solo «Normal»
   const chips = signalChips({ hrvSig, rhrSig, checkin: checkinToday, tsb, minTsb }, ev).map((c): SignalChip => {
     if (c.key === "hrv" && c.state === "ok" && acute.hrvLowToday && acute.hrvPctToday != null) return { ...c, state: "watch", detail: `Hoy ${Math.abs(acute.hrvPctToday).toFixed(0)}% bajo · media de 7 días normal` };

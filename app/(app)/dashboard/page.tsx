@@ -1,3 +1,4 @@
+import { intensityOf } from "@/lib/training-engine/variants";
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
@@ -219,11 +220,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} />
+      <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} attention={!!availability.acute.message || availability.chips.some((c) => c.state === "watch")} />
       {availability.acute.message && (
         <div className="dash-card" style={{ marginBottom: "14px", borderColor: "var(--amber)" }}>
           <h3 className="dash-card-title">Prestá atención</h3>
           <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, marginTop: "8px" }}>{availability.acute.message}</div>
+          {todayWorkout && intensityOf(todayWorkout.workoutLibraryKey) >= 2 && (
+            <div style={{ fontSize: "13px", color: "var(--text)", lineHeight: 1.5, marginTop: "8px" }}>Hoy tenés una sesión de calidad. Si en la entrada en calor la FC viene alta o las piernas pesadas, pedí una versión más suave desde «Pedir ajustes» en la sesión.</div>
+          )}
           <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "8px" }}>Aviso con criterio práctico del sistema (no de un ensayo): no cambia el semáforo. Un día aislado puede deberse al sueño, al alcohol o al reloj.</div>
         </div>
       )}
