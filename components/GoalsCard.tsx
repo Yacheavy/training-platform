@@ -41,10 +41,64 @@ function countdown(n: number): string {
   return `faltan ${n} días`;
 }
 
+/** Qué mide una meta de rendimiento y en qué unidad (las metas viejas guardan solo «FTP»; las del asistente, «W de FTP», «W en 5 min», «kg de peso») */
+function metricInfo(metric: string | null): { label: string; unit: string; kind: "ftp" | "p5" | "weight" | "other" } {
+  const m = metric ?? "";
+  if (/ftp/i.test(m)) return { label: "FTP", unit: "W", kind: "ftp" };
+  if (/5\s?min/i.test(m)) return { label: "Potencia de 5 min", unit: "W", kind: "p5" };
+  if (/peso|kg/i.test(m)) return { label: "Peso", unit: "kg", kind: "weight" };
+  return { label: m || "Meta", unit: "", kind: "other" };
+}
+const num = (v: number) => String(Math.round(v * 10) / 10).replace(".", ",");
+
+/** Barra de avance: del punto de partida (al fijar la meta) a la meta, con un marcador en el valor de hoy */
+function GoalProgress({ label, own, unit, from, to, current, source }: { label: string; own: string; unit: string; from: number; to: number; current: number | null; source?: string }) {
+  const u = unit ? ` ${unit}` : "";
+  const span = to - from;
+  const raw = current != null && span !== 0 ? (current - from) / span : null; // <0: fue para el otro lado; >1: superó la meta
+  const pct = raw == null ? null : Math.max(0, Math.min(1, raw));
+  const done = raw != null && raw >= 1;
+  const remaining = current != null ? Math.abs(to - current) : Math.abs(span);
+  let status: { text: string; color: string };
+  if (current == null) status = { text: "Sin dato actual para medir el avance.", color: "var(--text-muted)" };
+  else if (done) status = { text: "¡Meta alcanzada!", color: "var(--teal)" };
+  else if (raw! < 0) status = { text: `Estás ${num(Math.abs(current - from))}${u} ${span > 0 ? "por debajo" : "por encima"} del punto de partida.`, color: "var(--amber)" };
+  else if (raw === 0) status = { text: `Todavía sin avance: ${own} sigue igual que al fijar la meta.`, color: "var(--text-muted)" };
+  else status = { text: `Te ${remaining === 1 ? "falta" : "faltan"} ${num(remaining)}${u} para llegar.`, color: "var(--text-muted)" };
+  return (
+    <div style={{ marginTop: "14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <div style={{ fontSize: "10.5px", letterSpacing: ".06em", textTransform: "uppercase", color: "var(--text-dim)" }}>Punto de partida</div>
+          <div style={{ fontSize: "15px", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{num(from)}{u}</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "10.5px", letterSpacing: ".06em", textTransform: "uppercase", color: "var(--text-dim)" }}>Meta</div>
+          <div style={{ fontSize: "15px", fontWeight: 600, fontVariantNumeric: "tabular-nums", color: "var(--teal)" }}>{num(to)}{u}</div>
+        </div>
+      </div>
+      <div style={{ position: "relative", height: "10px", margin: "10px 0 6px", borderRadius: "5px", background: "var(--surface-3)" }} role="progressbar" aria-label={`Avance hacia la meta de ${label}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct == null ? undefined : Math.round(pct * 100)}>
+        {pct != null && <div style={{ width: `${pct * 100}%`, height: "100%", borderRadius: "5px", background: "linear-gradient(90deg, var(--teal-dim), var(--teal))", transition: "width .4s ease" }} />}
+        {pct != null && <span aria-hidden style={{ position: "absolute", top: "50%", left: `${pct * 100}%`, width: "16px", height: "16px", transform: "translate(-50%, -50%)", borderRadius: "50%", background: "var(--bg)", border: `3px solid ${done ? "var(--teal)" : "var(--text)"}` }} />}
+      </div>
+      {current != null && (
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", fontSize: "12.5px" }}>
+          <b style={{ color: "var(--text)" }}>Hoy: {num(current)}{u}</b>
+          {pct != null && <span style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{Math.round(pct * 100)}% del camino</span>}
+        </div>
+      )}
+      <div style={{ fontSize: "12px", color: status.color, marginTop: "6px", lineHeight: 1.45 }}>{status.text}</div>
+      {current != null && source && <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "2px" }}>«Hoy» sale {source}.</div>}
+    </div>
+  );
+}
+
 export function GoalsCard({
   goals,
   todayKey,
   currentFtp,
+  currentP5 = null,
+  currentWeight = null,
   addAction,
   deleteAction,
   updateProfileAction,
@@ -54,6 +108,9 @@ export function GoalsCard({
   goals: GoalRow[];
   todayKey: string;
   currentFtp: number | null;
+  /** Potencia de 5 min y peso actuales (para medir el avance de esas metas) */
+  currentP5?: number | null;
+  currentWeight?: number | null;
   addAction: (formData: FormData) => Promise<unknown>;
   deleteAction: (formData: FormData) => Promise<unknown>;
   updateProfileAction: (formData: FormData) => Promise<unknown>;
@@ -160,12 +217,10 @@ export function GoalsCard({
           <h3 className="group-title" style={{ marginBottom: "10px" }}>Metas de rendimiento</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {perf.map((g) => {
-              const isFtp = /ftp/i.test(g.metric ?? "");
-              const current = isFtp && currentFtp ? currentFtp : g.baselineValue;
+              const mi = metricInfo(g.metric);
+              const live = mi.kind === "ftp" ? currentFtp : mi.kind === "p5" ? currentP5 : mi.kind === "weight" ? currentWeight : null;
               const from = g.baselineValue;
               const to = g.targetValue;
-              let pct: number | null = null;
-              if (from != null && to != null && current != null && to !== from) pct = Math.max(0, Math.min(100, Math.round(((current - from) / (to - from)) * 100)));
               const p = PRIORITY[g.priority];
               return (
                 <div key={g.id} style={{ padding: "12px 14px", border: "1px solid var(--border)", borderRadius: "12px", background: "var(--surface-2)" }}>
@@ -179,25 +234,11 @@ export function GoalsCard({
                     </div>
                     <DeleteButton id={g.id} />
                   </div>
-                  {(from != null || to != null) && (
-                    <div style={{ marginTop: "12px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-mono)", fontSize: "12px", marginBottom: "6px" }}>
-                        <span style={{ color: "var(--text-muted)" }}>{from ?? "?"} {g.metric}</span>
-                        <span>{to ?? "?"} {g.metric}</span>
-                      </div>
-                      {pct != null && (
-                        <>
-                          <div style={{ height: "8px", borderRadius: "4px", background: "var(--surface-3)", overflow: "hidden" }}>
-                            <div style={{ width: `${pct}%`, height: "100%", background: "var(--teal)", borderRadius: "4px" }} />
-                          </div>
-                          <div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "6px" }}>
-                            Hoy: {current} {g.metric} · {pct}% del camino
-                            {isFtp && currentFtp ? " (tu FTP actual)" : ""}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                  {from != null && to != null ? (
+                    <GoalProgress label={mi.label} own={mi.kind === "ftp" ? "tu FTP" : mi.kind === "p5" ? "tu potencia de 5 min" : mi.kind === "weight" ? "tu peso" : "tu valor"} unit={mi.unit} from={from} to={to} current={live} source={mi.kind === "ftp" ? "del FTP que tenés cargado en Ajustes" : mi.kind === "p5" ? "de la potencia de 5 min que tenés cargada en Ajustes" : mi.kind === "weight" ? "del peso que tenés cargado en tu perfil" : undefined} />
+                  ) : from != null || to != null ? (
+                    <div style={{ marginTop: "10px", fontSize: "12.5px", color: "var(--text-muted)" }}>{from != null ? `Desde ${num(from)}` : `Meta ${num(to as number)}`} {mi.unit}</div>
+                  ) : null}
                 </div>
               );
             })}

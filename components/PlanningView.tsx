@@ -143,6 +143,8 @@ export async function PlanningView({ athleteId, sp, coach }: { athleteId: string
         }))}
         todayKey={dateKeyLocal(new Date())}
         currentFtp={user?.ftp ?? null}
+        currentP5={user?.pvo2maxWatts ?? null}
+        currentWeight={user?.weight ?? null}
         addAction={act.addGoal}
         deleteAction={act.deleteGoal}
         updateProfileAction={act.updateProfile}
