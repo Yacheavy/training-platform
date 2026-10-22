@@ -8,7 +8,11 @@ function formatDuration(sec: number): string {
   return `${min}m${remSec}s`;
 }
 
-function stepLine(b: WorkoutBlock, pct: (w: number) => string): string {
+/** Sesiones cuyos "intervalos" son sprints a TOPE: se escriben sin objetivo de potencia (freeride) para que el rodillo en ERG o el ciclocomputador no los limiten. */
+export const ALL_OUT_SPRINT_KEYS = new Set(["z2_sprints", "sprint_neuro"]);
+
+function stepLine(b: WorkoutBlock, pct: (w: number) => string, allOut = false): string {
+  if (allOut && b.type === "interval") return `- Sprint a tope ${formatDuration(b.durationSec)} freeride`;
   return `- ${formatDuration(b.durationSec)} ${pct(b.targetWatts)}${b.cadenceRpm ? ` ${b.cadenceRpm}rpm` : ""}`;
 }
 
@@ -23,7 +27,7 @@ const same = (a: WorkoutBlock, b: WorkoutBlock) => a.durationSec === b.durationS
  * calma), se escribe aparte como "Última repetición": así el total de repeticiones es exacto.
  * El resto (Z2, relleno, descansos entre series) va como pasos sueltos. Devuelve también las repeticiones de cada serie.
  */
-function buildMainSetSection(mainBlocks: WorkoutBlock[], pct: (w: number) => string): { text: string; reps: number[] } {
+function buildMainSetSection(mainBlocks: WorkoutBlock[], pct: (w: number) => string, allOut = false): { text: string; reps: number[] } {
   const sections: string[] = [];
   const reps: number[] = [];
   let loose: string[] = [];
@@ -44,19 +48,19 @@ function buildMainSetSection(mainBlocks: WorkoutBlock[], pct: (w: number) => str
       while (isPair(mainBlocks[i + n * 2], mainBlocks[i + n * 2 + 1]) && same(mainBlocks[i + n * 2], iv) && same(mainBlocks[i + n * 2 + 1], rc)) n++;
       flushLoose();
       setNo++;
-      sections.push(`${setNo === 1 ? "Main Set" : `Serie ${setNo}`} ${n}x\n${stepLine(iv, pct)}\n${stepLine(rc, pct)}`);
+      sections.push(`${setNo === 1 ? "Main Set" : `Serie ${setNo}`} ${n}x\n${stepLine(iv, pct, allOut)}\n${stepLine(rc, pct)}`);
       i += n * 2;
       let total = n;
       // Repetición final sin recuperación posterior (solo cuando el par era intervalo + recuperación)
       const tail = mainBlocks[i];
       if (rc.type === "recovery" && tail && tail.type === "interval" && same(tail, iv) && mainBlocks[i + 1]?.type !== "recovery") {
-        sections.push(`Última repetición\n${stepLine(tail, pct)}`);
+        sections.push(`Última repetición\n${stepLine(tail, pct, allOut)}`);
         total++;
         i++;
       }
       reps.push(total);
     } else {
-      loose.push(stepLine(iv, pct));
+      loose.push(stepLine(iv, pct, allOut));
       i++;
     }
   }
@@ -83,8 +87,10 @@ export function buildStructuredWorkout(
   blocks: WorkoutBlock[],
   ftp: number,
   fueling?: FuelingInfo,
-  rationale?: string | null
+  rationale?: string | null,
+  libraryKey?: string
 ): string {
+  const allOut = !!libraryKey && ALL_OUT_SPRINT_KEYS.has(libraryKey);
   const pct = (watts: number) => `${Math.round((watts / ftp) * 100)}%`;
 
   const warmupBlocks = blocks.filter((b) => b.type.startsWith("warmup"));
@@ -98,7 +104,7 @@ export function buildStructuredWorkout(
     sections.push(`Warmup\n${warmupBlocks.map((b) => stepLine(b, pct)).join("\n")}`);
   }
   if (mainBlocks.length > 0) {
-    const main = buildMainSetSection(mainBlocks, pct);
+    const main = buildMainSetSection(mainBlocks, pct, allOut);
     mainReps = main.reps;
     sections.push(main.text);
   }
@@ -113,6 +119,7 @@ export function buildStructuredWorkout(
   if (reps.length > 0) {
     notesLines.push(`Estructura: ${reps.length === 1 ? "UNA sola serie" : `${reps.length} series`} — total ${reps.reduce((x, y) => x + y, 0)} repeticiones${reps.length > 1 ? ` (${reps.join(" + ")})` : ""}. No agregues ni quites series.`);
   }
+  if (allOut) notesLines.push("Los sprints van a TOPE, sin potencia objetivo (paso libre): si usás rodillo, que no quede en modo ERG durante el sprint. Entre sprints, recuperá casi por completo.");
   if (fueling) {
     notesLines.push(
       `Nutrición sugerida: ${fueling.suggestedCarbsG}g de carbohidratos (~${fueling.suggestedCarbsGPerHour}g/h), ${fueling.totalKj} kJ estimados.`
