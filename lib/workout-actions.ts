@@ -20,7 +20,7 @@ export async function approveWorkout(formData: FormData) {
 
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Esa sesión ya no existe (el plan se regeneró). Recargá la página para ver la versión actual.");
   const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
 
   if (workout.status !== "PLANNED" && workout.status !== "SUGGESTED" && workout.status !== "EDITED") throw new Error("Esta sesión ya fue aprobada, enviada o completada");
@@ -41,7 +41,7 @@ export async function sendWorkoutToIntervals(formData: FormData) {
 
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Esa sesión ya no existe (el plan se regeneró). Recargá la página para ver la versión actual.");
   const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status !== "APPROVED" && workout.status !== "EDITED") throw new Error("Aprobalo primero");
 
@@ -58,7 +58,7 @@ export async function approveAndSendWorkout(formData: FormData) {
 
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Esa sesión ya no existe (el plan se regeneró). Recargá la página para ver la versión actual.");
   const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (!["PLANNED", "SUGGESTED", "EDITED", "APPROVED", "SENT_TO_INTERVALS"].includes(workout.status)) throw new Error("Esta sesión ya fue completada");
 
@@ -138,7 +138,7 @@ async function regenerateInner(formData: FormData, excludeCurrent: boolean): Pro
   if (!session?.user?.id) throw new Error("No autenticado");
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Esa sesión ya no existe (el plan se regeneró). Recargá la página para ver la versión actual.");
   const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status === "COMPLETED") throw new Error("La sesión ya está completada");
 
@@ -185,7 +185,7 @@ export async function moveWorkoutIndoor(formData: FormData): Promise<{ error: st
   if (!session?.user?.id) throw new Error("No autenticado");
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Esa sesión ya no existe (el plan se regeneró). Recargá la página para ver la versión actual.");
   const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status === "COMPLETED") throw new Error("La sesión ya está completada");
   if (isOffBike(workout.workoutLibraryKey)) throw new Error("Esta sesión no es en bici: no se pasa a rodillo");
