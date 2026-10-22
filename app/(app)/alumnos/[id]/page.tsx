@@ -6,7 +6,8 @@ import { pushGoalsToIntervals } from "@/lib/push-goals";
 import { requireCoachOfStudent } from "@/lib/access";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { getPlanVsActual, getHrvBandData } from "@/lib/analytics";
-import { getDashboardData, getLoadHistory, getAvailabilityHistory } from "@/lib/dashboard-data";
+import { PlanNavigator } from "@/components/PlanNavigator";
+import { getPlanWorkouts, getDashboardData, getLoadHistory, getAvailabilityHistory } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
 import { Sparkline } from "@/components/Sparkline";
@@ -39,7 +40,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   await pushGoalsToIntervals(id).catch((e) => console.error("Objetivos del alumno a Intervals", e));
 
   const todayKey = dateKeyLocal(new Date());
-  const [availability, data, weeks, upcoming, activities, checkin, chatUsage, nutrition, load, hrvBand, availHistory] = await Promise.all([
+  const [availability, data, weeks, upcoming, activities, checkin, chatUsage, nutrition, planWorkouts, load, hrvBand, availHistory] = await Promise.all([
     calculateAvailability(id),
     getDashboardData(id),
     getPlanVsActual(id, 6),
@@ -51,6 +52,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId: id, date: dayKeyDate(new Date()) } } }),
     getChatUsage(id),
     getNutritionSummary(id, 42),
+    getPlanWorkouts(id),
     getLoadHistory(id),
     getHrvBandData(id, 30),
     getAvailabilityHistory(id),
@@ -151,23 +153,14 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
       <Section title="Entrenamiento">
         <div className="dash-row two">
-          <Card title="Próximos 7 días" subtitle="Tocá un día para ver la sesión.">
-            {days.some((w) => w.status !== "SENT_TO_INTERVALS" && w.status !== "COMPLETED") && (
+          <Card title="Plan" subtitle="Navegá semana a semana. Tocá un día para ver y modificar la sesión.">
+            {planWorkouts.some((w) => ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"].includes(w.status) && dateKeyLocal(new Date(w.date)) >= todayKey) && (
               <ActionForm action={coachSendPlanToIntervals.bind(null, id)} success="Plan enviado a Intervals" style={{ marginBottom: "12px" }}>
-                <SubmitButton className="btn btn-solid" pendingText="Enviando…">Aprobar y enviar a Intervals</SubmitButton>
+                <SubmitButton className="btn btn-solid" pendingText="Enviando…">Aprobar y enviar todo lo pendiente (3 semanas)</SubmitButton>
                 <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>Manda al calendario de Intervals de {student.name ?? "el alumno"} las sesiones pendientes de hoy en adelante.</div>
               </ActionForm>
             )}
-            {days.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin sesiones planificadas.</div> : (
-              <div>
-                {days.map((w) => (
-                  <div key={w.id} style={row}>
-                    <Link href={`/workouts/${w.id}`} style={{ color: "inherit", textDecoration: "none" }}><strong style={{ textTransform: "capitalize" }}>{fmtDay(w.date, false).replace(".", "")}</strong> · {STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey} <span style={{ color: "var(--teal)" }}>›</span></Link>
-                    <span style={{ color: "var(--text-muted)" }}>{(w.workoutLibraryKey === "gym" || w.workoutLibraryKey === "flexibility") ? "" : `${mins(w.blocksJson)} min · TSS ${Math.round(w.estimatedTss ?? 0)} · `}{STATUS_ES[w.status] ?? w.status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <PlanNavigator workouts={planWorkouts} nowISO={new Date().toISOString()} athleteId={id} />
           </Card>
           <Card title="Últimas actividades">
             {activities.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin actividades.</div> : (

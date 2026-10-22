@@ -21,7 +21,7 @@ interface PlanWorkout {
 }
 
 /** Plan completo navegable semana a semana (con botones y deslizando en el celular). */
-export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; nowISO: string }) {
+export function PlanNavigator({ workouts, nowISO, athleteId }: { workouts: PlanWorkout[]; nowISO: string; athleteId?: string }) {
   const currentStart = useMemo(() => weekRangeLocal(new Date(nowISO)).start.getTime(), [nowISO]);
 
   // Rango de semanas con contenido (siempre incluye la actual)
@@ -129,6 +129,7 @@ export function PlanNavigator({ workouts, nowISO }: { workouts: PlanWorkout[]; n
       {pendingSend > 0 && (
         <ActionForm action={sendWeekToIntervals} success="Semana enviada a Intervals" style={{ marginBottom: "12px" }}>
           <input type="hidden" name="weekStart" value={weekStart} />
+          {athleteId && <input type="hidden" name="athleteId" value={athleteId} />}
           <SubmitButton pendingText="Enviando…" style={{ width: "100%", background: "var(--teal)", color: "#0A1310", border: "none", borderRadius: "10px", padding: "11px 16px", fontSize: "13.5px", fontWeight: 600, cursor: "pointer" }}>
             {offset === 0 ? "Enviar lo que falta de esta semana" : "Enviar lo que falta de esta semana a Intervals"}
             {" "}({pendingSend} sin enviar{futureInWeek > pendingSend ? `, ${futureInWeek - pendingSend} ya en Intervals` : ""})

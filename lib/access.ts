@@ -28,3 +28,14 @@ export async function requireCoachOfStudent(studentId: string) {
   if (!student || !coachCanManage({ coachId, student, invite })) throw new Error("Alumno no encontrado");
   return student;
 }
+
+/**
+ * Dueño de la acción sobre datos de un alumno: el propio alumno o su entrenador. Devuelve el id del alumno (el dueño
+ * de los datos), que es el que hay que usar para leer, escribir y mandar a Intervals; nunca el del que hace clic.
+ */
+export async function authorizeAthlete(athleteId: string, sessionUserId: string): Promise<string> {
+  if (athleteId === sessionUserId) return athleteId;
+  const student = await requireCoachOfStudent(athleteId).catch(() => null);
+  if (!student) throw new Error("Workout no encontrado");
+  return student.id;
+}

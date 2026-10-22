@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { pushWorkoutToIntervals } from "@/lib/push-workout";
 import { revalidatePath } from "next/cache";
+import { authorizeAthlete } from "@/lib/access";
 import { dayStartLocal, dayRangeLocal } from "@/lib/tz";
 
 export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
@@ -11,7 +12,8 @@ export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
   if (!session?.user?.id) throw new Error("No autenticado");
 
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status === "COMPLETED") throw new Error("La sesión ya se realizó");
 
   const parsed = new Date(newDateISO);
@@ -22,7 +24,7 @@ export async function moveWorkoutToDate(workoutId: string, newDateISO: string) {
   await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { date: newDate } });
   if (["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(workout.status)) {
     try {
-      await pushWorkoutToIntervals(session.user.id, workoutId);
+      await pushWorkoutToIntervals(athleteId, workoutId);
     } catch (err) {
       await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { date: workout.date } });
       throw err;
@@ -42,9 +44,8 @@ export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
     prisma.generatedWorkout.findUnique({ where: { id: workoutIdB } }),
   ]);
   if (!workoutA || !workoutB) throw new Error("Workout no encontrado");
-  if (workoutA.athleteId !== session.user.id || workoutB.athleteId !== session.user.id) {
-    throw new Error("No autorizado");
-  }
+  if (workoutA.athleteId !== workoutB.athleteId) throw new Error("No autorizado");
+  const athleteId = await authorizeAthlete(workoutA.athleteId, session.user.id);
   if (workoutA.status === "COMPLETED" || workoutB.status === "COMPLETED") throw new Error("Una de las sesiones ya se realizó");
 
   const dateA = workoutA.date;
@@ -57,7 +58,7 @@ export async function swapWorkouts(workoutIdA: string, workoutIdB: string) {
 
   try {
     for (const w of [workoutA, workoutB]) {
-      if (["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(w.status)) await pushWorkoutToIntervals(session.user.id, w.id);
+      if (["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(w.status)) await pushWorkoutToIntervals(athleteId, w.id);
     }
   } catch (err) {
     // Se revierte: la app y Intervals no deben quedar con fechas distintas
@@ -83,12 +84,13 @@ export async function moveWorkoutByDate(formData: FormData) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("Elegí una fecha");
 
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
 
   const target = new Date(`${day}T12:00:00Z`);
   const { start, end } = dayRangeLocal(target);
   const other = await prisma.generatedWorkout.findFirst({
-    where: { athleteId: session.user.id, date: { gte: start, lt: end }, id: { not: workoutId } },
+    where: { athleteId, date: { gte: start, lt: end }, id: { not: workoutId } },
   });
   if (other) {
     await swapWorkouts(workoutId, other.id);

@@ -104,7 +104,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
 
   const workout = await prisma.generatedWorkout.findUnique({ where: { id } });
   if (!workout) notFound();
-  // Una sesión es del alumno; su entrenador la ve en SOLO LECTURA (sin aprobar, enviar ni cambiar nada)
+  // Una sesión es del alumno; su entrenador puede verla y modificarla (aprobar, enviar, cambiar variante, mover) en nombre del alumno
   const readOnly = workout.athleteId !== session.user.id;
   const student = readOnly ? await requireCoachOfStudent(workout.athleteId).catch(() => null) : null;
   if (readOnly && !student) notFound();
@@ -144,7 +144,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
       <BackLink fallback={readOnly ? `/alumnos/${workout.athleteId}/calendario` : "/dashboard"} />
 
       <div style={{ margin: "14px 0 20px" }}>
-        {readOnly && student && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "4px" }}>Sesión de {student.name ?? student.email} · solo lectura</div>}
+        {readOnly && student && <div style={{ fontSize: "12px", color: "var(--teal)", marginBottom: "4px" }}>Sesión de {student.name ?? student.email} · como coach · tus cambios se aplican a su plan</div>}
         <div style={{ fontSize: "12px", color: "var(--text-muted)", textTransform: "capitalize" }}>{dateLabel}</div>
         <h1 className="page-title" style={{ margin: "4px 0" }}>{TYPE_LABELS[workout.workoutLibraryKey] ?? workout.workoutLibraryKey}</h1>
         <span style={{ fontSize: "11px", color: "var(--teal)", border: "1px solid var(--border)", borderRadius: "999px", padding: "2px 10px" }}>
@@ -160,7 +160,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
         )}
       </div>
 
-      {!readOnly && (
+      {true && (
         <div style={{ display: "grid", gap: "10px", marginBottom: "16px" }}>
           {(workout.status === "PLANNED" || workout.status === "SUGGESTED") && (
             <ActionForm action={approveAndSendWorkout} success="Sesión aprobada y enviada a Intervals">
@@ -200,7 +200,7 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
                 </ActionForm>
               )}
               <MoveDayControl action={moveWorkoutByDate} workoutId={workout.id} defaultDate={workout.date.toISOString().slice(0, 10)} className="session-action" />
-              <PendingLink href={`/chat?workoutId=${workout.id}`} className="session-action accent">Pedir ajustes (IA)</PendingLink>
+              {!readOnly && <PendingLink href={`/chat?workoutId=${workout.id}`} className="session-action accent">Pedir ajustes (IA)</PendingLink>}
             </div>
           )}
           {workout.status === "SENT_TO_INTERVALS" && (

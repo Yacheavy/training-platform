@@ -12,6 +12,7 @@ import type { Prisma } from "@/app/generated/prisma";
 import { VARIANTS } from "@/lib/training-engine/variants";
 import { isOffBike } from "@/lib/training-engine/off-bike";
 import { dayRangeLocal } from "@/lib/tz";
+import { authorizeAthlete } from "@/lib/access";
 
 export async function approveWorkout(formData: FormData) {
   const session = await auth();
@@ -19,7 +20,8 @@ export async function approveWorkout(formData: FormData) {
 
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
 
   if (workout.status !== "PLANNED" && workout.status !== "SUGGESTED" && workout.status !== "EDITED") throw new Error("Esta sesión ya fue aprobada, enviada o completada");
 
@@ -29,6 +31,7 @@ export async function approveWorkout(formData: FormData) {
   });
 
   revalidatePath("/dashboard");
+  revalidatePath(`/alumnos/${athleteId}`);
   revalidatePath(`/workouts/${workoutId}`);
 }
 
@@ -38,11 +41,13 @@ export async function sendWorkoutToIntervals(formData: FormData) {
 
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status !== "APPROVED" && workout.status !== "EDITED") throw new Error("Aprobalo primero");
 
-  await pushWorkoutToIntervals(session.user.id, workoutId);
+  await pushWorkoutToIntervals(athleteId, workoutId);
   revalidatePath("/dashboard");
+  revalidatePath(`/alumnos/${athleteId}`);
   revalidatePath(`/workouts/${workoutId}`);
 }
 
@@ -53,7 +58,8 @@ export async function approveAndSendWorkout(formData: FormData) {
 
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (!["PLANNED", "SUGGESTED", "EDITED", "APPROVED", "SENT_TO_INTERVALS"].includes(workout.status)) throw new Error("Esta sesión ya fue completada");
 
   // Una sesión ya enviada se vuelve a enviar tal cual (actualiza el mismo evento de Intervals)
@@ -61,8 +67,9 @@ export async function approveAndSendWorkout(formData: FormData) {
     await prisma.generatedWorkout.update({ where: { id: workoutId }, data: { status: "APPROVED", approvedAt: new Date() } });
   }
   // Si Intervals falla queda aprobada: se puede reintentar sin perder nada
-  await pushWorkoutToIntervals(session.user.id, workoutId);
+  await pushWorkoutToIntervals(athleteId, workoutId);
   revalidatePath("/dashboard");
+  revalidatePath(`/alumnos/${athleteId}`);
   revalidatePath("/calendar");
   revalidatePath(`/workouts/${workoutId}`);
 }
@@ -75,7 +82,8 @@ export async function approveAndSendWorkout(formData: FormData) {
 export async function sendWeekToIntervals(formData?: FormData): Promise<{ error: string } | { sent: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autenticado");
-  const athleteId = session.user.id;
+  const targetId = String(formData?.get("athleteId") ?? "");
+  const athleteId = targetId ? await authorizeAthlete(targetId, session.user.id) : session.user.id;
 
   const today = dayRangeLocal(new Date()).start;
   const ws = Number(formData?.get("weekStart"));
@@ -103,6 +111,7 @@ export async function sendWeekToIntervals(formData?: FormData): Promise<{ error:
     }
   }
   revalidatePath("/dashboard");
+  revalidatePath(`/alumnos/${athleteId}`);
   revalidatePath("/calendar");
   if (failed.length > 0) {
     return { error: `Se enviaron ${sent} de ${pending.length}. ${failed[0]}. Las que faltan quedaron aprobadas: probá de nuevo.` };
@@ -129,11 +138,12 @@ async function regenerateInner(formData: FormData, excludeCurrent: boolean): Pro
   if (!session?.user?.id) throw new Error("No autenticado");
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status === "COMPLETED") throw new Error("La sesión ya está completada");
 
   const block = await prisma.trainingBlock.findFirst({
-    where: { athleteId: session.user.id, startDate: { lte: workout.date }, endDate: { gte: workout.date } },
+    where: { athleteId, startDate: { lte: workout.date }, endDate: { gte: workout.date } },
   });
   if (!block) throw new Error("Esa fecha no pertenece a ningún bloque de entrenamiento");
 
@@ -156,13 +166,14 @@ async function regenerateInner(formData: FormData, excludeCurrent: boolean): Pro
   // Si ya estaba en Intervals, se actualiza ahí en el mismo paso (si falla, queda aprobada para reenviar)
   let resendError: string | null = null;
   for (const id of r.resendIds) {
-    try { await pushWorkoutToIntervals(session.user.id, id); } catch (err) {
+    try { await pushWorkoutToIntervals(athleteId, id); } catch (err) {
       console.error("Reenvío tras regenerar falló:", err);
       resendError = err instanceof Error ? err.message : "error";
     }
   }
 
   revalidatePath("/dashboard");
+  revalidatePath(`/alumnos/${athleteId}`);
   revalidatePath("/calendar");
   revalidatePath(`/workouts/${workoutId}`);
   if (resendError) return { error: `La sesión se regeneró pero no se pudo actualizar en Intervals (${resendError}). Quedó aprobada: usá «Enviar a Intervals».` };
@@ -174,13 +185,14 @@ export async function moveWorkoutIndoor(formData: FormData): Promise<{ error: st
   if (!session?.user?.id) throw new Error("No autenticado");
   const workoutId = String(formData.get("workoutId"));
   const workout = await prisma.generatedWorkout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.athleteId !== session.user.id) throw new Error("Workout no encontrado");
+  if (!workout) throw new Error("Workout no encontrado");
+  const athleteId = await authorizeAthlete(workout.athleteId, session.user.id);
   if (workout.status === "COMPLETED") throw new Error("La sesión ya está completada");
   if (isOffBike(workout.workoutLibraryKey)) throw new Error("Esta sesión no es en bici: no se pasa a rodillo");
   const curSec = (workout.blocksJson as unknown as WorkoutBlock[]).reduce((t, b) => t + b.durationSec, 0);
   // Si ya está en rodillo pero supera el tope (sesiones pasadas antes de que existiera el tope), se vuelve a ajustar
   if (workout.environment === "indoor" && curSec <= indoorCapMin(workout.blocksJson as unknown as WorkoutBlock[]) * 60) throw new Error("La sesión ya está en rodillo");
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } });
+  const user = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } });
   if (!user?.ftp) throw new Error("Falta el FTP");
 
   const ad = adaptForIndoor(workout.blocksJson as unknown as WorkoutBlock[], workout.workoutLibraryKey);
@@ -204,12 +216,13 @@ export async function moveWorkoutIndoor(formData: FormData): Promise<{ error: st
   let pushError: string | null = null;
   // Toda sesión confirmada (aprobada, editada o enviada) se actualiza en Intervals en el mismo paso
   if (wasConfirmed) {
-    try { await pushWorkoutToIntervals(session.user.id, workoutId); } catch (err) {
+    try { await pushWorkoutToIntervals(athleteId, workoutId); } catch (err) {
       console.error("Reenvío tras pasar a rodillo falló:", err);
       pushError = err instanceof Error ? err.message : "error";
     }
   }
   revalidatePath("/dashboard");
+  revalidatePath(`/alumnos/${athleteId}`);
   revalidatePath("/calendar");
   revalidatePath(`/workouts/${workoutId}`);
   if (pushError) return { error: `Se ajustó la sesión pero no se pudo actualizar en Intervals (${pushError}). Quedó aprobada: usá «Enviar a Intervals».` };
