@@ -12,6 +12,10 @@ export interface AvailabilityResult {
   hrvToday: number | null;
   hrvAvg7d: number | null;
   hrvDeltaPct: number | null;
+  /** Media de la línea base de HRV (ms), null si no hay. */
+  hrvBaseline: number | null;
+  /** Media de la línea base de FC de reposo (lpm), null si no hay. */
+  restingHrBaseline: number | null;
   restingHrToday: number | null;
   restingHrAvg7d: number | null;
   restingHrDeltaAbs: number | null;
@@ -120,6 +124,8 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     hrvToday,
     hrvAvg7d,
     hrvDeltaPct,
+    hrvBaseline: hrvSig.baseline,
+    restingHrBaseline: rhrSig.baseline,
     restingHrToday,
     restingHrAvg7d,
     restingHrDeltaAbs,

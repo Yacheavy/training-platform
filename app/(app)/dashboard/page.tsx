@@ -39,7 +39,7 @@ import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart"
 import { PhaseTimeline } from "@/components/PhaseTimeline";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { CheckinForm } from "@/components/CheckinForm";
-import { decideReadinessAdjustment } from "@/lib/readiness-actions";
+import { ReadinessCard, ReadinessDecided, buildReadinessSignals } from "@/components/ReadinessCard";
 import { proposeReadinessAdjustment } from "@/lib/training-engine/readiness-adjust";
 import { Card, Section } from "@/components/Card";
 import { PendingLink } from "@/components/PendingLink";
@@ -149,6 +149,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       ? proposeReadinessAdjustment(availability.status, todayWorkout.workoutLibraryKey, todayWorkout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[], (await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } }))?.ftp ?? 0)
       : null;
 
+  // Ya decidido hoy (marca [CHECKIN:ESTADO:decisión] en el fundamento): resumen corto en lugar de la tarjeta grande
+  const resolvedMark = todayWorkout && todayWorkout.status !== "COMPLETED" && availability.status !== "GREEN"
+    ? (todayWorkout.rationale ?? "").match(new RegExp(`\\[CHECKIN:${availability.status}:(aplicada|mantenida)\\]`))
+    : null;
+  const resolvedAdjustment = resolvedMark
+    ? {
+        decision: resolvedMark[1] as "aplicada" | "mantenida",
+        detail: resolvedMark[1] === "aplicada"
+          ? ((todayWorkout?.rationale ?? "").match(/Ajustada por tu estado de hoy \(.*?\): (.*?) · \[CHECKIN/)?.[1] ?? "La sesión de hoy quedó ajustada")
+          : "Decisión tuya · el semáforo sigue en " + (availability.status === "RED" ? "rojo" : "ámbar"),
+      }
+    : null;
+  const fmtDuration = (sec: number) => {
+    const m = Math.round(sec / 60);
+    return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, "0")} min` : ""}` : `${m} min`;
+  };
   const sessionLabel = (k: string) => STIMULUS_LABELS[k] ?? k;
   const checkinSummary = existingCheckin
     ? [
@@ -260,6 +276,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           El número y el color resumen cómo llegás hoy, mirando tu HRV, tu FC en reposo, tu check-in y tu forma (TSB). <b>Verde:</b> hacé la sesión como está. <b>Ámbar:</b> con cuidado; si el cuerpo no responde, bajá la intensidad. <b>Rojo:</b> priorizá recuperar. Cada casilla muestra qué señal pesa, y una sola señal aislada no lo pone en rojo.
         </FirstTimeTip>
       </div>
+      {adjustment && todayWorkout && (availability.status === "RED" || availability.status === "AMBER") && (
+        <ReadinessCard
+          status={availability.status}
+          nAlerts={availability.chips.filter((c) => c.state === "alert").length}
+          nSources={availability.sources.length}
+          signals={buildReadinessSignals(availability, null)}
+          workoutId={todayWorkout.id}
+          current={`${sessionLabel(todayWorkout.workoutLibraryKey)} · ${fmtDuration(todayBlocks.reduce((t, b) => t + b.durationSec, 0))}`}
+          proposal={`${adjustment.kind === "z2" ? "Rodaje Z2" : sessionLabel(adjustment.newKey)} · ${fmtDuration(adjustment.newBlocks.reduce((t, b) => t + b.durationSec, 0))}`}
+          hint={adjustment.kind === "z2" ? "sin la parte intensa" : adjustment.newKey === "z2" ? null : "mantiene la parte intensa"}
+          inIntervals={["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(todayWorkout.status)}
+        />
+      )}
+      {resolvedAdjustment && (
+        <ReadinessDecided decision={resolvedAdjustment.decision} detail={resolvedAdjustment.detail} />
+      )}
       {availability.acute.message && (
         <div className="dash-card" style={{ marginBottom: "14px", borderColor: "var(--amber)" }}>
           <h3 className="dash-card-title">Prestá atención</h3>
@@ -327,27 +359,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-        {adjustment && todayWorkout && (
-          <div className="dash-card" style={{ marginBottom: "14px", borderColor: availability.status === "RED" ? "var(--red, var(--red))" : "var(--amber)" }}>
-            <h3 className="dash-card-title">Ajuste sugerido por tu estado de hoy ({availability.status === "RED" ? "semáforo rojo" : "semáforo ámbar"})</h3>
-            <div style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5, margin: "8px 0 12px" }}>
-              {availability.reasons.join(" · ")}
-              <div style={{ color: "var(--text)", marginTop: "8px", fontWeight: 600 }}>{adjustment.label}</div>
-            </div>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <ActionForm action={decideReadinessAdjustment} success="Sesión ajustada">
-                <input type="hidden" name="workoutId" value={todayWorkout.id} />
-                <input type="hidden" name="decision" value="apply" />
-                <ActionButton primary>Aplicar ajuste</ActionButton>
-              </ActionForm>
-              <ActionForm action={decideReadinessAdjustment} success="Se mantiene la sesión">
-                <input type="hidden" name="workoutId" value={todayWorkout.id} />
-                <input type="hidden" name="decision" value="keep" />
-                <ActionButton>Mantener como está</ActionButton>
-              </ActionForm>
             </div>
           </div>
         )}
