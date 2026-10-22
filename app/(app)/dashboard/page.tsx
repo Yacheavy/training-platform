@@ -164,13 +164,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <Card
       title="Últimas actividades"
       subtitle="Tocá una para ver su resumen."
-      action={
-        <ActionForm action={syncNow} success="Datos actualizados desde Intervals">
-          <SubmitButton pendingText="Sincronizando…" style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--text-muted)", borderRadius: "8px", padding: "5px 12px", fontSize: "12px" }}>
-            Sincronizar
-          </SubmitButton>
-        </ActionForm>
-      }
     >
       {data.recentActivities.length === 0 && <div style={{ fontSize: "12.5px", color: "var(--text-dim)" }}>Todavía no hay actividades sincronizadas.</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -256,6 +249,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {data.hrvDate ? `Último dato de recuperación: ${ageLabel(data.hrvDate).replace(/[()]/g, "")}` : "Todavía no hay datos de recuperación"}
           </div>
         </div>
+        <ActionForm action={syncNow} success="Datos actualizados desde Intervals">
+          <SubmitButton className="btn btn-outline" pendingText="Sincronizando…">Actualizar datos</SubmitButton>
+        </ActionForm>
       </div>
 
       <div style={{ position: "relative" }}>
