@@ -10,6 +10,15 @@ const fmt1 = (n: number) => n.toFixed(1).replace(".", ",").replace("-", "−");
 const fmt0 = (n: number) => String(Math.round(n));
 const sign = (n: number) => (n > 0 ? "+" : n < 0 ? "−" : "");
 
+/** "Umbral X · te pasaste por Y" + aviso si está apenas pasado (la alerta es binaria: conviene ver cuánto falta para que desaparezca). */
+function marginText(value: number, base: number | null, threshold: number | null, unit: string, below: boolean): string | null {
+  if (threshold == null) return null;
+  const over = below ? threshold - value : value - threshold; // cuánto se pasó del umbral (>0 = en alerta)
+  const dist = base != null ? Math.abs(base - threshold) : null; // distancia base → umbral
+  const near = dist != null && dist > 0 && over / dist < 0.5;
+  return `Alerta desde ${threshold.toFixed(1).replace(".", ",")} ${unit} · estás ${Math.abs(over).toFixed(1).replace(".", ",")} ${unit} ${below ? "por debajo" : "por encima"}${near ? " · cerca del límite" : ""}`;
+}
+
 interface AvailabilityLike {
   signalsTriggered: string[];
   chips: { key: string; state: string }[];
@@ -20,32 +29,35 @@ interface AvailabilityLike {
   restingHrAvg7d: number | null;
   restingHrDeltaAbs: number | null;
   restingHrBaseline: number | null;
+  hrvThreshold: number | null;
+  restingHrThreshold: number | null;
+  minTsb: number;
   tsb: number | null;
   sources: string[];
 }
 
 /** Arma las filas de "qué señales están en alerta" con el dato clave en el título y el contexto debajo (coma decimal, como el resto de la app). */
-export function buildReadinessSignals(a: AvailabilityLike, minTsb: number | null): ReadinessSignal[] {
+export function buildReadinessSignals(a: AvailabilityLike): ReadinessSignal[] {
   const out: ReadinessSignal[] = [];
   if (a.signalsTriggered.includes("hrv") && a.hrvAvg7d != null && a.hrvDeltaPct != null) {
     out.push({
       key: "hrv",
       title: `HRV ${fmt0(a.hrvAvg7d)} ms · ${fmt1(Math.abs(a.hrvDeltaPct))} % ${a.hrvDeltaPct < 0 ? "bajo" : "sobre"} tu base`,
-      detail: a.hrvBaseline != null ? `Media de 7 días contra tu línea base (${fmt0(a.hrvBaseline)} ms)` : "Media de 7 días contra tu línea base",
+      detail: [a.hrvBaseline != null ? `Media de 7 días contra tu línea base (${fmt0(a.hrvBaseline)} ms)` : "Media de 7 días contra tu línea base", marginText(a.hrvAvg7d, a.hrvBaseline, a.hrvThreshold, "ms", true)].filter(Boolean).join(" · "),
     });
   }
   if (a.signalsTriggered.includes("resting_hr") && a.restingHrAvg7d != null && a.restingHrDeltaAbs != null) {
     out.push({
       key: "resting_hr",
       title: `FC de reposo ${fmt1(a.restingHrAvg7d)} lpm · ${sign(a.restingHrDeltaAbs)}${fmt1(Math.abs(a.restingHrDeltaAbs))} ${a.restingHrDeltaAbs > 0 ? "sobre" : "bajo"} tu base`,
-      detail: a.restingHrBaseline != null ? `Media de 7 días contra tu línea base (${fmt1(a.restingHrBaseline)} lpm)` : "Media de 7 días contra tu línea base",
+      detail: [a.restingHrBaseline != null ? `Media de 7 días contra tu línea base (${fmt1(a.restingHrBaseline)} lpm)` : "Media de 7 días contra tu línea base", marginText(a.restingHrAvg7d, a.restingHrBaseline, a.restingHrThreshold, "lpm", false)].filter(Boolean).join(" · "),
     });
   }
   if (a.chips.find((c) => c.key === "tsb")?.state === "alert" && a.tsb != null) {
     out.push({
       key: "tsb",
       title: `Forma ${fmt1(a.tsb)} · cansancio acumulado alto`,
-      detail: `Al empezar el día${minTsb != null ? `, por debajo de tu mínimo (${minTsb})` : ""}`,
+      detail: `Al empezar el día, por debajo de tu mínimo (${a.minTsb})`,
     });
   }
   if (a.signalsTriggered.some((s) => ["fatigue", "stress", "muscle_soreness", "sleep_quality"].includes(s))) {
@@ -98,18 +110,19 @@ const btnBase = { borderRadius: "12px", padding: "12px 18px", fontSize: "14.5px"
  * Guía principal del día cuando el semáforo no está en verde: qué señales están en alerta, qué cambiaría en la sesión de hoy y qué
  * pasa si se mantiene. Solo presentación: el semáforo y la propuesta salen de la misma lógica de siempre.
  */
+export interface ReadinessChange { workoutId: string; current: string; proposal: string; hint: string | null; inIntervals: boolean }
+
 export function ReadinessCard({
-  status, nAlerts, nSources, signals, workoutId, current, proposal, hint, inIntervals,
+  status, nAlerts, nSources, signals, change, noChangeText,
 }: {
   status: "RED" | "AMBER";
   nAlerts: number;
   nSources: number;
   signals: ReadinessSignal[];
-  workoutId: string;
-  current: string;
-  proposal: string;
-  hint: string | null;
-  inIntervals: boolean;
+  /** Cambio propuesto sobre la sesión de hoy; null si no hay un ajuste automático que proponer. */
+  change: ReadinessChange | null;
+  /** Qué decir cuando no hay cambio propuesto (sin sesión hoy, ya hecha, o una sesión sin ajuste automático). */
+  noChangeText: string;
 }) {
   const tone = status === "RED" ? "var(--red)" : "var(--amber)";
   return (
@@ -141,32 +154,38 @@ export function ReadinessCard({
         </div>
       )}
 
-      <div style={{ marginTop: "14px", border: "1px solid var(--border)", borderRadius: "14px", overflow: "hidden", fontSize: "13.5px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", padding: "10px 12px" }}>
-          <span style={{ color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>Hoy tenías</span>
-          <span style={{ textAlign: "right" }}>{current}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", padding: "10px 12px", borderTop: "1px solid var(--border)", background: "color-mix(in srgb, var(--teal) 7%, transparent)" }}>
-          <span style={{ color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>Te propongo</span>
-          <span style={{ textAlign: "right" }}><span style={{ color: "var(--teal)" }}>→</span> {proposal}{hint ? <span style={{ color: "var(--text-muted)" }}> · {hint}</span> : null}</span>
-        </div>
-      </div>
+      {change ? (
+        <>
+          <div style={{ marginTop: "14px", border: "1px solid var(--border)", borderRadius: "14px", overflow: "hidden", fontSize: "13.5px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", padding: "10px 12px" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>Hoy tenías</span>
+              <span style={{ textAlign: "right" }}>{change.current}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", padding: "10px 12px", borderTop: "1px solid var(--border)", background: "color-mix(in srgb, var(--teal) 7%, transparent)" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "12px", textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>Te propongo</span>
+              <span style={{ textAlign: "right" }}><span style={{ color: "var(--teal)" }}>→</span> {change.proposal}{change.hint ? <span style={{ color: "var(--text-muted)" }}> · {change.hint}</span> : null}</span>
+            </div>
+          </div>
 
-      <div style={{ display: "flex", gap: "10px", marginTop: "14px", flexWrap: "wrap" }}>
-        <ActionForm action={decideReadinessAdjustment} success="Sesión ajustada" style={{ flex: 1, display: "contents" }}>
-          <input type="hidden" name="workoutId" value={workoutId} />
-          <input type="hidden" name="decision" value="apply" />
-          <SubmitButton pendingText="Aplicando…" style={{ ...btnBase, flex: 1, background: "var(--teal)", color: "#0A1310", border: "none" }}>Aplicar el cambio</SubmitButton>
-        </ActionForm>
-        <ActionForm action={decideReadinessAdjustment} success="Se mantiene la sesión" style={{ display: "contents" }}>
-          <input type="hidden" name="workoutId" value={workoutId} />
-          <input type="hidden" name="decision" value="keep" />
-          <SubmitButton pendingText="Guardando…" style={{ ...btnBase, background: "transparent", color: "var(--text)", border: "1px solid var(--border-strong)", fontWeight: 600 }}>Mantener la sesión</SubmitButton>
-        </ActionForm>
-      </div>
-      <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "10px", lineHeight: 1.45 }}>
-        Si la mantenés, decidís vos: escuchá las piernas y cortá lo intenso si no responde.{inIntervals ? " Si aplicás el cambio, también se actualiza en Intervals." : ""}
-      </div>
+          <div style={{ display: "flex", gap: "10px", marginTop: "14px", flexWrap: "wrap" }}>
+            <ActionForm action={decideReadinessAdjustment} success="Sesión ajustada" style={{ display: "contents" }}>
+              <input type="hidden" name="workoutId" value={change.workoutId} />
+              <input type="hidden" name="decision" value="apply" />
+              <SubmitButton pendingText="Aplicando…" style={{ ...btnBase, flex: 1, background: "var(--teal)", color: "#0A1310", border: "none" }}>Aplicar el cambio</SubmitButton>
+            </ActionForm>
+            <ActionForm action={decideReadinessAdjustment} success="Se mantiene la sesión" style={{ display: "contents" }}>
+              <input type="hidden" name="workoutId" value={change.workoutId} />
+              <input type="hidden" name="decision" value="keep" />
+              <SubmitButton pendingText="Guardando…" style={{ ...btnBase, background: "transparent", color: "var(--text)", border: "1px solid var(--border-strong)", fontWeight: 600 }}>Mantener la sesión</SubmitButton>
+            </ActionForm>
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "10px", lineHeight: 1.45 }}>
+            Si la mantenés, decidís vos: escuchá las piernas y cortá lo intenso si no responde.{change.inIntervals ? " Si aplicás el cambio, también se actualiza en Intervals." : ""}
+          </div>
+        </>
+      ) : (
+        <div style={{ marginTop: "14px", fontSize: "13px", color: "var(--text-muted)", lineHeight: 1.5 }}>{noChangeText}</div>
+      )}
     </section>
   );
 }

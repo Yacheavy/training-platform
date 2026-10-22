@@ -17,6 +17,8 @@ export function buildWarmupZ2(totalSec: number, ftp: number): WorkoutBlock[] {
  * el MLSS/VT2) + 2 intervalos de 1min a intensidad MLSS/VT2 (~FTP) con 30s de
  * recuperación activa. Total: 13min.
  */
+/** Duración MÍNIMA de cualquier sprint (s). Decisión del entrenador: nada por debajo de 10 s. */
+export const SPRINT_MIN_SEC = 10;
 /** Sprints del rodaje Z2 por paso de progresión (1→3). Mantenimiento (descarga): 3. */
 export const SPRINTS_BY_STEP = [5, 7, 9];
 export const MAINTENANCE_SPRINTS = 3;
@@ -374,17 +376,19 @@ export function buildBlocks(
   }
 
   /**
-   * Sprints cortos neuromusculares (Kristoffersen 2019): series de 4 sprints de ~6 s sentado, salida desde parado,
+   * Sprints cortos neuromusculares (Kristoffersen 2019): series de 4 sprints sentado, salida desde parado,
    * resistencia alta (110-120 rpm al final), 2 min de recuperación entre sprints y 5 min entre series.
    * El estudio hizo 3 series, 2 veces por semana, 6 semanas, en ciclistas competitivos: mejoró la potencia pico
    * (+5,6% a 6 s) sin cambios en VO2max. Aquí va dentro de un rodaje Z2, 1 vez por semana y con 1→3 series.
+   * ADAPTACIÓN: el estudio usó ~6 s; acá el sprint mínimo es de 10 s (decisión del entrenador: 6 s es difícil de ejecutar y aporta casi nada de
+   * carga; 10 s queda dentro del rango de 4-20 s de los protocolos de sprint). Es una extrapolación, no el protocolo exacto del ensayo.
    */
   if (stimulusType === "sprint_neuro") {
     const sets = maintenance ? 1 : Math.min(3, Math.max(1, seriesOverride ?? 3));
     const blocks: WorkoutBlock[] = [...buildWarmupZ2(Math.min(900, Math.round(totalSec * 0.2)), ftp)];
     for (let s = 0; s < sets; s++) {
       for (let i = 0; i < 4; i++) {
-        blocks.push({ type: "interval", durationSec: 6, targetWatts: Math.round(ftp * 2.0) });
+        blocks.push({ type: "interval", durationSec: SPRINT_MIN_SEC, targetWatts: Math.round(ftp * 2.0) });
         if (i < 3) blocks.push({ type: "recovery", durationSec: 120, targetWatts: Math.round(ftp * 0.4) });
       }
       if (s < sets - 1) blocks.push({ type: "z2", durationSec: 300, targetWatts: z2Watts });
@@ -513,7 +517,7 @@ export function buildBlocks(
    * Rønnestad 30/15: 3 series de 13x(30s/15s), 3min entre series (protocolo real).
    * Billat 30-30: series de 30s/30s "hasta el fallo" — usamos 15 reps como
    * aproximación práctica de duración típica, no un tope fisiológico exacto.
-   * RST: 4 series de 6x(5-6s/24-25s), 3min entre series (fosfágenos).
+   * RST: 4 series de 6x(10s/30s), 3min entre series (fosfágenos; sprint mínimo de 10 s).
    * ANTES de este fix, esta rama llenaba TODO el tiempo disponible sin
    * límite, generando 80+ repeticiones irreales para sesiones largas.
    */
@@ -521,8 +525,8 @@ export function buildBlocks(
     const is5x12 = stimulusType === "ronnestad_5x12";
     const is1515 = stimulusType === "vo2_corto_15_15";
     const isBillat = stimulusType === "billat_30_30";
-    const shortInterval = stimulusType === "rst" ? 6 : is1515 ? 15 : 30;
-    const shortRecovery = stimulusType === "rst" ? 24 : is1515 ? 15 : isBillat ? 30 : 15;
+    const shortInterval = stimulusType === "rst" ? SPRINT_MIN_SEC : is1515 ? 15 : 30;
+    const shortRecovery = stimulusType === "rst" ? 30 : is1515 ? 15 : isBillat ? 30 : 15;
     // Billat 30/30: 2 series y la dosis sube por repeticiones (10 → 12 → 15) con el mismo paso 1→3 que las series (criterio propio)
     const billatStep = Math.min(3, Math.max(1, seriesOverride ?? 3));
     const repsPerSeries = stimulusType === "rst" ? 6 : is1515 ? 20 : isBillat ? [10, 12, 15][billatStep - 1] : is5x12 ? 12 : 13;

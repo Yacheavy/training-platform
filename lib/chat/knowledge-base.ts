@@ -74,7 +74,7 @@ un nivel de evidencia honesto; al explicarlas, decí siempre cuál es:
   mejore la durabilidad es una [HIPÓTESIS]; solo en salidas de 150 min o más y nunca el día antes de una sesión de calidad.
 - Over-unders (umbral): ciclos de 2' al ~94% + 1' al ~105% FTP. [PRÁCTICA].
 - VO2max largo 5': 4-5 × 5 min con 2:30 de recuperación. Los intervalos largos tienen ensayos en ciclistas, pero esta dosis exacta es [PRÁCTICA].
-- Sprints cortos de 6 s (neuromuscular): series de 4 sprints dentro de un rodaje Z2 [R42]; evidencia PRELIMINAR sobre potencia pico, no sobre resistencia.
+- Sprints cortos de 10 s (neuromuscular): series de 4 sprints dentro de un rodaje Z2 [R42]; el ensayo usó ~6 s y acá se adaptó a 10 s (mínimo de sprint del sistema), así que no es el protocolo exacto; evidencia PRELIMINAR sobre potencia pico, no sobre resistencia.
 - Torque a cadencia baja (fuerza en bici): 4-5 × 6' a ~72% FTP y 55 rpm [R43]; evidencia NO CONCLUYENTE: es solo variedad; cuidado con las rodillas.
 Reglas del sistema (criterio propio, [PRÁCTICA]): mínimo 48 h entre sesiones de calidad, el día después de una sesión dura solo rodaje fácil, como
 máximo una sesión neuromuscular por semana, en semanas de descarga los rodajes son solo Z2 y se conserva UNA sesión de intensidad de mantenimiento.

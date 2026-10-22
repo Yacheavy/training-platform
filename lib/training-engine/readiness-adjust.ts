@@ -1,5 +1,5 @@
 import { buildBlocks } from "./block-builder";
-import type { WorkoutBlock } from "./tss";
+import { calculateTss, type WorkoutBlock } from "./tss";
 import { isOffBike } from "./off-bike";
 
 const QUALITY = new Set(["hiit_genuino", "ronnestad_30_15", "z2_sprints", "billat_30_30", "rst", "sweet_spot", "umbral", "over_under", "vo2_long", "vo2_pmax", "vo2_supra_30", "vo2_corto_15_15", "vo2_piramide", "hiit_10x2", "hiit_4min", "ronnestad_5x12", "sprint_neuro", "endurance_tempo", "long_durability", "torque_low_cadence", "ftp_test", "ftp_test_5min", "ftp_test_8min"]);
@@ -45,7 +45,16 @@ export function proposeReadinessAdjustment(
 
   if (status === "RED") {
     if (QUALITY.has(stimulusType)) {
-      return { kind: "z2", label: `Cambiar la sesión de calidad por un rodaje Z2 de ${total} min`, newKey: "z2", newBlocks: buildBlocks("z2", total, ftp, null, null) };
+      // Un rodaje Z2 nunca debe cargar más que lo que reemplaza (sesiones con mucha Z1/recuperación pueden salir más suaves que Z2 corrido).
+      const origTss = calculateTss(blocks, ftp);
+      let mins = total;
+      let z2 = buildBlocks("z2", mins, ftp, null, null);
+      while (mins > 30 && calculateTss(z2, ftp) >= origTss) {
+        mins = Math.max(30, mins - 10);
+        z2 = buildBlocks("z2", mins, ftp, null, null);
+      }
+      const shorter = mins < total ? ` (más corto que los ${total} min planificados para no cargar más)` : "";
+      return { kind: "z2", label: `Cambiar la sesión de calidad por un rodaje Z2 de ${mins} min${shorter}`, newKey: "z2", newBlocks: z2 };
     }
     const t = trimZ2(blocks, 0.3);
     return t ? { kind: "trim", label: `Recortar el rodaje 30% (de ${total} a ${minutes(t)} min)`, newKey: stimulusType, newBlocks: t } : null;

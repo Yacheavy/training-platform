@@ -161,6 +161,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           : "Decisión tuya · el semáforo sigue en " + (availability.status === "RED" ? "rojo" : "ámbar"),
       }
     : null;
+  const showGuide = (availability.status === "RED" || availability.status === "AMBER") && !availability.insufficient && !resolvedAdjustment;
   const fmtDuration = (sec: number) => {
     const m = Math.round(sec / 60);
     return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, "0")} min` : ""}` : `${m} min`;
@@ -271,22 +272,37 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <div style={{ position: "relative" }}>
-        <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} attention={!!availability.acute.message || availability.chips.some((c) => c.state === "watch")} />
+        <AvailabilityRing status={availability.status} score={availability.score} alertReasons={availability.alertReasons} chips={availability.chips} insufficient={availability.insufficient} sources={availability.sources} ageDays={availability.wellnessAgeDays} attention={!!availability.acute.message || availability.chips.some((c) => c.state === "watch")} hideReasons={showGuide} />
         <FirstTimeTip id="semaforo" title="Cómo leer tu disponibilidad" linkText="¿Cómo leer el semáforo?" floating>
           El número y el color resumen cómo llegás hoy, mirando tu HRV, tu FC en reposo, tu check-in y tu forma (TSB). <b>Verde:</b> hacé la sesión como está. <b>Ámbar:</b> con cuidado; si el cuerpo no responde, bajá la intensidad. <b>Rojo:</b> priorizá recuperar. Cada casilla muestra qué señal pesa, y una sola señal aislada no lo pone en rojo.
         </FirstTimeTip>
       </div>
-      {adjustment && todayWorkout && (availability.status === "RED" || availability.status === "AMBER") && (
+      {showGuide && (
         <ReadinessCard
-          status={availability.status}
+          status={availability.status as "RED" | "AMBER"}
           nAlerts={availability.chips.filter((c) => c.state === "alert").length}
           nSources={availability.sources.length}
-          signals={buildReadinessSignals(availability, null)}
-          workoutId={todayWorkout.id}
-          current={`${sessionLabel(todayWorkout.workoutLibraryKey)} · ${fmtDuration(todayBlocks.reduce((t, b) => t + b.durationSec, 0))}`}
-          proposal={`${adjustment.kind === "z2" ? "Rodaje Z2" : sessionLabel(adjustment.newKey)} · ${fmtDuration(adjustment.newBlocks.reduce((t, b) => t + b.durationSec, 0))}`}
-          hint={adjustment.kind === "z2" ? "sin la parte intensa" : adjustment.newKey === "z2" ? null : "mantiene la parte intensa"}
-          inIntervals={["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(todayWorkout.status)}
+          signals={buildReadinessSignals(availability)}
+          change={
+            adjustment && todayWorkout
+              ? {
+                  workoutId: todayWorkout.id,
+                  current: `${sessionLabel(todayWorkout.workoutLibraryKey)} · ${fmtDuration(todayBlocks.reduce((t, b) => t + b.durationSec, 0))}`,
+                  proposal: `${adjustment.kind === "z2" ? "Rodaje Z2" : sessionLabel(adjustment.newKey)} · ${fmtDuration(adjustment.newBlocks.reduce((t, b) => t + b.durationSec, 0))}`,
+                  hint: adjustment.kind === "z2" ? "sin la parte intensa" : adjustment.newKey === "z2" ? null : "mantiene la parte intensa",
+                  inIntervals: ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(todayWorkout.status),
+                }
+              : null
+          }
+          noChangeText={
+            !todayWorkout
+              ? "Hoy no tenés sesión planificada: priorizá recuperar (comer bien, dormir y moverte suave)."
+              : todayWorkout.status === "COMPLETED"
+                ? "Ya hiciste la sesión de hoy. Priorizá comer, dormir y recuperar."
+                : availability.status === "RED"
+                  ? "Para la sesión de hoy no hay un ajuste automático que proponer: priorizá recuperar, bajá la intensidad o descansá."
+                  : "Para la sesión de hoy no hay un ajuste automático que proponer: hacela con cuidado y bajá la intensidad si el cuerpo no responde."
+          }
         />
       )}
       {resolvedAdjustment && (

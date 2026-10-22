@@ -16,6 +16,11 @@ export interface AvailabilityResult {
   hrvBaseline: number | null;
   /** Media de la línea base de FC de reposo (lpm), null si no hay. */
   restingHrBaseline: number | null;
+  /** Media móvil de 7 días a partir de la cual cada señal pasa a alerta (null sin línea base individual). */
+  hrvThreshold: number | null;
+  restingHrThreshold: number | null;
+  /** TSB mínimo configurado (por debajo, alerta). */
+  minTsb: number;
   restingHrToday: number | null;
   restingHrAvg7d: number | null;
   restingHrDeltaAbs: number | null;
@@ -126,6 +131,9 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
     hrvDeltaPct,
     hrvBaseline: hrvSig.baseline,
     restingHrBaseline: rhrSig.baseline,
+    hrvThreshold: hrvSig.threshold,
+    restingHrThreshold: rhrSig.threshold,
+    minTsb,
     restingHrToday,
     restingHrAvg7d,
     restingHrDeltaAbs,

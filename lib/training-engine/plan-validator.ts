@@ -1,3 +1,4 @@
+import { SPRINT_MIN_SEC } from "./block-builder";
 import type { PlannedDay } from "./plan-builder";
 import { MIN_GAP_DAYS_BETWEEN_VO2MAX, MIN_GAP_DAYS_BETWEEN_HARD } from "./quality-assignment";
 import { VARIANTS, intensityOf, isNeuroKey } from "./variants";
@@ -168,7 +169,7 @@ export function validatePlan(plan: PlannedDay[], ctx: { objective: string; ftp: 
     }
     if (d.stimulusType === "sprint_neuro") {
       if (ivBlocks.length === 0 || ivBlocks.length % 4 !== 0 || ivBlocks.length > 12) w.push(`${label(d)}: ${ivBlocks.length} sprints (debe ser 4×series, máx. 12)`);
-      if (ivBlocks.some((b) => b.durationSec !== 6)) w.push(`${label(d)}: los sprints cortos deben durar 6 s`);
+      if (ivBlocks.some((b) => b.durationSec < SPRINT_MIN_SEC)) w.push(`${label(d)}: los sprints cortos no pueden durar menos de ${SPRINT_MIN_SEC} s`);
     }
     if (d.stimulusType === "vo2_long") {
       const minR = d.isDeload ? 2 : 4;

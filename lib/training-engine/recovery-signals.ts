@@ -28,6 +28,8 @@ export interface SignalResult {
   rolling7: number | null;
   /** Media de la línea base (valor natural). null si no hay línea base. */
   baseline: number | null;
+  /** Valor de la media móvil en el que la señal pasa a alerta (valor natural: ms o lpm). Solo con línea base individual; null en el respaldo genérico. */
+  threshold: number | null;
   /** Cambio relativo de la media móvil vs. línea base (HRV, %), o diferencia absoluta (FC, lpm). */
   delta: number | null;
   reason: string | null;
@@ -74,6 +76,7 @@ export function hrvSignal(points: DailyPoint[], todayKey: Date, fallbackDropPct 
       triggered,
       rolling7: Math.exp(rMean),
       baseline: Math.exp(bMean),
+      threshold: Math.exp(lowerBound),
       delta: deltaPct,
       reason: triggered
         ? `HRV: tu media de 7 días (${Math.exp(rMean).toFixed(0)} ms) está ${Math.abs(deltaPct).toFixed(1)}% bajo tu línea base de ${baseline.length} días (${Math.exp(bMean).toFixed(0)} ms), por debajo de tu rango habitual`
@@ -90,6 +93,7 @@ export function hrvSignal(points: DailyPoint[], todayKey: Date, fallbackDropPct 
       triggered,
       rolling7: mean(rolling),
       baseline: ref,
+      threshold: null,
       delta: deltaPct,
       reason: triggered
         ? `HRV de hoy ${deltaPct.toFixed(1)}% bajo la media de tus 6 días previos (umbral genérico −${fallbackDropPct}%; aún no hay ${MIN_BASELINE_DAYS} días para tu línea base individual)`
@@ -97,7 +101,7 @@ export function hrvSignal(points: DailyPoint[], todayKey: Date, fallbackDropPct 
     };
   }
 
-  return { method: "insufficient", triggered: false, rolling7: rolling.length >= MIN_ROLLING_DAYS ? mean(rolling) : null, baseline: null, delta: null, reason: null };
+  return { method: "insufficient", triggered: false, rolling7: rolling.length >= MIN_ROLLING_DAYS ? mean(rolling) : null, baseline: null, threshold: null, delta: null, reason: null };
 }
 
 export function restingHrSignal(points: DailyPoint[], todayKey: Date, fallbackBpm = 5): SignalResult {
@@ -114,6 +118,7 @@ export function restingHrSignal(points: DailyPoint[], todayKey: Date, fallbackBp
       triggered,
       rolling7: rMean,
       baseline: bMean,
+      threshold: bMean + bSd,
       delta: rMean - bMean,
       reason: triggered
         ? `FC de reposo: media de 7 días ${rMean.toFixed(1)} lpm, ${(rMean - bMean).toFixed(1)} sobre tu línea base (${bMean.toFixed(1)} lpm), por encima de tu rango habitual`
@@ -130,12 +135,13 @@ export function restingHrSignal(points: DailyPoint[], todayKey: Date, fallbackBp
       triggered,
       rolling7: mean(rolling),
       baseline: ref,
+      threshold: null,
       delta: diff,
       reason: triggered ? `FC de reposo de hoy ${diff.toFixed(1)} lpm sobre la media de tus 6 días previos (umbral genérico +${fallbackBpm} lpm, no individualizado)` : null,
     };
   }
 
-  return { method: "insufficient", triggered: false, rolling7: rolling.length >= MIN_ROLLING_DAYS ? mean(rolling) : null, baseline: null, delta: null, reason: null };
+  return { method: "insufficient", triggered: false, rolling7: rolling.length >= MIN_ROLLING_DAYS ? mean(rolling) : null, baseline: null, threshold: null, delta: null, reason: null };
 }
 
 export interface AcuteWarning {

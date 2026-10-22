@@ -23,7 +23,7 @@ const PREFIX: Record<string, string> = {
   hiit_10x2: "HIIT 10x2",
   hiit_4min: "HIIT 4MIN",
   ronnestad_5x12: "30/15 x5",
-  sprint_neuro: "SPR6",
+  sprint_neuro: "SPR10",
   billat_30_30: "30/30",
   rst: "RST",
   gym: "GYM",

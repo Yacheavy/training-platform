@@ -182,9 +182,9 @@ export const VARIANTS: Record<string, VariantDef> = {
     intensity: 1, neuro: true, minSlotMin: 90, minGapDays: 5, maxPerWeek: 1, maintainable: true, indoor: "ok",
   },
   sprint_neuro: {
-    key: "sprint_neuro", label: "Sprints cortos (6 s)", family: "neuro", evidence: "preliminar",
-    evidenceNote: "Kristoffersen 2019 (ciclistas competitivos, ensayo pequeño): mejoró la potencia pico de 6 s sin cambiar el VO2max. Hecho 2 veces por semana durante 6 semanas.",
-    purpose: "1-3 series de 4 sprints de ~6 s, sentado y desde parado, dentro de un rodaje Z2.",
+    key: "sprint_neuro", label: "Sprints cortos (10 s)", family: "neuro", evidence: "preliminar",
+    evidenceNote: "Adaptado de Kristoffersen 2019 (ciclistas competitivos, ensayo pequeño): mejoró la potencia pico de 6 s sin cambiar el VO2max, con 2 sesiones por semana durante 6 semanas. Acá el sprint dura 10 s (el ensayo usó ~6 s): queda dentro del rango de 4-20 s de los protocolos de sprint, pero no es el protocolo exacto.",
+    purpose: "1-3 series de 4 sprints de 10 s, sentado y desde parado, dentro de un rodaje Z2.",
     caveat: "Calentá bien antes de los sprints.",
     intensity: 1, neuro: true, minSlotMin: 60, minGapDays: 5, maxPerWeek: 1, maintainable: true, indoor: "ok",
   },

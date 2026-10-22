@@ -105,7 +105,7 @@ export function getExecutionTips(stimulusType: string): string[] {
       "No hay ensayos que respalden esta forma: es una variante para variar el estímulo.",
     ],
     sprint_neuro: [
-      "Cada sprint dura apenas 6 s: salí desde casi parado, sentado, con resistencia alta, y acelerá al máximo sostenido hasta el final.",
+      "Cada sprint dura 10 s: salí desde casi parado, sentado, con resistencia alta, y acelerá al máximo sostenido hasta el final.",
       "Recuperá bien (2 min) entre sprints y 5 min entre series: la calidad de cada sprint importa más que la cantidad.",
       "Hacelo en llano o en falsa bajada controlada y con buen agarre. Si hay dolor o molestia (cadera, rodilla, espalda), cortá la serie.",
       "No hacerlo con piernas muy cargadas ni el día después de una sesión dura.",
