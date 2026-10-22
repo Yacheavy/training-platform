@@ -16,7 +16,9 @@ import { WorkoutDetailChart } from "@/components/WorkoutDetailChart";
 import { GymSessionView } from "@/components/GymSessionView";
 import { FirstTimeTip } from "@/components/FirstTimeTip";
 import { isOffBike } from "@/lib/training-engine/off-bike";
-import { calculateTss } from "@/lib/training-engine/tss";
+import { calculateTss, type WorkoutBlock } from "@/lib/training-engine/tss";
+import { indoorDurationRange, INDOOR_SOFT_WARN_MIN } from "@/lib/training-engine/indoor";
+import { IndoorDurationControl } from "@/components/IndoorDurationControl";
 import { buildMobilitySet, type GymSession } from "@/lib/training-engine/strength";
 
 type Block = { type: string; durationSec: number; targetWatts: number; cadenceRpm?: number; gym?: GymSession };
@@ -188,10 +190,16 @@ export default async function WorkoutDetailPage({ params }: { params: Promise<{ 
                 </ActionForm>
               )}
               {!offBike && workout.environment !== "indoor" && (
-                <ActionForm action={moveWorkoutIndoor} success="Sesión pasada a rodillo" style={{ display: "contents" }}>
-                  <input type="hidden" name="workoutId" value={workout.id} />
-                  <SubmitButton className="session-action">Pasar a rodillo</SubmitButton>
-                </ActionForm>
+                (() => {
+                  const r = indoorDurationRange(blocks as unknown as WorkoutBlock[], workout.workoutLibraryKey);
+                  return (
+                    <IndoorDurationControl
+                      action={moveWorkoutIndoor} workoutId={workout.id} athleteId={workout.athleteId}
+                      minMin={r.minMin} maxMin={r.maxMin} defaultMin={r.defaultMin}
+                      origMin={Math.round(blocks.reduce((t, b) => t + b.durationSec, 0) / 60)} warnMin={INDOOR_SOFT_WARN_MIN}
+                    />
+                  );
+                })()
               )}
               {!offBike && workout.environment === "indoor" && (
                 <ActionForm action={regenerateWorkout} success="Sesión vuelta a ruta" style={{ display: "contents" }}>

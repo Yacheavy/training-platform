@@ -8,6 +8,23 @@ import { VARIANTS } from "./variants";
  */
 export const INDOOR_CAP_QUALITY_MIN = 90;
 export const INDOOR_CAP_ENDURANCE_MIN = 120;
+/** Por encima de esto en rodillo se muestra un aviso suave (no bloquea). */
+export const INDOOR_SOFT_WARN_MIN = 120;
+
+/**
+ * Rango del selector de duración al pasar a rodillo (minutos, de a 5):
+ * mínimo = lo más corto que se puede dejar sin desarmar la sesión; máximo = la duración original (no se alarga);
+ * inicial = el tope por defecto (90 con intervalos, 120 en rodaje) o la duración original si es menor.
+ */
+export function indoorDurationRange(blocks: WorkoutBlock[], key: string): { minMin: number; maxMin: number; defaultMin: number } {
+  const orig = blocks.reduce((s, b) => s + b.durationSec, 0);
+  const maxMin = Math.max(5, Math.ceil(orig / 300) * 5);
+  const floorSec = adaptForIndoor(blocks, key, 1).blocks.reduce((s, b) => s + b.durationSec, 0);
+  const minMin = Math.min(maxMin, Math.max(5, Math.ceil((floorSec + 60) / 300) * 5));
+  const defaultMin = Math.min(maxMin, Math.max(minMin, indoorCapMin(blocks)));
+  return { minMin, maxMin, defaultMin };
+}
+
 export function indoorCapMin(blocks: { type: string }[]): number {
   return blocks.some((b) => b.type === "interval") ? INDOOR_CAP_QUALITY_MIN : INDOOR_CAP_ENDURANCE_MIN;
 }
@@ -59,8 +76,9 @@ function tidy(blocks: WorkoutBlock[]): WorkoutBlock[] {
  * Fundamento de la nota: en interior la temperatura corporal sube más sin viento relativo, por eso se recomienda ventilador
  * fuerte y guiarse por la potencia y no por la frecuencia cardíaca (Junge 2016; evidencia fisiológica, no de rendimiento).
  */
-export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdaptation {
-  const capMin = indoorCapMin(blocks);
+export function adaptForIndoor(blocks: WorkoutBlock[], key: string, capMinOverride?: number): IndoorAdaptation {
+  // capMinOverride = duración elegida por el entrenador/atleta (el tope por defecto es solo el valor inicial)
+  const capMin = capMinOverride && capMinOverride > 0 ? Math.round(capMinOverride) : indoorCapMin(blocks);
   const cap = capMin * 60;
   let out = blocks.map((b) => ({ ...b }));
   const originalTotal = sum(out);
@@ -110,7 +128,7 @@ export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdapt
         const want = Math.max(minSec, tot - (sum(out) - cap));
         if (!idxs.length || want >= tot) return;
         const k = want / tot;
-        idxs.forEach((x) => { out[x.i].durationSec = Math.max(60, Math.round((x.b.durationSec * k) / 30) * 30); });
+        idxs.forEach((x) => { out[x.i].durationSec = Math.max(60, Math.floor((x.b.durationSec * k) / 30) * 30); });
       };
       shrink(isWarm, 12 * 60);
       if (sum(out) > cap) shrink(isCool, 6 * 60);
@@ -146,6 +164,7 @@ export function adaptForIndoor(blocks: WorkoutBlock[], key: string): IndoorAdapt
   }
   if (shortened > 0) parts.push(`los intervalos largos se acortaron ${Math.round(shortened / 60)} min en total (misma potencia)`);
   if (overCap) parts.push(`no se pudo bajar de ${capMin} min sin desarmar la sesión: dura ${Math.round(total / 60)} min`);
+  if (capMinOverride && total > INDOOR_SOFT_WARN_MIN * 60) parts.push(`dura ${Math.round(total / 60)} min en rodillo: suele costar más sostenerlo (calor, posición fija); cortá si hace falta`);
   if (v?.indoor === "limited") parts.push("esta variante pierde parte de su sentido en rodillo; si podés, hacela en ruta otro día");
   return { blocks: out, note: parts.join(" · "), trimmedMin, removedReps, overCap };
 }

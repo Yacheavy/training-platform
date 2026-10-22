@@ -5,7 +5,7 @@ import { auth } from "@/auth";
 import { pushWorkoutToIntervals } from "@/lib/push-workout";
 import { revalidatePath } from "next/cache";
 import { generateFullPlan } from "@/lib/training-engine/generate-full-plan";
-import { adaptForIndoor, indoorCapMin } from "@/lib/training-engine/indoor";
+import { adaptForIndoor, indoorCapMin, indoorDurationRange } from "@/lib/training-engine/indoor";
 import { calculateTss, calculateKilojoules, type WorkoutBlock } from "@/lib/training-engine/tss";
 import { calculateFueling } from "@/lib/training-engine/fueling";
 import type { Prisma } from "@/app/generated/prisma";
@@ -195,7 +195,11 @@ export async function moveWorkoutIndoor(formData: FormData): Promise<{ error: st
   const user = await prisma.user.findUnique({ where: { id: athleteId }, select: { ftp: true } });
   if (!user?.ftp) throw new Error("Falta el FTP");
 
-  const ad = adaptForIndoor(workout.blocksJson as unknown as WorkoutBlock[], workout.workoutLibraryKey);
+  // Duración elegida (opcional): se limita al rango posible de la sesión
+  const rawDur = Number(formData.get("durationMin"));
+  const range = indoorDurationRange(workout.blocksJson as unknown as WorkoutBlock[], workout.workoutLibraryKey);
+  const chosen = Number.isFinite(rawDur) && rawDur > 0 ? Math.min(range.maxMin, Math.max(range.minMin, Math.round(rawDur))) : undefined;
+  const ad = adaptForIndoor(workout.blocksJson as unknown as WorkoutBlock[], workout.workoutLibraryKey, chosen);
   const fuel = calculateFueling(ad.blocks, user.ftp);
   const wasConfirmed = ["APPROVED", "EDITED", "SENT_TO_INTERVALS"].includes(workout.status);
   await prisma.generatedWorkout.update({
@@ -208,7 +212,7 @@ export async function moveWorkoutIndoor(formData: FormData): Promise<{ error: st
       suggestedCarbsG: fuel.suggestedCarbsG,
       suggestedCarbsGPerHour: fuel.suggestedCarbsGPerHour,
       requiresMultipleCarbSources: fuel.requiresMultipleCarbSources,
-      rationale: `${(workout.rationale ?? "").split(" · ").filter((p) => !p.startsWith("Rodillo:") && !p.startsWith("se acortó") && !p.startsWith("los intervalos largos")).join(" · ")} · ${ad.note}`.replace(/^ · /, ""),
+      rationale: `${(workout.rationale ?? "").split(" · ").filter((p) => !p.startsWith("Rodillo:") && !p.startsWith("se acortó") && !p.startsWith("los intervalos largos") && !p.startsWith("dura ") && !p.startsWith("no se pudo bajar")).join(" · ")} · ${ad.note}`.replace(/^ · /, ""),
       status: wasConfirmed ? "APPROVED" : workout.status,
       sentToIntervalsAt: null,
     },
