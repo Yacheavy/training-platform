@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireCoachId, requireCoachOfStudent } from "@/lib/access";
 import { addGoalCore, deleteGoalCore, saveTemplateCore, saveThresholdsCore, updateGoalProfileCore } from "@/lib/settings-core";
 import { runRegeneration, regenerationQuery, deletePlannedSessionsOfBlock } from "@/lib/plan-core";
+import { pushWorkoutToIntervals } from "@/lib/push-workout";
+import { dayRangeLocal } from "@/lib/tz";
 import { applySeasonCore } from "@/lib/season-apply";
 import { mailConfigured, sendMail } from "@/lib/email/mailer";
 import { bodyToHtml, layoutEmail } from "@/lib/email/template";
@@ -158,5 +160,41 @@ export async function coachSetStudentEmail(athleteId: string, formData: FormData
     refresh(athleteId);
   } catch (e) {
     return { error: e instanceof Error && e.message ? e.message : "No se pudo guardar la preferencia." };
+  }
+}
+
+/**
+ * Aprueba y manda a Intervals las sesiones pendientes del alumno (hoy y las próximas 3 semanas), usando la conexión
+ * de Intervals del propio alumno. Las ya enviadas no se tocan. Si alguna falla, el resto sigue y se informa.
+ */
+export async function coachSendPlanToIntervals(athleteId: string, _formData?: FormData): Promise<{ error: string } | { sent: number }> {
+  try {
+    await authorize(athleteId);
+    const from = dayRangeLocal(new Date()).start;
+    const end = new Date(from.getTime() + 21 * 24 * 60 * 60 * 1000);
+    const pending = await prisma.generatedWorkout.findMany({
+      where: { athleteId, date: { gte: from, lt: end }, status: { in: ["PLANNED", "SUGGESTED", "EDITED", "APPROVED"] } },
+      orderBy: { date: "asc" },
+      select: { id: true, status: true },
+    });
+    if (pending.length === 0) return { error: "No hay sesiones pendientes de enviar." };
+    let sent = 0;
+    const failed: string[] = [];
+    for (const w of pending) {
+      try {
+        if (w.status !== "APPROVED") await prisma.generatedWorkout.update({ where: { id: w.id }, data: { status: "APPROVED", approvedAt: new Date() } });
+        await pushWorkoutToIntervals(athleteId, w.id);
+        sent++;
+      } catch (err) {
+        console.error("coachSendPlanToIntervals: falló una sesión", err);
+        failed.push(err instanceof Error ? err.message : "error");
+      }
+    }
+    refresh(athleteId);
+    if (failed.length > 0) return { error: `Se enviaron ${sent} de ${pending.length}. ${failed[0]}` };
+    return { sent };
+  } catch (e) {
+    console.error("coachSendPlanToIntervals falló", e);
+    return { error: "No se pudo enviar el plan a Intervals. Probá de nuevo." };
   }
 }

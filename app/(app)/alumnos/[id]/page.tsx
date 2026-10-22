@@ -19,6 +19,7 @@ import { getNutritionSummary } from "@/lib/nutrition-data";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
+import { coachSendPlanToIntervals } from "@/lib/coach-actions";
 import { markOnboardingReviewed } from "@/lib/onboarding-actions";
 
 const STATUS_ES: Record<string, string> = {
@@ -151,6 +152,12 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <Section title="Entrenamiento">
         <div className="dash-row two">
           <Card title="Próximos 7 días" subtitle="Tocá un día para ver la sesión.">
+            {days.some((w) => w.status !== "SENT_TO_INTERVALS" && w.status !== "COMPLETED") && (
+              <ActionForm action={coachSendPlanToIntervals.bind(null, id)} success="Plan enviado a Intervals" style={{ marginBottom: "12px" }}>
+                <SubmitButton className="btn btn-solid" pendingText="Enviando…">Aprobar y enviar a Intervals</SubmitButton>
+                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "6px" }}>Manda al calendario de Intervals de {student.name ?? "el alumno"} las sesiones pendientes de hoy en adelante.</div>
+              </ActionForm>
+            )}
             {days.length === 0 ? <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Sin sesiones planificadas.</div> : (
               <div>
                 {days.map((w) => (
