@@ -36,6 +36,7 @@ export function AvailabilityRing({
   sources = [],
   ageDays = null,
   attention = false,
+  hideReasons = false,
 }: {
   status: Status;
   score: number;
@@ -49,6 +50,8 @@ export function AvailabilityRing({
   ageDays?: number | null;
   /** Hay un aviso de atención (HRV muy bajo + FC alta hoy): el consejo no puede decir solo «todo bien». */
   attention?: boolean;
+  /** La tarjeta de guía del día ya detalla los motivos: no se repiten acá. */
+  hideReasons?: boolean;
 }) {
   if (insufficient) return <InsufficientHero />;
   const m = META[status];
@@ -102,7 +105,7 @@ export function AvailabilityRing({
             </li>
           ))}
         </ul>
-        {alertReasons.length > 0 && (
+        {alertReasons.length > 0 && !hideReasons && (
           <ul className="avail-reasons">
             {alertReasons.slice(0, 3).map((r, i) => (
               <li key={i}>{r}</li>
