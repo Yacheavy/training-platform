@@ -73,9 +73,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
   const l28 = load.slice(-28);
   const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string; sub?: string }[] = [
-    { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", spark: l28.map((d) => d.ctl), color: "var(--blue)" },
-    { label: "Fatiga (ATL)", value: data.atl?.toFixed(1) ?? "—", spark: l28.map((d) => d.atl), color: "#B58CE0" },
-    { label: "Forma (TSB)", value: data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—", spark: l28.map((d) => d.tsb) },
+    { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", sub: "Al empezar el día", spark: l28.map((d) => d.ctl), color: "var(--blue)" },
+    { label: "Fatiga (ATL)", value: data.atl?.toFixed(1) ?? "—", sub: "Al empezar el día", spark: l28.map((d) => d.atl), color: "#B58CE0" },
+    { label: "Forma (TSB)", value: data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—", sub: "Al empezar el día", spark: l28.map((d) => d.tsb) },
     { label: "HRV", value: data.hrvToday?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.hrv) },
     { label: "FC reposo", value: data.restingHr?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "var(--amber)" },
     { label: "Sueño", value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—", sub: data.sleepTrend ?? undefined },

@@ -1,3 +1,5 @@
+import { getDayStartForm } from "@/lib/day-start-form";
+import { dayStartSeries } from "@/lib/training-engine/day-start-form";
 import { sleepAverage7d, sleepTrendText } from "@/lib/sleep-note";
 import { buildAvailabilityHistory } from "@/lib/training-engine/availability-score";
 import { dayKeyDate, dayRangeLocal, weekRangeLocal } from "@/lib/tz";
@@ -13,12 +15,8 @@ export async function getDashboardData(athleteId: string) {
     orderBy: { date: "desc" },
   });
 
-  // CTL/ATL/TSB: última fila que trae CTL y ATL (igual que el semáforo): una fila de hoy que solo trae HRV no debe borrar la forma
-  const loadRow = await prisma.wellness.findFirst({
-    where: { athleteId, date: { lte: dayKeyDate(new Date()) }, ctl: { not: null }, atl: { not: null } },
-    orderBy: { date: "desc" },
-    select: { ctl: true, atl: true },
-  });
+  // CTL/ATL/TSB al EMPEZAR el día (cierre de ayer): el de hoy ya incluye la sesión de hoy, hecha o planificada (ver day-start-form.ts)
+  const loadRow = await getDayStartForm(athleteId);
 
   // Cada métrica toma su último valor disponible (el de hoy llega recién cuando el
   // reloj sincroniza a la mañana); se informa la fecha para mostrar "de ayer", etc.
@@ -58,7 +56,8 @@ export async function getDashboardData(athleteId: string) {
   return {
     ctl: loadRow?.ctl ?? null,
     atl: loadRow?.atl ?? null,
-    tsb: loadRow?.ctl != null && loadRow?.atl != null ? Math.round((loadRow.ctl - loadRow.atl) * 10) / 10 : null,
+    tsb: loadRow ? Math.round(loadRow.tsb * 10) / 10 : null,
+    loadDate: loadRow?.date ?? null,
     hrvToday: hrvRow?.hrv ?? null,
     hrvDate: hrvRow?.date ?? null,
     hrvAvg7d: hrvAvg7d != null ? Math.round(hrvAvg7d * 10) / 10 : null,
@@ -80,19 +79,24 @@ export async function getTodayWorkout(athleteId: string) {
   });
 }
 
+/**
+ * Carga AL EMPEZAR cada día: el punto del día D lleva el cierre de D-1 (CTL, ATL y TSB = CTL - ATL del mismo día, coherentes entre sí).
+ * El último punto es hoy y coincide con las tarjetas y el semáforo. Intervals dibuja el cierre de cada día: acá va corrido un día.
+ */
 export async function getLoadHistory(athleteId: string, days: number = 56) {
-  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const today = dayKeyDate(new Date());
+  const startDate = new Date(Date.now() - (days + 1) * 24 * 60 * 60 * 1000);
   const records = await prisma.wellness.findMany({
-    where: { athleteId, date: { gte: startDate, lte: dayKeyDate(new Date()) }, ctl: { not: null } },
+    where: { athleteId, date: { gte: startDate, lte: today }, ctl: { not: null }, atl: { not: null } },
     orderBy: { date: "asc" },
     select: { date: true, ctl: true, atl: true },
   });
 
-  return records.map((r) => ({
+  return dayStartSeries(records, today).map((r) => ({
     date: r.date.toISOString(),
     ctl: r.ctl,
     atl: r.atl,
-    tsb: r.ctl != null && r.atl != null ? Math.round((r.ctl - r.atl) * 10) / 10 : null,
+    tsb: Math.round(r.tsb * 10) / 10,
   }));
 }
 

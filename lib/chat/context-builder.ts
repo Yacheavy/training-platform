@@ -1,3 +1,4 @@
+import { getDayStartForm } from "@/lib/day-start-form";
 import { ensureActivityLaps, describeLaps, sustainedEfforts } from "@/lib/laps";
 import { buildSessionInsights } from "@/lib/session-insights";
 import { comparePlanVsReal } from "@/lib/plan-vs-real";
@@ -96,13 +97,12 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   const note = sleepNote({ sleepHours: sleepRow?.sleepHours ?? null, checkinQuality: availability.checkinToday?.sleepQuality ?? null });
   if (note) parts.push(note);
 
-  const latestWellness = await prisma.wellness.findFirst({
-    where: { athleteId, ctl: { not: null }, date: { lte: dayKeyDate(new Date()) } },
-    orderBy: { date: "desc" },
-  });
-  if (latestWellness?.ctl != null && latestWellness?.atl != null) {
+  // Carga AL EMPEZAR EL DÍA (cierre de ayer): la de hoy ya incluye la sesión de hoy (hecha o planificada), que todavía no pesa en la fatiga con la que se llega
+  const startForm = await getDayStartForm(athleteId);
+  const latestWellness = startForm ? await prisma.wellness.findFirst({ where: { athleteId, date: startForm.date } }) : null;
+  if (startForm) {
     parts.push(
-      `CARGA ACTUAL: CTL (fitness) ${latestWellness.ctl.toFixed(1)}, ATL (fatiga) ${latestWellness.atl.toFixed(1)}, ramp rate ${latestWellness.rampRate?.toFixed(2) ?? "sin dato"} — dato del ${latestWellness.date.toISOString().split("T")[0]}`
+      `CARGA AL EMPEZAR EL DÍA (cierre de ayer, sin la sesión de hoy): CTL (fitness) ${startForm.ctl.toFixed(1)}, ATL (fatiga) ${startForm.atl.toFixed(1)}, TSB ${startForm.tsb.toFixed(1)}, ramp rate ${latestWellness?.rampRate?.toFixed(2) ?? "sin dato"} — dato del ${startForm.date.toISOString().split("T")[0]}. El CTL/ATL de hoy que muestra Intervals incluye la sesión de hoy: no lo uses para decidir cómo entrenar hoy.`
     );
   }
 
@@ -119,7 +119,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   });
 
   if (latestWellness?.ctl != null) {
-    const trendParts: string[] = [`hoy: ${latestWellness.ctl.toFixed(1)}`];
+    const trendParts: string[] = [`al empezar hoy: ${latestWellness.ctl.toFixed(1)}`];
     if (ctl4wAgo?.ctl != null) {
       const deltaPerWeek = (latestWellness.ctl - ctl4wAgo.ctl) / 4;
       trendParts.push(`hace 4 semanas: ${ctl4wAgo.ctl.toFixed(1)} (${deltaPerWeek >= 0 ? "+" : ""}${deltaPerWeek.toFixed(1)}/sem promedio)`);
@@ -131,7 +131,7 @@ export async function buildChatContext(athleteId: string, focusedWorkoutId?: str
   }
 
   const tsbTrendParts: string[] = [];
-  if (availability.tsb != null) tsbTrendParts.push(`hoy: ${availability.tsb.toFixed(1)}`);
+  if (availability.tsb != null) tsbTrendParts.push(`al empezar hoy: ${availability.tsb.toFixed(1)}`);
   if (ctl4wAgo?.ctl != null && ctl4wAgo?.atl != null) {
     tsbTrendParts.push(`hace 4 semanas: ${(ctl4wAgo.ctl - ctl4wAgo.atl).toFixed(1)}`);
   }

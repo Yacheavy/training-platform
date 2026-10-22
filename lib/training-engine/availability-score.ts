@@ -1,3 +1,4 @@
+import { pickDayStartForm } from "./day-start-form";
 import { hrvSignal, restingHrSignal, type DailyPoint, type SignalResult } from "./recovery-signals";
 
 /**
@@ -103,7 +104,7 @@ export function evaluateAvailability(i: EvaluationInput): Evaluation {
   // TSB: señal de CARGA acumulada; por sí solo solo da ámbar. Rojo exige TSB bajo + 1 señal de recuperación, o 2+ señales.
   const tsbAlert = tsb != null && tsb < minTsb;
   if (tsbAlert) {
-    reasons.push(`TSB en ${tsb!.toFixed(1)}, por debajo de tu mínimo configurado (${minTsb})`);
+    reasons.push(`TSB al empezar el día en ${tsb!.toFixed(1)}, por debajo de tu mínimo configurado (${minTsb})`);
     alertReasons.push(reasons[reasons.length - 1]);
   }
 
@@ -223,7 +224,8 @@ export function buildAvailabilityHistory(days: HistoryDay[], opts: { from: Date;
     const rhrSig = restingHrSignal(upTo, d.date);
     // Sin ninguna señal evaluable no se inventa un puntaje
     if (hrvSig.method === "insufficient" && rhrSig.method === "insufficient") continue;
-    const tsb = d.ctl != null && d.atl != null ? d.ctl - d.atl : null;
+    // Misma regla que hoy: la forma con la que se llega al día (cierre del día anterior)
+    const tsb = pickDayStartForm(days, d.date)?.tsb ?? null;
     const ev = evaluateAvailability({ hrvSig, rhrSig, checkin: d.checkin, tsb, minTsb: opts.minTsb });
     const s = scoreAvailability({ status: ev.status, hrvDeltaPct: hrvSig.delta, restingHrDeltaAbs: rhrSig.delta, tsb, checkin: d.checkin });
     out.push({ date: d.date.toISOString(), score: s.score, status: ev.status, hasCheckin: !!d.checkin });

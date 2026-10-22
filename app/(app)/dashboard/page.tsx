@@ -273,12 +273,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <Section title="Cómo estás">
         <div className="metric-strip">
-          <StatCard label="Fitness (CTL)" value={data.ctl?.toFixed(1) ?? "—"} spark={loadHistory.slice(-28).map((d) => d.ctl)} color="#6FA8DC" />
-          <StatCard label="Fatiga (ATL)" value={data.atl?.toFixed(1) ?? "—"} spark={loadHistory.slice(-28).map((d) => d.atl)} color="#B58CE0" />
+          <StatCard label="Fitness (CTL)" value={data.ctl?.toFixed(1) ?? "—"} sub="Al empezar el día" spark={loadHistory.slice(-28).map((d) => d.ctl)} color="#6FA8DC" />
+          <StatCard label="Fatiga (ATL)" value={data.atl?.toFixed(1) ?? "—"} sub="Al empezar el día" spark={loadHistory.slice(-28).map((d) => d.atl)} color="#B58CE0" />
           <StatCard
             label="Forma (TSB)"
             value={data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—"}
-            sub={data.tsb == null ? undefined : data.tsb < -25 ? "Muy fatigado" : data.tsb > 5 ? "Fresco" : "Entrenable"}
+            sub={data.tsb == null ? undefined : `${data.tsb < -25 ? "Muy fatigado" : data.tsb > 5 ? "Fresco" : "Entrenable"} · al empezar el día`}
             spark={loadHistory.slice(-28).map((d) => d.tsb)}
             color={data.tsb != null && data.tsb < -25 ? "#E5636A" : "#4FD1C5"}
             accent={data.tsb != null ? (data.tsb < -25 ? "red" : data.tsb > 5 ? "teal" : undefined) : undefined}
@@ -521,7 +521,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <Section title="Carga y cumplimiento">
         <div className="dash-row two" style={{ marginBottom: "16px" }}>
           {loadHistory.length > 0 && (
-            <Card title="Carga de entrenamiento, 8 semanas" subtitle="CTL (fitness), ATL (fatiga) y TSB (forma), calculados por Intervals.icu.">
+            <Card title="Carga de entrenamiento, 8 semanas" subtitle="CTL (fitness), ATL (fatiga) y TSB (forma) al empezar cada día (cierre del día anterior), calculados por Intervals.icu.">
               <LoadChart data={loadHistory} />
             </Card>
           )}

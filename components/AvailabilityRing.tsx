@@ -121,7 +121,7 @@ export function AvailabilityRing({
             <ul>
               <li>HRV y FC en reposo: se compara la media de tus últimos 7 días con tu línea base de 60 días. Es alerta si sale de tu rango habitual.</li>
               <li>Check-in: sueño, fatiga, estrés y dolor muscular; cuentan como una sola señal.</li>
-              <li>Forma (TSB): alerta si baja de tu mínimo configurado.</li>
+              <li>Forma (TSB): se toma al empezar el día (cierre de ayer, sin la sesión de hoy) y alerta si baja de tu mínimo configurado.</li>
             </ul>
             <p>Una sola señal da moderada; baja exige dos coincidiendo (o forma baja más una). El número es una referencia dentro del estado, no una medida validada.</p>
           </div>

@@ -1,3 +1,4 @@
+import { getDayStartForm } from "@/lib/day-start-form";
 import { prisma } from "@/lib/prisma";
 import { dayKeyDate, weekRangeLocal, dateKeyLocal, dayOfWeekLocal } from "@/lib/tz";
 import { calculateAvailability } from "@/lib/training-engine/availability";
@@ -213,7 +214,7 @@ export async function getCoachOverview(coachId: string): Promise<StudentRow[]> {
       const [avail, lastAct, latest, planned, acts] = await Promise.all([
         calculateAvailability(s.id).catch(() => null),
         prisma.activity.findFirst({ where: { athleteId: s.id }, orderBy: { date: "desc" }, select: { date: true } }),
-        prisma.wellness.findFirst({ where: { athleteId: s.id, date: { lte: dayKeyDate(now) }, ctl: { not: null } }, orderBy: { date: "desc" }, select: { ctl: true } }),
+        getDayStartForm(s.id),
         prisma.generatedWorkout.findMany({ where: { athleteId: s.id, date: { gte: week.start, lt: now }, workoutLibraryKey: { notIn: ["gym", "flexibility"] } }, select: { estimatedTss: true } }),
         prisma.activity.findMany({ where: { athleteId: s.id, type: { in: RIDE_TYPES }, date: { gte: week.start, lt: week.end } }, select: { tss: true } }),
       ]);
@@ -225,7 +226,7 @@ export async function getCoachOverview(coachId: string): Promise<StudentRow[]> {
         reasons: avail?.reasons ?? [],
         hrvAgeDays: avail?.wellnessAgeDays ?? null,
         tsb: avail?.tsb != null ? Math.round(avail.tsb * 10) / 10 : null,
-        ctl: latest?.ctl != null ? Math.round(latest.ctl * 10) / 10 : null,
+        ctl: latest ? Math.round(latest.ctl * 10) / 10 : null,
         lastActivity: lastAct?.date.toISOString() ?? null,
         lastSync: s.intervalsLastSyncAt?.toISOString() ?? null,
         weekActualTss: Math.round(acts.reduce((t, a) => t + (a.tss ?? 0), 0)),

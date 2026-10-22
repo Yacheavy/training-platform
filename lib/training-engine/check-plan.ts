@@ -173,9 +173,10 @@ for (const [wk,c] of vo2PerWeek) { const exp = bp.some((d)=>d.weekIndex===wk&&d.
   const early2 = h2.filter(p=>new Date(p.date).getTime()<day0+95*86400000).map(key).join(",");
   check("historial no depende de datos futuros", early1===early2);
   const dd = base[99];
+  const prev = base[98]; // la forma que cuenta es la de inicio del día (cierre del día anterior)
   const todaySig = {h:hrvSignal(base.map(d=>({date:d.date,hrv:d.hrv,restingHr:d.restingHr})),dd.date,7.5), r:restingHrSignal(base.map(d=>({date:d.date,hrv:d.hrv,restingHr:d.restingHr})),dd.date)};
-  const tEv = evaluateAvailability({hrvSig:todaySig.h,rhrSig:todaySig.r,checkin:dd.checkin,tsb:dd.ctl-dd.atl,minTsb:-30});
-  const tSc = scoreAvailability({status:tEv.status,hrvDeltaPct:todaySig.h.delta,restingHrDeltaAbs:todaySig.r.delta,tsb:dd.ctl-dd.atl,checkin:dd.checkin});
+  const tEv = evaluateAvailability({hrvSig:todaySig.h,rhrSig:todaySig.r,checkin:dd.checkin,tsb:prev.ctl-prev.atl,minTsb:-30});
+  const tSc = scoreAvailability({status:tEv.status,hrvDeltaPct:todaySig.h.delta,restingHrDeltaAbs:todaySig.r.delta,tsb:prev.ctl-prev.atl,checkin:dd.checkin});
   const last = h1[h1.length-1];
   check("el último punto del historial coincide con el cálculo de hoy", last && last.score===tSc.score && last.status===tEv.status);
 }

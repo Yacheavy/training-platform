@@ -1,3 +1,4 @@
+import { getDayStartForm } from "@/lib/day-start-form";
 import { dayKeyDate } from "../tz";
 import { prisma } from "@/lib/prisma";
 import { hrvSignal, restingHrSignal, acuteWarning, type AcuteWarning, type SignalMethod } from "./recovery-signals";
@@ -51,11 +52,8 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const hrvDropAlertPct = thresholds?.hrvDropAlertPct ?? 7.5;
   const minTsb = thresholds?.minTsb ?? -30;
 
-  // Última fila con CTL y ATL (una fila de hoy que solo trae HRV no debe borrar la forma)
-  const latest = await prisma.wellness.findFirst({
-    where: { athleteId, date: { lte: dayKeyDate(new Date()) }, ctl: { not: null }, atl: { not: null } },
-    orderBy: { date: "desc" },
-  });
+  // Forma AL EMPEZAR EL DÍA (cierre de ayer), no la de hoy: la de hoy ya incluye la sesión de hoy (hecha o planificada) y no es la fatiga con la que se llega
+  const startForm = await getDayStartForm(athleteId);
 
   const todayKey = dayKeyDate(new Date());
   // Último dato de RECUPERACIÓN (HRV o FC de reposo): una fila de hoy que solo trae CTL/ATL no cuenta
@@ -79,7 +77,7 @@ export async function calculateAvailability(athleteId: string): Promise<Availabi
   const restingHrDeltaAbs = rhrSig.delta;
   const wellnessAgeDays = latestRecovery ? Math.round((todayKey.getTime() - latestRecovery.date.getTime()) / (24 * 60 * 60 * 1000)) : null;
 
-  const tsb = latest?.ctl != null && latest?.atl != null ? latest.ctl - latest.atl : null;
+  const tsb = startForm?.tsb ?? null;
 
   const todayStart = dayKeyDate(new Date());
   const checkin = await prisma.dailyCheckin.findUnique({ where: { athleteId_date: { athleteId, date: todayStart } } });
