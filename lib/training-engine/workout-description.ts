@@ -8,11 +8,11 @@ function formatDuration(sec: number): string {
   return `${min}m${remSec}s`;
 }
 
-/** Sesiones cuyos "intervalos" son sprints a TOPE: se escriben sin objetivo de potencia (freeride) para que el rodillo en ERG o el ciclocomputador no los limiten. */
+/** Sesiones cuyos "intervalos" son sprints a TOPE: se escriben por zona (Z7, neuromuscular) en vez de un % fijo, para que el objetivo no actúe de techo. */
 export const ALL_OUT_SPRINT_KEYS = new Set(["z2_sprints", "sprint_neuro"]);
 
 function stepLine(b: WorkoutBlock, pct: (w: number) => string, allOut = false): string {
-  if (allOut && b.type === "interval") return `- Sprint a tope ${formatDuration(b.durationSec)} freeride`;
+  if (allOut && b.type === "interval") return `- ${formatDuration(b.durationSec)} Z7`;
   return `- ${formatDuration(b.durationSec)} ${pct(b.targetWatts)}${b.cadenceRpm ? ` ${b.cadenceRpm}rpm` : ""}`;
 }
 
@@ -119,7 +119,7 @@ export function buildStructuredWorkout(
   if (reps.length > 0) {
     notesLines.push(`Estructura: ${reps.length === 1 ? "UNA sola serie" : `${reps.length} series`} — total ${reps.reduce((x, y) => x + y, 0)} repeticiones${reps.length > 1 ? ` (${reps.join(" + ")})` : ""}. No agregues ni quites series.`);
   }
-  if (allOut) notesLines.push("Los sprints van a TOPE, sin potencia objetivo (paso libre): si usás rodillo, que no quede en modo ERG durante el sprint. Entre sprints, recuperá casi por completo.");
+  if (allOut) notesLines.push("Los sprints son a TOPE (zona 7): la potencia que figura es solo una referencia, dalo todo. Si usás rodillo en modo ERG, pasalo a modo libre durante el sprint. Entre sprints, recuperá casi por completo.");
   if (fueling) {
     notesLines.push(
       `Nutrición sugerida: ${fueling.suggestedCarbsG}g de carbohidratos (~${fueling.suggestedCarbsGPerHour}g/h), ${fueling.totalKj} kJ estimados.`
