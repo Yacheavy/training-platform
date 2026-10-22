@@ -88,9 +88,11 @@ export function buildStructuredWorkout(
   ftp: number,
   fueling?: FuelingInfo,
   rationale?: string | null,
-  libraryKey?: string
+  libraryKey?: string,
+  indoor = false
 ): string {
-  const allOut = !!libraryKey && ALL_OUT_SPRINT_KEYS.has(libraryKey);
+  // En rodillo (ERG) una zona abierta como Z7 es inejecutable: ahí el sprint conserva su potencia objetivo fija
+  const allOut = !indoor && !!libraryKey && ALL_OUT_SPRINT_KEYS.has(libraryKey);
   const pct = (watts: number) => `${Math.round((watts / ftp) * 100)}%`;
 
   const warmupBlocks = blocks.filter((b) => b.type.startsWith("warmup"));

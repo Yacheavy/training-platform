@@ -186,7 +186,8 @@ async function sendChatMessageInner(formData: FormData) {
                 me.ftp,
                 { totalKj: fueling.totalKj, suggestedCarbsG: fueling.suggestedCarbsG, suggestedCarbsGPerHour: fueling.suggestedCarbsGPerHour, requiresMultipleCarbSources: fueling.requiresMultipleCarbSources },
                 workout.rationale,
-                workout.workoutLibraryKey
+                workout.workoutLibraryKey,
+                workout.environment === "indoor"
               );
               await createEvent(creds.athleteId, creds.apiKey, {
                 external_id: workout.id,

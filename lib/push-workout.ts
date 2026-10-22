@@ -45,7 +45,8 @@ export async function pushWorkoutToIntervals(athleteId: string, workoutId: strin
       requiresMultipleCarbSources: workout.requiresMultipleCarbSources,
     },
     workout.rationale,
-    workout.workoutLibraryKey
+    workout.workoutLibraryKey,
+    workout.environment === "indoor"
   );
   await createEvent(creds.athleteId, creds.apiKey, {
     external_id: workout.id,
