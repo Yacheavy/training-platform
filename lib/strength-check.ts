@@ -86,6 +86,7 @@ for (const objective of objectives)
                   ok(JSON.stringify(buildGymSession(i)) === JSON.stringify(g), `${tag}: no es determinista`);
                   const txt = gymToText(g);
                   ok(txt.includes(g.title) && g.exercises.every((e) => txt.includes(e.name)), `${tag}: el texto para Intervals omite algo`);
+                  ok(!txt.split("\n").some((l) => /^\s*-/.test(l)), `${tag}: línea que empieza con "-" (Intervals la toma como paso y falsea la duración)`);
                   ok(!/undefined|NaN|\[object/.test(txt), `${tag}: texto con valores inválidos`);
                 }
 

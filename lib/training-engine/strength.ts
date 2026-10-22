@@ -499,10 +499,12 @@ export function buildFlexSession(slotMin: number): GymSession {
 }
 
 /** Texto plano de la sesión (Intervals y vista previa). */
+// IMPORTANTE: ninguna línea empieza con "-": Intervals interpreta las líneas con "- " como pasos de un entrenamiento
+// y calcula la duración del evento a partir de ellos (ej.: "- 3-5 min suaves…" daba ~10 min en vez de los 55 planificados).
 export function gymToText(g: GymSession): string {
   const lines: string[] = [g.title];
   if (g.summary) lines.push(g.summary);
-  if (g.warmup.length) lines.push("", "Entrada en calor", ...g.warmup.map((w) => `- ${w}`));
+  if (g.warmup.length) lines.push("", "Entrada en calor", ...g.warmup.map((w) => `• ${w}`));
   const CAT: Record<ExCategory, string> = { fuerza: "Fuerza", potencia: "Potencia", core: "Core", propiocepcion: "Propiocepción" };
   if (g.exercises.length) {
     lines.push("", "Trabajo principal");
@@ -514,10 +516,10 @@ export function gymToText(g: GymSession): string {
     });
   }
   if (g.mobility.length) {
-    lines.push("", "Flexibilidad (al final)", ...g.mobility.map((m) => `- ${m.name}: ${m.hold}. ${m.cue}`));
+    lines.push("", "Flexibilidad (al final)", ...g.mobility.map((m) => `• ${m.name}: ${m.hold}. ${m.cue}`));
   }
-  if (g.notes.length) lines.push("", "Notas", ...g.notes.map((n) => `- ${n}`));
-  if (g.evidence.length) lines.push("", "Evidencia", ...g.evidence.map((n) => `- ${n}`));
+  if (g.notes.length) lines.push("", "Notas", ...g.notes.map((n) => `• ${n}`));
+  if (g.evidence.length) lines.push("", "Evidencia", ...g.evidence.map((n) => `• ${n}`));
   return lines.join("\n");
 }
 
