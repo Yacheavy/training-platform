@@ -102,6 +102,23 @@ export async function linkActivitiesToPlan(userId: string, sinceDays = 30): Prom
   let linked = 0;
   const used = new Set<string>();
   for (const a of acts) {
+    // Gimnasio y flexibilidad: se vinculan con su sesión planificada del día (mínimo 15 min), sin TSS ni desvío
+    const offBikeKey = a.type === "WeightTraining" ? "gym" : a.type === "Yoga" ? "flexibility" : null;
+    if (offBikeKey && a.durationSec >= 15 * 60) {
+      const key = a.date.toISOString().slice(0, 10);
+      const dayMs = Date.parse(`${key}T00:00:00Z`);
+      const cands = await prisma.generatedWorkout.findMany({
+        where: { athleteId: userId, date: { gte: new Date(dayMs - DAY_MS), lt: new Date(dayMs + 2 * DAY_MS) }, workoutLibraryKey: offBikeKey },
+      });
+      const w = cands.find((c) => dateKeyLocal(c.date) === key && !used.has(c.id) && c.status !== "COMPLETED");
+      if (w) {
+        used.add(w.id);
+        await prisma.activity.update({ where: { id: a.id }, data: { generatedWorkoutId: w.id } });
+        await prisma.generatedWorkout.update({ where: { id: w.id }, data: { status: "COMPLETED" } });
+        linked++;
+      }
+      continue;
+    }
     if (!RIDE_TYPES.has(a.type) || a.durationSec < 20 * 60) continue;
     const key = a.date.toISOString().slice(0, 10);
     const dayMs = Date.parse(`${key}T00:00:00Z`);

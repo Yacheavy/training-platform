@@ -113,7 +113,7 @@ const btnBase = { borderRadius: "12px", padding: "12px 18px", fontSize: "14.5px"
 export interface ReadinessChange { workoutId: string; current: string; proposal: string; hint: string | null; inIntervals: boolean }
 
 export function ReadinessCard({
-  status, nAlerts, nSources, signals, change, noChangeText,
+  status, nAlerts, nSources, signals, change, noChangeText, title,
 }: {
   status: "RED" | "AMBER";
   nAlerts: number;
@@ -123,6 +123,8 @@ export function ReadinessCard({
   change: ReadinessChange | null;
   /** Qué decir cuando no hay cambio propuesto (sin sesión hoy, ya hecha, o una sesión sin ajuste automático). */
   noChangeText: string;
+  /** Reemplaza el título estándar (ej. cuando hoy ya se entrenó). */
+  title?: string;
 }) {
   const tone = status === "RED" ? "var(--red)" : "var(--amber)";
   return (
@@ -133,7 +135,7 @@ export function ReadinessCard({
       <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: tone, boxShadow: `0 0 0 5px color-mix(in srgb, ${tone} 20%, transparent)`, flex: "none" }} />
         <div>
-          <h3 style={{ margin: 0, fontSize: "16px", lineHeight: 1.25 }}>{status === "RED" ? "Hoy conviene bajar la intensidad" : "Hoy conviene ir con cuidado"}</h3>
+          <h3 style={{ margin: 0, fontSize: "16px", lineHeight: 1.25 }}>{title ?? (status === "RED" ? "Hoy conviene bajar la intensidad" : "Hoy conviene ir con cuidado")}</h3>
           <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "2px" }}>
             {nAlerts} {nAlerts === 1 ? "señal en alerta" : "señales en alerta"} · calculado con {nSources} de 3
           </div>

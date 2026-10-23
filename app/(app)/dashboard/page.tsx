@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import Link from "next/link";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { STIMULUS_LABELS } from "@/lib/labels";
-import { ATHLETE_TZ, dayKeyDate } from "@/lib/tz";
+import { ATHLETE_TZ, dayKeyDate, dateKeyLocal } from "@/lib/tz";
 import { syncIfStale } from "@/lib/intervals-sync";
 import { syncNow } from "@/lib/sync-actions";
 import { auth } from "@/auth";
@@ -144,8 +144,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     : null;
   const summary = summarizeRationale(todayWorkout?.rationale, (k) => STIMULUS_LABELS[k] ?? k);
 
+  // Actividades reales de hoy que NO están vinculadas a la sesión planificada (ej.: salí a rodar en lugar de hacer gimnasio).
+  // Las actividades se guardan con la hora local como si fuera UTC: el día sale de la clave local.
+  const todayKey = dateKeyLocal(new Date());
+  const todayDayMs = Date.parse(`${todayKey}T00:00:00Z`);
+  const unplannedToday = await prisma.activity.findMany({
+    where: { athleteId: session.user.id, date: { gte: new Date(todayDayMs), lt: new Date(todayDayMs + 24 * 3600 * 1000) }, durationSec: { gte: 20 * 60 }, ...(todayWorkout?.status === "COMPLETED" ? { generatedWorkoutId: null } : {}) },
+    select: { type: true, durationSec: true, tss: true },
+    orderBy: { durationSec: "desc" },
+  });
+  const doneInstead = unplannedToday.length > 0 ? unplannedToday[0] : null;
+
   const adjustment =
-    todayWorkout && todayWorkout.status !== "COMPLETED" && availability.status !== "GREEN" && !(todayWorkout.rationale ?? "").includes(`[CHECKIN:${availability.status}:`)
+    todayWorkout && todayWorkout.status !== "COMPLETED" && !doneInstead && availability.status !== "GREEN" && !(todayWorkout.rationale ?? "").includes(`[CHECKIN:${availability.status}:`)
       ? proposeReadinessAdjustment(availability.status, todayWorkout.workoutLibraryKey, todayWorkout.blocksJson as unknown as { type: string; durationSec: number; targetWatts: number }[], (await prisma.user.findUnique({ where: { id: session.user.id }, select: { ftp: true } }))?.ftp ?? 0)
       : null;
 
@@ -294,8 +305,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 }
               : null
           }
+          title={doneInstead ? "Hoy ya entrenaste: ahora toca recuperar" : undefined}
           noChangeText={
-            !todayWorkout
+            doneInstead
+              ? `Hoy ya hiciste ${doneInstead.type === "WeightTraining" ? "gimnasio" : doneInstead.type === "Yoga" ? "flexibilidad" : "una salida"} (${fmtDuration(doneInstead.durationSec)}${doneInstead.tss != null ? `, TSS ${Math.round(doneInstead.tss)}` : ""})${todayWorkout && todayWorkout.status !== "COMPLETED" ? ` en lugar de la sesión planificada (${sessionLabel(todayWorkout.workoutLibraryKey)})` : ""}. Con las señales de hoy, priorizá comer, dormir y recuperar; esa carga ya cuenta para mañana.`
+              : !todayWorkout
               ? "Hoy no tenés sesión planificada: priorizá recuperar (comer bien, dormir y moverte suave)."
               : todayWorkout.status === "COMPLETED"
                 ? "Ya hiciste la sesión de hoy. Priorizá comer, dormir y recuperar."
