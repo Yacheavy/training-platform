@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ActivityIcon } from "@/components/ActivityIcon";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { ATHLETE_TZ, dayKeyDate, dateKeyLocal } from "@/lib/tz";
+import { ageLabel, recoveryTrends } from "@/lib/recovery-labels";
 import { syncIfStale } from "@/lib/intervals-sync";
 import { syncNow } from "@/lib/sync-actions";
 import { auth } from "@/auth";
@@ -51,14 +52,6 @@ import { prisma } from "@/lib/prisma";
 import { getPendingNutrition } from "@/lib/nutrition-data";
 import { applyPlannedNutrition, skipActivityNutrition } from "@/lib/nutrition-actions";
 
-
-function ageLabel(d: Date | null): string {
-  if (!d) return "";
-  const days = Math.round((dayKeyDate(new Date()).getTime() - d.getTime()) / 86400000);
-  if (days <= 0) return "hoy";
-  if (days === 1) return "(ayer)";
-  return `(hace ${days} d)`;
-}
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ intervals?: string }> }) {
   const sp = await searchParams;
@@ -114,14 +107,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         : null;
 
   // Mismo criterio que el semáforo (no un número distinto con el mismo nombre): media de 7 días contra tu línea base (o los 6 días previos si todavía no hay base)
-  const hrvTrend =
-    availability.hrvDeltaPct != null
-      ? `${availability.hrvDeltaPct > 0 ? "↑" : "↓"} ${Math.abs(Math.round(availability.hrvDeltaPct * 10) / 10).toString().replace(".", ",")}% ${availability.hrvMethod === "baseline" ? "media 7 d vs tu base" : "hoy vs 6 días previos"}`
-      : undefined;
-  const rhrTrend =
-    availability.restingHrDeltaAbs != null
-      ? `${availability.restingHrDeltaAbs > 0 ? "↑" : "↓"} ${Math.abs(Math.round(availability.restingHrDeltaAbs * 10) / 10).toString().replace(".", ",")} lpm ${availability.restingHrMethod === "baseline" ? "media 7 d vs tu base" : "hoy vs 6 días previos"}`
-      : undefined;
+  const { hrvTrend, rhrTrend } = recoveryTrends(availability);
   const hrvAlert = availability.signalsTriggered.includes("hrv");
   const rhrAlert = availability.signalsTriggered.includes("resting_hr");
 

@@ -7,6 +7,7 @@ import { requireCoachOfStudent } from "@/lib/access";
 import { calculateAvailability } from "@/lib/training-engine/availability";
 import { getPlanVsActual, getHrvBandData } from "@/lib/analytics";
 import { PlanNavigator } from "@/components/PlanNavigator";
+import { ageLabel, recoveryTrends } from "@/lib/recovery-labels";
 import { getPlanWorkouts, getDashboardData, getLoadHistory, getAvailabilityHistory } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
@@ -72,13 +73,16 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
   const l28 = load.slice(-28);
-  const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string; sub?: string }[] = [
+  const { hrvTrend, rhrTrend } = recoveryTrends(availability);
+  const hrvAlert = availability.signalsTriggered.includes("hrv");
+  const rhrAlert = availability.signalsTriggered.includes("resting_hr");
+  const metrics: { label: string; value: string; spark?: (number | null)[]; color?: string; sub?: string; alert?: boolean }[] = [
     { label: "Fitness (CTL)", value: data.ctl?.toFixed(1) ?? "—", sub: "Al empezar el día", spark: l28.map((d) => d.ctl), color: "var(--blue)" },
     { label: "Fatiga (ATL)", value: data.atl?.toFixed(1) ?? "—", sub: "Al empezar el día", spark: l28.map((d) => d.atl), color: "#B58CE0" },
     { label: "Forma (TSB)", value: data.tsb != null ? (data.tsb > 0 ? `+${data.tsb}` : `${data.tsb}`) : "—", sub: "Al empezar el día", spark: l28.map((d) => d.tsb) },
-    { label: "HRV", value: data.hrvToday?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.hrv) },
-    { label: "FC reposo", value: data.restingHr?.toFixed(0) ?? "—", spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "var(--amber)" },
-    { label: "Sueño", value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—", sub: data.sleepTrend ?? undefined },
+    { label: `HRV ${ageLabel(data.hrvDate)}`.trim(), value: data.hrvToday?.toFixed(0) ?? "—", sub: hrvTrend, alert: hrvAlert, spark: hrvBand.points.slice(-28).map((p) => p.hrv) },
+    { label: `FC reposo ${ageLabel(data.restingHrDate)}`.trim(), value: data.restingHr?.toFixed(0) ?? "—", sub: rhrTrend, alert: rhrAlert, spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "var(--amber)" },
+    { label: `Sueño ${ageLabel(data.sleepDate)}`.trim(), value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—", sub: data.sleepTrend ?? undefined },
   ];
   const row = { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" as const, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.05)", fontSize: "13px" };
 
@@ -136,7 +140,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             <div className="metric" key={m.label}>
               <div className="metric-label">{m.label}</div>
               <div className="metric-value">{m.value}</div>
-              {m.sub && <div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "3px" }}>{m.sub}</div>}
+              {m.sub && <div style={{ fontSize: "11.5px", color: m.alert ? "var(--amber)" : "var(--text-muted)", marginTop: "3px" }}>{m.sub}</div>}
               {m.spark && m.spark.filter((v) => v != null).length > 1 && (
                 <div className="metric-spark"><Sparkline values={m.spark} color={m.color} id={`s${m.label.replace(/\W/g, "")}`} /></div>
               )}
