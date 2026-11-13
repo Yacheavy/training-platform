@@ -8,6 +8,8 @@ import { calculateAvailability } from "@/lib/training-engine/availability";
 import { getPlanVsActual, getHrvBandData } from "@/lib/analytics";
 import { PlanNavigator } from "@/components/PlanNavigator";
 import { ageLabel, recoveryTrends } from "@/lib/recovery-labels";
+import { getPlateau } from "@/lib/plateau-data";
+import { PlateauCard } from "@/components/PlateauCard";
 import { getPlanWorkouts, getDashboardData, getLoadHistory, getAvailabilityHistory } from "@/lib/dashboard-data";
 import { AvailabilityRing } from "@/components/AvailabilityRing";
 import { AvailabilityHistoryChart } from "@/components/AvailabilityHistoryChart";
@@ -73,6 +75,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   const mins = (b: unknown) => Math.round(((b as { durationSec?: number }[]) ?? []).reduce((s, x) => s + (x.durationSec ?? 0), 0) / 60);
   const l28 = load.slice(-28);
+  const plateau = await getPlateau(id).catch(() => null);
   const { hrvTrend, rhrTrend } = recoveryTrends(availability);
   const hrvAlert = availability.signalsTriggered.includes("hrv");
   const rhrAlert = availability.signalsTriggered.includes("resting_hr");
@@ -154,6 +157,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           </div>
         )}
       </Section>
+
+      {plateau && <PlateauCard p={plateau} audience="coach" />}
 
       <Section title="Entrenamiento">
         <div className="dash-row two">

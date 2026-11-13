@@ -6,6 +6,8 @@ import { ActivityIcon } from "@/components/ActivityIcon";
 import { STIMULUS_LABELS } from "@/lib/labels";
 import { ATHLETE_TZ, dayKeyDate, dateKeyLocal } from "@/lib/tz";
 import { ageLabel, recoveryTrends } from "@/lib/recovery-labels";
+import { getPlateau } from "@/lib/plateau-data";
+import { PlateauCard } from "@/components/PlateauCard";
 import { syncIfStale } from "@/lib/intervals-sync";
 import { syncNow } from "@/lib/sync-actions";
 import { auth } from "@/auth";
@@ -66,6 +68,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const data = await getDashboardData(session.user.id);
   const todayWorkout = await getTodayWorkout(session.user.id);
   const loadHistory = await getLoadHistory(session.user.id);
+  const plateau = await getPlateau(session.user.id).catch(() => null);
   const planWorkouts = await getPlanWorkouts(session.user.id);
   const availability = await calculateAvailability(session.user.id);
   const chatUsage = await getChatUsage(session.user.id);
@@ -343,6 +346,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <StatCard label={`Sueño ${ageLabel(data.sleepDate)}`} value={data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—"} sub={data.sleepTrend ?? undefined} />
         </div>
       </Section>
+
+      <a href="/situacion" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginTop: "16px", padding: "12px 16px", borderRadius: "var(--r-lg)", border: "1px solid var(--border)", background: "var(--surface)", textDecoration: "none", fontSize: "13.5px" }}>
+        <span><b>¿Pasó algo?</b> <span style={{ color: "var(--text-muted)" }}>Enfermedad o viaje: reordenamos la semana</span></span>
+        <span style={{ color: "var(--teal)" }} aria-hidden>→</span>
+      </a>
+
+      {plateau && <PlateauCard p={plateau} />}
 
       <Section title="Hoy">
         {pendingNutrition.length > 0 && (
