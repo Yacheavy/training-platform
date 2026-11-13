@@ -78,7 +78,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       <BackLink fallback="/dashboard" />
 
       <div style={{ margin: "14px 0 20px", display: "flex", gap: "14px", alignItems: "center" }}>
-        <div style={{ width: "46px", height: "46px", borderRadius: "12px", background: "rgba(79,209,197,.1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div style={{ width: "46px", height: "46px", borderRadius: "12px", background: "rgba(var(--teal-rgb), .1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <ActivityIcon type={a.type} size={24} />
         </div>
         <div style={{ minWidth: 0 }}>

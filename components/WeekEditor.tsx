@@ -53,7 +53,7 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
 export const buzz = () => { try { navigator.vibrate?.(8); } catch { /* sin vibración */ } };
 
 
-export const pill = (on: boolean): React.CSSProperties => ({ padding: "8px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", border: `1px solid ${on ? "var(--teal)" : "var(--border)"}`, background: on ? "rgba(79,209,197,.14)" : "transparent", color: on ? "var(--teal)" : "var(--text-muted)" });
+export const pill = (on: boolean): React.CSSProperties => ({ padding: "8px 12px", borderRadius: "999px", fontSize: "13px", fontWeight: 600, cursor: "pointer", border: `1px solid ${on ? "var(--teal)" : "var(--border)"}`, background: on ? "rgba(var(--teal-rgb), .14)" : "transparent", color: on ? "var(--teal)" : "var(--text-muted)" });
 
 /** Control segmentado: una sola fila, con ícono arriba y texto abajo */
 export function Segmented<T extends string>({ value, options, onChange, ariaLabel }: { value: T; options: readonly { value: T; label: string; icon?: string }[]; onChange: (v: T) => void; ariaLabel: string }) {

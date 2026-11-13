@@ -37,8 +37,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           top: 0,
           bottom: 0,
           width: "72px",
-          background: "linear-gradient(180deg, #171E27, #121821)",
-          borderRight: "1px solid rgba(255,255,255,.05)",
+          background: "var(--side-bg)",
+          borderRight: "1px solid rgba(var(--ink-rgb), .05)",
           flexDirection: "column",
           alignItems: "center",
           padding: "20px 0",
@@ -52,29 +52,36 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <NavLinks variant="side" isCoach={isCoach} />
       </div>
 
-      {/* Mobile bottom nav */}
-      <div
+      {/* Mobile bottom nav: barra flotante con íconos */}
+      <nav
         className="app-bottomnav"
+        aria-label="Navegación principal"
         style={{
           position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "60px",
-          background: "rgba(23,30,39,.92)",
-          backdropFilter: "blur(14px)",
-          borderTop: "1px solid rgba(255,255,255,.06)",
+          bottom: "calc(10px + env(safe-area-inset-bottom))",
+          left: "12px",
+          right: "12px",
+          maxWidth: "440px",
+          margin: "0 auto",
+          height: "64px",
+          padding: "6px",
+          gap: "4px",
+          background: "var(--nav-bg)",
+          backdropFilter: "blur(18px) saturate(1.4)",
+          WebkitBackdropFilter: "blur(18px) saturate(1.4)",
+          border: "1px solid rgba(var(--ink-rgb), .1)",
+          borderRadius: "24px",
+          boxShadow: "0 14px 34px -12px rgba(var(--shadow-rgb), .55), 0 1px 0 rgba(var(--ink-rgb), .05) inset",
           display: "flex",
-          alignItems: "center",
+          alignItems: "stretch",
           justifyContent: "space-around",
           zIndex: 10,
-          paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
         <NavLinks variant="bottom" isCoach={isCoach} />
-      </div>
+      </nav>
 
-      <div className="app-content" style={{ paddingBottom: "76px" }}>
+      <div className="app-content" style={{ paddingBottom: "100px" }}>
         {children}
       </div>
 

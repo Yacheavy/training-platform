@@ -97,7 +97,7 @@ export function WeekList({
               padding: "10px 12px",
               borderRadius: "10px",
               border: `1px solid ${isToday ? "var(--teal)" : "var(--border)"}`,
-              background: isToday ? "rgba(79,209,197,.05)" : "transparent",
+              background: isToday ? "rgba(var(--teal-rgb), .05)" : "transparent",
             }}
           >
             <div style={{ width: "72px", flexShrink: 0 }}>

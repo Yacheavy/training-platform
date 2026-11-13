@@ -27,7 +27,7 @@ export const btnStyle: CSSProperties = {
   fontSize: "13px",
   fontWeight: 600,
   cursor: "pointer",
-  boxShadow: "0 6px 16px -10px rgba(79, 209, 197, 0.7)",
+  boxShadow: "0 6px 16px -10px rgba(var(--teal-rgb), 0.7)",
 };
 
 /** Botón secundario (con borde, sin relleno); el color del texto se puede cambiar según el caso */
@@ -42,8 +42,8 @@ export const btnGhostStyle: CSSProperties = {
 /** Tarjeta de sección */
 export const cardStyle: CSSProperties = {
   background: "var(--grad-card)",
-  border: "1px solid rgba(255,255,255,.06)",
-  boxShadow: "0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px -12px rgba(0,0,0,.5)",
+  border: "1px solid rgba(var(--ink-rgb), .06)",
+  boxShadow: "0 1px 0 rgba(var(--ink-rgb), .03) inset, 0 8px 24px -12px rgba(0,0,0,.5)",
   borderRadius: "var(--radius)",
   padding: "22px",
   marginBottom: "20px",

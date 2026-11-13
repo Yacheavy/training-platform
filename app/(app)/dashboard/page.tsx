@@ -195,7 +195,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           return (
             <Link key={a.id} href={`/activities/${a.id}`} className="activity-card" style={{ textDecoration: "none", color: "inherit" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 14px", border: "1px solid var(--border)", borderRadius: "12px", background: "var(--surface-2, transparent)" }}>
-                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(79,209,197,.1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(var(--teal-rgb), .1)", color: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <ActivityIcon type={a.type} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>

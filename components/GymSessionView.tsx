@@ -36,7 +36,7 @@ function Figure({ e }: { e: Ex }) {
   return (
     <div style={{ marginTop: "10px" }}>
       {/* SVG propio y estático generado en código (no hay contenido de usuarios) */}
-      <div style={{ background: "linear-gradient(160deg, #1B2430 0%, #151C26 100%)", border: "1px solid var(--border)", borderRadius: "12px", padding: "10px 12px 6px", display: "inline-block", maxWidth: "100%" }}
+      <div style={{ background: "var(--grad-card)", border: "1px solid var(--border)", borderRadius: "12px", padding: "10px 12px 6px", display: "inline-block", maxWidth: "100%" }}
         dangerouslySetInnerHTML={{ __html: figureSvg(f, e.name) }} />
       <div style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "4px" }}>
         Esquema de referencia, no reemplaza la técnica que te corrija un profesional.{f.note ? ` ${f.note}` : ""}
@@ -66,7 +66,7 @@ function ExerciseItem({ e, label, inGroup }: { e: Ex; label: string; inGroup?: b
 function GroupCard({ items }: { items: Ex[] }) {
   const g = items[0].group!;
   return (
-    <div style={{ border: "1px solid var(--teal-dim)", background: "rgba(79,209,197,0.04)", borderRadius: "12px", padding: "14px" }}>
+    <div style={{ border: "1px solid var(--teal-dim)", background: "rgba(var(--teal-rgb), 0.04)", borderRadius: "12px", padding: "14px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap", alignItems: "baseline" }}>
         <div style={{ fontSize: "13.5px", fontWeight: 600 }}>Superserie {g.id} · {g.label}</div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--teal)", whiteSpace: "nowrap" }}>{items[0].sets} rondas</div>

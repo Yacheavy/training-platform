@@ -3,6 +3,8 @@
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from "chart.js";
 import type { WeeklyIntensity } from "@/lib/analytics";
+import { chartTheme } from "@/lib/chart-theme";
+const T = chartTheme();
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -27,7 +29,7 @@ export function IntensityChart({ data }: { data: WeeklyIntensity[] }) {
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
     plugins: {
-      legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 8, boxHeight: 8, color: "#8A97A6", padding: 14, font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 } } },
+      legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 8, boxHeight: 8, color: T.legend, padding: 14, font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 } } },
       tooltip: {
         backgroundColor: "#0B0E13",
         borderColor: "rgba(255,255,255,.1)",
@@ -43,8 +45,8 @@ export function IntensityChart({ data }: { data: WeeklyIntensity[] }) {
       },
     },
     scales: {
-      x: { stacked: true, grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false } },
-      y: { stacked: true, grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#5A6673", font: { size: 10 }, maxTicksLimit: 5 }, border: { display: false }, title: { display: true, text: "horas", color: "#5A6673", font: { size: 10 } } },
+      x: { stacked: true, grid: { display: false }, ticks: { color: T.tick, font: { size: 10 } }, border: { display: false } },
+      y: { stacked: true, grid: { color: T.grid }, ticks: { color: T.tick, font: { size: 10 }, maxTicksLimit: 5 }, border: { display: false }, title: { display: true, text: "horas", color: T.tick, font: { size: 10 } } },
     },
   };
   return (

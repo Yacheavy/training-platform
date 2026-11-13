@@ -2,6 +2,8 @@
 
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, type Plugin } from "chart.js";
+import { chartTheme } from "@/lib/chart-theme";
+const T = chartTheme();
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
@@ -32,7 +34,7 @@ export function AvailabilityHistoryChart({ data }: { data: Point[] }) {
       {
         label: "Disponibilidad",
         data: data.map((d) => d.score),
-        borderColor: "rgba(231,236,242,.55)",
+        borderColor: T.line,
         backgroundColor: (ctx: { chart: ChartJS }) => {
           const { ctx: c, chartArea } = ctx.chart;
           if (!chartArea) return "transparent";
@@ -46,7 +48,7 @@ export function AvailabilityHistoryChart({ data }: { data: Point[] }) {
         borderWidth: 1.5,
         pointRadius: data.map((d) => (d.hasCheckin ? 4 : 3)),
         pointHoverRadius: 6,
-        pointBackgroundColor: data.map((d) => (d.hasCheckin ? COLOR[d.status] : "#10151C")),
+        pointBackgroundColor: data.map((d) => (d.hasCheckin ? COLOR[d.status] : T.dot)),
         pointBorderColor: data.map((d) => COLOR[d.status]),
         pointBorderWidth: 2,
       },
@@ -75,8 +77,8 @@ export function AvailabilityHistoryChart({ data }: { data: Point[] }) {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 }, maxTicksLimit: 7, maxRotation: 0 }, border: { display: false } },
-      y: { min: 0, max: 100, grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#5A6673", font: { size: 10 }, stepSize: 25 }, border: { display: false } },
+      x: { grid: { display: false }, ticks: { color: T.tick, font: { size: 10 }, maxTicksLimit: 7, maxRotation: 0 }, border: { display: false } },
+      y: { min: 0, max: 100, grid: { color: T.grid }, ticks: { color: T.tick, font: { size: 10 }, stepSize: 25 }, border: { display: false } },
     },
   };
 

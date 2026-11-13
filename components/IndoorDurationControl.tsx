@@ -39,7 +39,7 @@ export function IndoorDurationControl({
   const slim = minMin >= maxMin;
 
   return (
-    <ActionForm action={action} success="Sesión pasada a rodillo" style={{ display: "block", width: "100%", border: "1px solid var(--border)", borderRadius: "14px", padding: "14px", background: "rgba(255,255,255,.03)" }}>
+    <ActionForm action={action} success="Sesión pasada a rodillo" style={{ display: "block", width: "100%", border: "1px solid var(--border)", borderRadius: "14px", padding: "14px", background: "rgba(var(--ink-rgb), .03)" }}>
       <input type="hidden" name="workoutId" value={workoutId} />
       <input type="hidden" name="durationMin" value={value} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "10px" }}>

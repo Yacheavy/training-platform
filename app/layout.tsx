@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -18,14 +19,22 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Overkill", statusBarStyle: "black" },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#0B0E13",
-};
+/** Tema elegido en Ajustes (cookie "theme"): dark (por defecto), light o auto (sigue al sistema). */
+async function currentTheme(): Promise<"dark" | "light" | "auto"> {
+  const t = (await cookies()).get("theme")?.value;
+  return t === "light" || t === "auto" ? t : "dark";
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export async function generateViewport(): Promise<Viewport> {
+  return { themeColor: (await currentTheme()) === "light" ? "#F3F5F8" : "#0B0E13" };
+}
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const theme = await currentTheme();
   return (
     <html
       lang="es"
+      data-theme={theme}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

@@ -58,7 +58,7 @@ export function ConnectIntervalsModal({
           {error === "rejected" && <div style={{ fontSize: "12.5px", color: "var(--red)" }}>Intervals rechazó esas credenciales. Verificá que sean las tuyas.</div>}
           <SubmitButton
             pendingText="Conectando y trayendo tus datos…"
-            style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", border: "none", borderRadius: "14px", padding: "13px 18px", fontSize: "15px", fontWeight: 600, boxShadow: "0 8px 20px -10px rgba(79,209,197,.7)", cursor: "pointer" }}
+            style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", border: "none", borderRadius: "14px", padding: "13px 18px", fontSize: "15px", fontWeight: 600, boxShadow: "0 8px 20px -10px rgba(var(--teal-rgb), .7)", cursor: "pointer" }}
           >
             Conectar Intervals
           </SubmitButton>

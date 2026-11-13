@@ -105,7 +105,7 @@ export function PostRideCard({ p, action, onLater }: { p: PendingPostRide; actio
             value="save"
             pendingText="Guardando…"
             disabled={!touched}
-            style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", border: "none", borderRadius: "14px", padding: "13px 18px", fontSize: "15px", fontWeight: 600, boxShadow: "0 8px 20px -10px rgba(79,209,197,.7)" }}
+            style={{ background: "linear-gradient(135deg, #5BDDD1, #3DB8AD)", color: "#08201C", border: "none", borderRadius: "14px", padding: "13px 18px", fontSize: "15px", fontWeight: 600, boxShadow: "0 8px 20px -10px rgba(var(--teal-rgb), .7)" }}
           >
             Guardar
           </SubmitButton>

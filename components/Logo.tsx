@@ -14,11 +14,11 @@ export function Wordmark({ size = 34, center = true }: { size?: number; center?:
           fontStyle: "italic",
           letterSpacing: "-0.02em",
           textTransform: "uppercase",
-          background: "linear-gradient(180deg, #FFFFFF 15%, #BFC9D3 50%, #4FD1C5 100%)",
+          background: "linear-gradient(180deg, var(--logo-1) 15%, var(--logo-2) 50%, var(--teal) 100%)",
           WebkitBackgroundClip: "text",
           backgroundClip: "text",
           color: "transparent",
-          filter: "drop-shadow(0 0 14px rgba(79,209,197,.35))",
+          filter: "drop-shadow(0 0 14px rgba(var(--teal-rgb), .35))",
         }}
       >
         Overkill

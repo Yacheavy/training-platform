@@ -181,7 +181,7 @@ export function ActivityChart({ stepSec, power, hr, cadence, speed, altitude, ft
         >
           {axisFor(left).map((v) => (
             <g key={`l${v}`}>
-              <line x1={PAD.l} x2={w - PAD.r} y1={y(left!, v)} y2={y(left!, v)} stroke="rgba(255,255,255,.06)" />
+              <line x1={PAD.l} x2={w - PAD.r} y1={y(left!, v)} y2={y(left!, v)} stroke="rgba(var(--ink-rgb), .06)" />
               <text x={PAD.l - 6} y={y(left!, v) + 3.5} textAnchor="end" fontSize="10" fill={left!.color} fontFamily="var(--font-mono)">{Math.round(v)}</text>
             </g>
           ))}
@@ -202,10 +202,10 @@ export function ActivityChart({ stepSec, power, hr, cadence, speed, altitude, ft
           ))}
           {hover != null && (
             <g pointerEvents="none">
-              <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={PAD.t + plotH} stroke="rgba(255,255,255,.35)" />
+              <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={PAD.t + plotH} stroke="rgba(var(--ink-rgb), .35)" />
               {active.map((s) => {
                 const v = s.vals[hover];
-                return v == null ? null : <circle key={s.key} cx={x(hover)} cy={y(s, v)} r="4" fill={s.color} stroke="#0E141B" strokeWidth="1.5" />;
+                return v == null ? null : <circle key={s.key} cx={x(hover)} cy={y(s, v)} r="4" fill={s.color} stroke="var(--surface)" strokeWidth="1.5" />;
               })}
             </g>
           )}
@@ -216,7 +216,7 @@ export function ActivityChart({ stepSec, power, hr, cadence, speed, altitude, ft
             style={{
               position: "absolute", top: "6px", pointerEvents: "none", minWidth: "128px",
               ...(tipOnRight ? { left: Math.min(w - 140, x(hover) + 12) } : { left: Math.max(4, x(hover) - 140) }),
-              background: "rgba(14,20,27,.94)", border: "1px solid var(--border-strong)", borderRadius: "10px", padding: "8px 10px", fontSize: "12px",
+              background: "color-mix(in srgb, var(--surface) 96%, transparent)", border: "1px solid var(--border-strong)", borderRadius: "10px", padding: "8px 10px", fontSize: "12px",
             }}
           >
             <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)", marginBottom: "5px" }}>{fmtTime(hover * stepSec)}</div>
@@ -243,7 +243,7 @@ export function ActivityChart({ stepSec, power, hr, cadence, speed, altitude, ft
             style={{
               padding: "4px 10px", borderRadius: "999px", fontSize: "12px", cursor: "pointer",
               border: `1px solid ${smoothSec === o.sec ? "var(--teal)" : "var(--border)"}`,
-              background: smoothSec === o.sec ? "rgba(79,209,197,.1)" : "transparent",
+              background: smoothSec === o.sec ? "rgba(var(--teal-rgb), .1)" : "transparent",
               color: smoothSec === o.sec ? "var(--teal)" : "var(--text-muted)",
             }}
           >

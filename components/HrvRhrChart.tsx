@@ -2,6 +2,8 @@
 
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
+import { chartTheme } from "@/lib/chart-theme";
+const T = chartTheme();
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -74,7 +76,7 @@ export function HrvRhrChart({ points, band }: Props) {
           pointStyle: "line",
           boxWidth: 14,
           boxHeight: 3,
-          color: "#8A97A6",
+          color: T.legend,
           padding: 12,
           font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 },
           filter: (item: { text: string }) => item.text !== "Banda alta",
@@ -83,9 +85,9 @@ export function HrvRhrChart({ points, band }: Props) {
       tooltip: { backgroundColor: "#0B0E13", borderColor: "rgba(255,255,255,.1)", borderWidth: 1, padding: 10, filter: (item: { dataset: { label?: string } }) => item.dataset.label !== "Banda alta" && item.dataset.label !== "Tu rango habitual" },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 }, maxTicksLimit: 8 }, border: { display: false } },
-      y: { position: "left", grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false }, title: { display: true, text: "HRV (ms)", color: "#5A6673", font: { size: 10 } } },
-      y1: { position: "right", grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false }, title: { display: true, text: "FC reposo (lpm)", color: "#5A6673", font: { size: 10 } } },
+      x: { grid: { display: false }, ticks: { color: T.tick, font: { size: 10 }, maxTicksLimit: 8 }, border: { display: false } },
+      y: { position: "left", grid: { color: T.grid }, ticks: { color: T.tick, font: { size: 10 } }, border: { display: false }, title: { display: true, text: "HRV (ms)", color: T.tick, font: { size: 10 } } },
+      y1: { position: "right", grid: { display: false }, ticks: { color: T.tick, font: { size: 10 } }, border: { display: false }, title: { display: true, text: "FC reposo (lpm)", color: T.tick, font: { size: 10 } } },
     },
   };
 

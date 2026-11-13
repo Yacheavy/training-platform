@@ -87,7 +87,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     { label: `FC reposo ${ageLabel(data.restingHrDate)}`.trim(), value: data.restingHr?.toFixed(0) ?? "—", sub: rhrTrend, alert: rhrAlert, spark: hrvBand.points.slice(-28).map((p) => p.restingHr), color: "var(--amber)" },
     { label: `Sueño ${ageLabel(data.sleepDate)}`.trim(), value: data.sleepHours != null ? `${data.sleepHours.toFixed(1)}h` : "—", sub: data.sleepTrend ?? undefined },
   ];
-  const row = { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" as const, padding: "9px 0", borderBottom: "1px solid rgba(255,255,255,.05)", fontSize: "13px" };
+  const row = { display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" as const, padding: "9px 0", borderBottom: "1px solid rgba(var(--ink-rgb), .05)", fontSize: "13px" };
 
   return (
     <div className="page-container">

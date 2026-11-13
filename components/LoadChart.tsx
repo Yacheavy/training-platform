@@ -2,12 +2,14 @@
 
 import { Line, Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Filler } from "chart.js";
+import { chartTheme } from "@/lib/chart-theme";
+const T = chartTheme();
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Filler);
 
 type P = { date: string; ctl: number | null; atl: number | null; tsb: number | null };
 
-const tick = { color: "#5A6673", font: { size: 10 } };
+const tick = { color: T.tick, font: { size: 10 } };
 const tooltip = {
   backgroundColor: "#0B0E13",
   borderColor: "rgba(255,255,255,.1)",
@@ -62,7 +64,7 @@ export function LoadChart({ data }: { data: P[] }) {
     plugins: { legend: { display: false }, tooltip: { ...tooltip, callbacks: { label: (i: { dataset: { label?: string }; parsed: { y: number | null } }) => `${i.dataset.label}: ${i.parsed.y?.toFixed(1)}` } } },
     scales: {
       x: { ...x, ticks: { ...x.ticks, display: false } },
-      y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { ...tick, maxTicksLimit: 4 }, border: { display: false } },
+      y: { grid: { color: T.grid }, ticks: { ...tick, maxTicksLimit: 4 }, border: { display: false } },
     },
   };
 
@@ -76,7 +78,7 @@ export function LoadChart({ data }: { data: P[] }) {
     plugins: { legend: { display: false }, tooltip: { ...tooltip, displayColors: false, callbacks: { label: (i: { parsed: { y: number | null } }) => `Forma (TSB): ${i.parsed.y != null && i.parsed.y > 0 ? "+" : ""}${i.parsed.y}` } } },
     scales: {
       x,
-      y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { ...tick, maxTicksLimit: 3 }, border: { display: false } },
+      y: { grid: { color: T.grid }, ticks: { ...tick, maxTicksLimit: 3 }, border: { display: false } },
     },
   };
 

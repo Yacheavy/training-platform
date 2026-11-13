@@ -17,6 +17,9 @@ import { DURATION_LABEL, type StoredPowerCurve, type StoredSportSettings } from 
 
 export const maxDuration = 60;
 
+import { cookies } from "next/headers";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; invite?: string; intervals?: string; history?: string; historyErrors?: string }> }) {
   const sp = await searchParams;
   const session = await auth();
@@ -24,6 +27,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   const { thresholds, user } = await getSettingsData(session.user.id);
   const access = await getAccessData(session.user.id);
+  const themeCookie = (await cookies()).get("theme")?.value;
+  const theme: "dark" | "light" | "auto" = themeCookie === "light" || themeCookie === "auto" ? themeCookie : "dark";
   const tab = sp.tab === "alumnos" && access.isCoach ? "alumnos" : "cuenta";
 
   const tabStyle = (active: boolean) => ({
@@ -32,7 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     fontSize: "13px",
     textDecoration: "none",
     border: "1px solid var(--border)",
-    background: active ? "rgba(79,209,197,.12)" : "transparent",
+    background: active ? "rgba(var(--teal-rgb), .12)" : "transparent",
     color: active ? "var(--teal)" : "var(--text-muted)",
   });
 
@@ -94,6 +99,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {tab === "cuenta" && (
         <>
+      {/* Apariencia */}
+      <div style={cardStyle}>
+        <h2 className="card-title">Apariencia</h2>
+        <p style={{ fontSize: "11.5px", color: "var(--text-dim)", marginBottom: "14px" }}>Elegí cómo se ve la app. Se recuerda en este dispositivo.</p>
+        <ThemeToggle initial={theme} />
+      </div>
       {/* Conexión con Intervals (cada persona usa su propia cuenta) */}
       <div style={cardStyle}>
         <h2 className="card-title">Conexión con Intervals.icu</h2>

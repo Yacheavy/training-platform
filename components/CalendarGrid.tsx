@@ -124,7 +124,7 @@ export function CalendarGrid({
 
   const seg = (active: boolean) => ({
     padding: "7px 16px", fontSize: "13px", cursor: "pointer", border: "1px solid var(--border)", color: active ? "var(--teal)" : "var(--text-muted)",
-    background: active ? "rgba(79,209,197,.12)" : "transparent",
+    background: active ? "rgba(var(--teal-rgb), .12)" : "transparent",
   }) as const;
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekLabel = `${fmtShort(weekDays[0])} – ${fmtShort(weekDays[6])}`;
@@ -153,7 +153,7 @@ export function CalendarGrid({
             const isToday = k === todayKey;
             const inMonth = k >= monthFirst && k <= monthLast;
             return (
-              <div key={k} style={{ display: "grid", gridTemplateColumns: "54px minmax(0, 1fr)", gap: "10px", alignItems: "center", padding: "10px 12px", borderRadius: "14px", border: `1px solid ${isToday ? "rgba(79,209,197,.6)" : "rgba(255,255,255,.06)"}`, background: isToday ? "linear-gradient(160deg, rgba(79,209,197,.14), rgba(79,209,197,.03))" : "var(--grad-card)", opacity: inMonth ? 1 : 0.75 }}>
+              <div key={k} style={{ display: "grid", gridTemplateColumns: "54px minmax(0, 1fr)", gap: "10px", alignItems: "center", padding: "10px 12px", borderRadius: "14px", border: `1px solid ${isToday ? "rgba(var(--teal-rgb), .6)" : "rgba(var(--ink-rgb), .06)"}`, background: isToday ? "linear-gradient(160deg, rgba(var(--teal-rgb), .14), rgba(var(--teal-rgb), .03))" : "var(--grad-card)", opacity: inMonth ? 1 : 0.75 }}>
                 <div style={{ textAlign: "center" }}>
                   <div style={{ fontSize: "11px", color: isToday ? "var(--teal)" : "var(--text-muted)", textTransform: "capitalize" }}>{DOW_LABELS[dow(k)]}</div>
                   <div style={{ fontSize: "20px", fontWeight: 600 }}>{Number(k.slice(8))}</div>
@@ -161,7 +161,7 @@ export function CalendarGrid({
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", minWidth: 0 }}>
                   {ev.map((e, i) => <EventChip key={i} e={e} />)}
                   {w ? (
-                    <button type="button" onClick={() => setDetailWorkout(w)} style={{ textAlign: "left", cursor: "pointer", border: `1px solid ${STATUS_BORDER[w.status] ?? "var(--border)"}`, borderRadius: "10px", padding: "8px 10px", background: "rgba(255,255,255,.04)", color: "inherit", width: "100%" }}>
+                    <button type="button" onClick={() => setDetailWorkout(w)} style={{ textAlign: "left", cursor: "pointer", border: `1px solid ${STATUS_BORDER[w.status] ?? "var(--border)"}`, borderRadius: "10px", padding: "8px 10px", background: "rgba(var(--ink-rgb), .04)", color: "inherit", width: "100%" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", fontSize: "13px", fontWeight: 600 }}>
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{STIMULUS_LABELS[w.workoutLibraryKey] ?? w.workoutLibraryKey}</span>
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: "11.5px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
@@ -204,11 +204,11 @@ export function CalendarGrid({
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => handleDrop(dayNumber)}
               style={{
-                border: `1px solid ${isToday ? "rgba(79,209,197,.6)" : "rgba(255,255,255,.06)"}`,
+                border: `1px solid ${isToday ? "rgba(var(--teal-rgb), .6)" : "rgba(var(--ink-rgb), .06)"}`,
                 borderRadius: "14px",
                 padding: "7px",
                 minHeight: "88px",
-                background: isToday ? "linear-gradient(160deg, rgba(79,209,197,.14), rgba(79,209,197,.03))" : "var(--grad-card)",
+                background: isToday ? "linear-gradient(160deg, rgba(var(--teal-rgb), .14), rgba(var(--teal-rgb), .03))" : "var(--grad-card)",
               }}
             >
               <div style={{ fontSize: "11.5px", fontWeight: isToday ? 700 : 500, color: isToday ? "var(--teal)" : "var(--text-muted)", marginBottom: "4px" }}>
@@ -216,7 +216,7 @@ export function CalendarGrid({
               </div>
               {dayEvents.map((e, i) => <EventChip key={i} e={e} compact />)}
               {workout && narrow && (
-                <button type="button" onClick={() => setDetailWorkout(workout)} aria-label={`Ver sesión del día ${dayNumber}`} style={{ display: "block", width: "100%", border: `1px solid ${STATUS_BORDER[workout.status] ?? "var(--border)"}`, borderRadius: "8px", padding: "4px 2px", background: "rgba(255,255,255,.06)", color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: "9.5px", cursor: "pointer" }}>
+                <button type="button" onClick={() => setDetailWorkout(workout)} aria-label={`Ver sesión del día ${dayNumber}`} style={{ display: "block", width: "100%", border: `1px solid ${STATUS_BORDER[workout.status] ?? "var(--border)"}`, borderRadius: "8px", padding: "4px 2px", background: "rgba(var(--ink-rgb), .06)", color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: "9.5px", cursor: "pointer" }}>
                   {workout.estimatedTss ? Math.round(workout.estimatedTss) : "•"}
                 </button>
               )}
@@ -231,7 +231,7 @@ export function CalendarGrid({
                     border: `1px solid ${STATUS_BORDER[workout.status] ?? "var(--border)"}`,
                     borderRadius: "10px",
                     padding: "6px",
-                    background: "rgba(255,255,255,.04)",
+                    background: "rgba(var(--ink-rgb), .04)",
                   }}
                   title={readOnly ? "Click para ver el detalle" : "Click para ver detalle - arrastra para mover"}
                 >
@@ -270,7 +270,7 @@ export function CalendarGrid({
             onClick={(e) => e.stopPropagation()}
             style={{
               background: "var(--grad-card)",
-              border: "1px solid rgba(255,255,255,.09)",
+              border: "1px solid rgba(var(--ink-rgb), .09)",
               boxShadow: "0 30px 80px -20px rgba(0,0,0,.8)",
               borderRadius: "22px",
               padding: "26px",

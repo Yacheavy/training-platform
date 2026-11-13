@@ -36,13 +36,13 @@ export default async function CalendarPage({
         <div style={{ display: "flex", gap: "10px" }}>
           <a
             href={`/calendar?year=${prevMonth.year}&month=${prevMonth.month}`}
-            style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" }}
+            style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(var(--ink-rgb), .08)", borderRadius: "999px", padding: "7px 14px" }}
           >
             ← Anterior
           </a>
           <a
             href={`/calendar?year=${nextMonth.year}&month=${nextMonth.month}`}
-            style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" }}
+            style={{ color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(var(--ink-rgb), .08)", borderRadius: "999px", padding: "7px 14px" }}
           >
             Siguiente →
           </a>

@@ -3,6 +3,8 @@
 import { Bar } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from "chart.js";
 import type { WeekPlanVsActual } from "@/lib/analytics";
+import { chartTheme } from "@/lib/chart-theme";
+const T = chartTheme();
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -12,7 +14,7 @@ export function PlanVsActualChart({ data }: { data: WeekPlanVsActual[] }) {
   const chartData = {
     labels,
     datasets: [
-      { label: "Planificado", data: data.map((w) => w.plannedTss || null), backgroundColor: "rgba(138,151,166,.28)", borderColor: "#5A6673", borderWidth: 1, borderRadius: 4, borderSkipped: false, maxBarThickness: 34 },
+      { label: "Planificado", data: data.map((w) => w.plannedTss || null), backgroundColor: "rgba(138,151,166,.28)", borderColor: T.tick, borderWidth: 1, borderRadius: 4, borderSkipped: false, maxBarThickness: 34 },
       { label: "Realizado", data: data.map((w) => w.actualTss || null), backgroundColor: "#4FD1C5", borderRadius: 4, borderSkipped: false, maxBarThickness: 34 },
     ],
   };
@@ -22,7 +24,7 @@ export function PlanVsActualChart({ data }: { data: WeekPlanVsActual[] }) {
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
     plugins: {
-      legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 8, boxHeight: 8, color: "#8A97A6", padding: 12, font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 } } },
+      legend: { position: "top", align: "end", labels: { usePointStyle: true, pointStyle: "rectRounded", boxWidth: 8, boxHeight: 8, color: T.legend, padding: 12, font: { family: "system-ui, -apple-system, Segoe UI, sans-serif", size: 10 } } },
       tooltip: {
         backgroundColor: "#0B0E13", borderColor: "rgba(255,255,255,.1)", borderWidth: 1, padding: 10, 
         callbacks: {
@@ -38,8 +40,8 @@ export function PlanVsActualChart({ data }: { data: WeekPlanVsActual[] }) {
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false } },
-      y: { grid: { color: "rgba(255,255,255,.04)" }, ticks: { color: "#5A6673", font: { size: 10 } }, border: { display: false }, title: { display: true, text: "TSS semanal", color: "#5A6673", font: { size: 10 } } },
+      x: { grid: { display: false }, ticks: { color: T.tick, font: { size: 10 } }, border: { display: false } },
+      y: { grid: { color: T.grid }, ticks: { color: T.tick, font: { size: 10 } }, border: { display: false }, title: { display: true, text: "TSS semanal", color: T.tick, font: { size: 10 } } },
     },
   };
   return (

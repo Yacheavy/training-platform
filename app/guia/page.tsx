@@ -6,9 +6,9 @@ export const metadata: Metadata = { title: `Guía · ${APP_NAME}`, description: 
 const h2 = { fontSize: "19px", fontWeight: 600, letterSpacing: "-0.01em", margin: "0 0 10px" } as const;
 const p = { fontSize: "14.5px", color: "var(--text-muted)", lineHeight: 1.65, margin: "0 0 10px" } as const;
 const ol = { ...p, paddingLeft: "22px", display: "flex", flexDirection: "column", gap: "7px" } as const;
-const card = { background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.06)", borderRadius: "var(--radius)", padding: "22px", marginBottom: "18px" } as const;
+const card = { background: "var(--grad-card)", border: "1px solid rgba(var(--ink-rgb), .06)", borderRadius: "var(--radius)", padding: "22px", marginBottom: "18px" } as const;
 const b = { color: "var(--text)" } as const;
-const tag = { display: "inline-block", fontSize: "11px", fontWeight: 600, letterSpacing: ".04em", color: "var(--teal)", background: "rgba(79,209,197,.12)", borderRadius: "999px", padding: "3px 10px", marginBottom: "10px" } as const;
+const tag = { display: "inline-block", fontSize: "11px", fontWeight: 600, letterSpacing: ".04em", color: "var(--teal)", background: "rgba(var(--teal-rgb), .12)", borderRadius: "999px", padding: "3px 10px", marginBottom: "10px" } as const;
 
 export default function GuidePage() {
   return (

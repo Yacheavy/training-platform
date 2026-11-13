@@ -1,10 +1,10 @@
 const DAY_NAMES = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  cycling: { bg: "#2A5C56", text: "#4FD1C5", label: "Bici" },
-  gym: { bg: "#2A3350", text: "#6FA8DC", label: "Gym" },
-  flexibility: { bg: "#2F2A45", text: "#B79BEF", label: "Flex" },
-  rest: { bg: "#242F3B", text: "#5A6673", label: "Descanso" },
+  cycling: { bg: "var(--teal-dim)", text: "var(--teal)", label: "Bici" },
+  gym: { bg: "var(--blue-dim)", text: "var(--blue)", label: "Gym" },
+  flexibility: { bg: "var(--violet-dim)", text: "var(--violet)", label: "Flex" },
+  rest: { bg: "var(--surface-3)", text: "var(--text-dim)", label: "Descanso" },
 };
 
 export function WeeklyGrid({
@@ -27,7 +27,7 @@ export function WeeklyGrid({
             key={dayOfWeek}
             style={{
               border: `1px solid ${isToday ? "var(--teal)" : "var(--border)"}`,
-              background: isToday ? "rgba(79,209,197,.05)" : "transparent",
+              background: isToday ? "rgba(var(--teal-rgb), .05)" : "transparent",
               borderRadius: "10px",
               padding: "10px 8px",
               minHeight: "70px",

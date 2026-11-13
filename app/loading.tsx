@@ -6,7 +6,7 @@ export default function Loading() {
     <div
       role="status"
       aria-label="Cargando"
-      style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "22px", background: "#0B0E13" }}
+      style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "22px", background: "var(--bg)" }}
     >
       <div className="splash-pulse">
         <LogoMark size={132} />

@@ -68,8 +68,8 @@ export function NavLinks({ variant }: { variant: "side" | "bottom"; isCoach?: bo
                 alignItems: "center",
                 gap: "3px",
                 color: active ? "var(--teal)" : "var(--text-dim)",
-                background: active ? "linear-gradient(160deg, rgba(79,209,197,.18), rgba(79,209,197,.06))" : "transparent",
-                boxShadow: active ? "0 0 0 1px rgba(79,209,197,.18) inset" : "none",
+                background: active ? "linear-gradient(160deg, rgba(var(--teal-rgb), .18), rgba(var(--teal-rgb), .06))" : "transparent",
+                boxShadow: active ? "0 0 0 1px rgba(var(--teal-rgb), .18) inset" : "none",
                 textDecoration: "none",
                 fontSize: "9.5px",
                 fontWeight: 500,
@@ -88,17 +88,19 @@ export function NavLinks({ variant }: { variant: "side" | "bottom"; isCoach?: bo
             className="nav-link"
             style={{
               flex: 1,
-              height: "100%",
+              borderRadius: "18px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               gap: "3px",
-              color: active ? "var(--teal)" : "var(--text-dim)",
-              borderTop: `2px solid ${active ? "var(--teal)" : "transparent"}`,
-              fontWeight: 500,
+              color: active ? "var(--teal)" : "var(--text-muted)",
+              background: active ? "linear-gradient(160deg, rgba(var(--teal-rgb), .2), rgba(var(--teal-rgb), .07))" : "transparent",
+              boxShadow: active ? "0 0 0 1px rgba(var(--teal-rgb), .22) inset" : "none",
+              fontWeight: active ? 600 : 500,
               fontSize: "10.5px",
               textDecoration: "none",
+              transition: "background .2s ease, color .2s ease",
             }}
           >
             <Icon href={item.href} size={22} />

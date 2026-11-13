@@ -26,7 +26,7 @@ export default async function StudentCalendarPage({ params, searchParams }: { pa
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const prev = month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 };
   const next = month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 };
-  const nav = { color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(255,255,255,.08)", borderRadius: "999px", padding: "7px 14px" } as const;
+  const nav = { color: "var(--text)", textDecoration: "none", fontSize: "13px", background: "var(--grad-card)", border: "1px solid rgba(var(--ink-rgb), .08)", borderRadius: "999px", padding: "7px 14px" } as const;
   const base = `/alumnos/${id}/calendario`;
 
   return (

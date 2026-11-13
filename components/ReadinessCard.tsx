@@ -130,7 +130,7 @@ export function ReadinessCard({
   return (
     <section
       aria-label="Guía para hoy"
-      style={{ marginBottom: "16px", border: `1.5px solid ${tone}`, borderRadius: "var(--r-lg)", padding: "18px", background: `linear-gradient(160deg, color-mix(in srgb, ${tone} 12%, #171E27) 0%, #171E27 60%)` }}
+      style={{ marginBottom: "16px", border: `1.5px solid ${tone}`, borderRadius: "var(--r-lg)", padding: "18px", background: `linear-gradient(160deg, color-mix(in srgb, ${tone} 12%, var(--surface)) 0%, var(--surface) 60%)` }}
     >
       <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: tone, boxShadow: `0 0 0 5px color-mix(in srgb, ${tone} 20%, transparent)`, flex: "none" }} />
@@ -145,7 +145,7 @@ export function ReadinessCard({
       {signals.length > 0 && (
         <div style={{ display: "grid", gap: "8px", marginTop: "14px" }}>
           {signals.map((s) => (
-            <div key={s.key} style={{ display: "flex", gap: "12px", alignItems: "center", padding: "10px 12px", borderRadius: "12px", background: "rgba(255,255,255,.035)" }}>
+            <div key={s.key} style={{ display: "flex", gap: "12px", alignItems: "center", padding: "10px 12px", borderRadius: "12px", background: "rgba(var(--ink-rgb), .035)" }}>
               <SignalIcon k={s.key} tone={tone} />
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: "14px", fontWeight: 700 }}>{s.title}</div>
