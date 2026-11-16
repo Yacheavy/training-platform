@@ -176,7 +176,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <input name={f.name} type="number" defaultValue={f.value ?? ""} style={inputStyle} />
                   <div style={{ fontSize: "10px", color: "var(--text-dim)", marginTop: "4px" }}>
                     {f.name === "pvo2maxWatts" && user?.pvo2maxUpdatedAt
-                      ? `${user.pvo2maxSource === "intervals-5min" ? "Desde Intervals" : "Manual"} · ${new Date(user.pvo2maxUpdatedAt).toLocaleDateString("es-AR")}`
+                      ? `${user.pvo2maxSource === "intervals-5min" ? "Desde Intervals" : user.pvo2maxSource === "coach" ? "Cargado por tu coach" : "Manual"} · ${new Date(user.pvo2maxUpdatedAt).toLocaleDateString("es-AR")}`
                       : f.name === "ftp" && user?.ftpUpdatedAt
                         ? `Actualizado ${new Date(user.ftpUpdatedAt).toLocaleDateString("es-AR")}`
                         : "\u00A0"}

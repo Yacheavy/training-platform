@@ -15,7 +15,7 @@ import { bodyToHtml, layoutEmail } from "@/lib/email/template";
 /**
  * Acciones del entrenador sobre la planificación de SUS alumnos. Cada una vuelve a verificar en el servidor que el
  * alumno es de ese entrenador (el id que llega del cliente no se da por bueno). El alcance es el que eligió el entrenador:
- * objetivos, temporada, plan, semana tipo y estilo del plan. El FTP y las sesiones sueltas los maneja cada alumno.
+ * objetivos, temporada, plan, semana tipo y estilo del plan. Además puede corregir el FTP y la potencia en VO2max (PAM) del alumno. Las sesiones sueltas las maneja cada alumno.
  */
 const COACH_NOTE = "Armado por tu coach";
 
@@ -197,4 +197,36 @@ export async function coachSendPlanToIntervals(athleteId: string, _formData?: Fo
     console.error("coachSendPlanToIntervals falló", e);
     return { error: "No se pudo enviar el plan a Intervals. Probá de nuevo." };
   }
+}
+
+function intInRange(raw: FormDataEntryValue | null, min: number, max: number): number | null {
+  const n = Number(raw);
+  return raw !== null && String(raw).trim() !== "" && Number.isFinite(n) && n >= min && n <= max ? Math.round(n) : null;
+}
+
+/**
+ * El entrenador fija el FTP y la PAM (potencia en VO2max) de un alumno suyo. El FTP no se borra (vacío = sin cambio);
+ * la PAM vacía la borra (el HIIT vuelve a usar un % del FTP). No regenera los planes ya creados: lo avisa la pantalla.
+ */
+export async function saveStudentMetrics(athleteId: string, formData: FormData) {
+  const { student } = await authorize(athleteId);
+  const current = await prisma.user.findUnique({ where: { id: student.id }, select: { ftp: true, pvo2maxWatts: true } });
+  const rawFtp = formData.get("ftp");
+  const rawPam = formData.get("pvo2maxWatts");
+  const ftp = intInRange(rawFtp, 50, 600);
+  const pam = intInRange(rawPam, 100, 800);
+  if (String(rawFtp ?? "").trim() !== "" && ftp == null) throw new Error("FTP fuera de rango (50 a 600 W)");
+  if (String(rawPam ?? "").trim() !== "" && pam == null) throw new Error("PAM fuera de rango (100 a 800 W)");
+  if (ftp != null && pam != null && pam <= ftp) throw new Error("La PAM tiene que ser mayor que el FTP");
+  const finalFtp = ftp ?? current?.ftp ?? null;
+  if (pam != null && finalFtp != null && pam <= finalFtp) throw new Error("La PAM tiene que ser mayor que el FTP");
+
+  await prisma.user.update({
+    where: { id: student.id },
+    data: {
+      ...(ftp != null && ftp !== current?.ftp ? { ftp, ftpUpdatedAt: new Date() } : {}),
+      ...(pam !== (current?.pvo2maxWatts ?? null) ? { pvo2maxWatts: pam, pvo2maxUpdatedAt: new Date(), pvo2maxSource: pam == null ? null : "coach" } : {}),
+    },
+  });
+  refresh(student.id);
 }

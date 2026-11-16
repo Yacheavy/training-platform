@@ -23,7 +23,8 @@ import { getNutritionSummary } from "@/lib/nutrition-data";
 import { NutritionPatterns } from "@/components/NutritionPatterns";
 import { ActionForm } from "@/components/ActionForm";
 import { SubmitButton } from "@/components/SubmitButton";
-import { coachSendPlanToIntervals } from "@/lib/coach-actions";
+import { coachSendPlanToIntervals, saveStudentMetrics } from "@/lib/coach-actions";
+import { cardStyle, inputStyle, labelStyle, btnStyle } from "@/components/ui-styles";
 import { markOnboardingReviewed } from "@/lib/onboarding-actions";
 
 const STATUS_ES: Record<string, string> = {
@@ -64,7 +65,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
   // Configuración que cargó el alumno (para revisarla y corregirla)
   const [cfgUser, cfgSlots, cfgGoals] = await Promise.all([
-    prisma.user.findUnique({ where: { id }, select: { weight: true, trainingBackground: true, currentStateNote: true, preferences: true, onboardingSubmittedAt: true, onboardingReviewedAt: true } }),
+    prisma.user.findUnique({ where: { id }, select: { weight: true, ftpUpdatedAt: true, pvo2maxUpdatedAt: true, pvo2maxSource: true, powerCurveJson: true, sportSettingsJson: true, trainingBackground: true, currentStateNote: true, preferences: true, onboardingSubmittedAt: true, onboardingReviewedAt: true } }),
     prisma.trainingTemplateSlot.findMany({ where: { athleteId: id } }),
     prisma.athleteGoal.findMany({ where: { athleteId: id }, orderBy: { eventDate: "asc" }, take: 5 }),
   ]);
@@ -102,6 +103,39 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginBottom: "20px" }}>
         {student.email} · FTP {student.ftp ?? "—"} W{student.pvo2maxWatts ? ` · PAM ${student.pvo2maxWatts} W` : ""} · {student.intervalsAthleteId ? `Intervals conectado${student.intervalsLastSyncAt ? `, sync ${student.intervalsLastSyncAt.toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}` : ""}` : "sin Intervals"}
       </div>
+
+      {(() => {
+        const ssn = cfgUser?.sportSettingsJson as { ftp?: number | null } | null;
+        const curve = cfgUser?.powerCurveJson as { points?: { secs: number; watts: number }[] } | null;
+        const best5 = curve?.points?.find((p) => p.secs === 300)?.watts ?? null;
+        const day = (d: Date | null | undefined) => (d ? d.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Argentina/Buenos_Aires" }) : null);
+        const pamWho = cfgUser?.pvo2maxSource === "coach" ? "Por vos" : cfgUser?.pvo2maxSource === "intervals-5min" ? "Desde Intervals" : cfgUser?.pvo2maxSource ? "Manual (alumno)" : null;
+        return (
+          <div style={{ ...cardStyle, marginBottom: "16px" }}>
+            <h3 className="dash-card-title">FTP y PAM</h3>
+            <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "6px 0 12px" }}>
+              Los usa el motor para los vatios de cada sesión. El cambio vale para lo que se genere de ahora en más: los planes ya creados no se regeneran solos (regeneralos en la planificación del alumno). La PAM tiene que ser mayor que el FTP; vacía, el HIIT usa un % del FTP.
+            </p>
+            <ActionForm action={saveStudentMetrics.bind(null, id)} success="FTP y PAM guardados" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}>
+              <div>
+                <label style={labelStyle}>FTP (W)</label>
+                <input name="ftp" type="number" inputMode="numeric" min={50} max={600} defaultValue={student.ftp ?? ""} style={inputStyle} />
+                <div style={{ fontSize: "10.5px", color: "var(--text-dim)", marginTop: "4px" }}>
+                  {day(cfgUser?.ftpUpdatedAt) ? `Actualizado ${day(cfgUser?.ftpUpdatedAt)}` : "\u00A0"}{ssn?.ftp ? ` · Intervals: ${ssn.ftp} W` : ""}
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>PAM · potencia en VO2max (W)</label>
+                <input name="pvo2maxWatts" type="number" inputMode="numeric" min={100} max={800} defaultValue={student.pvo2maxWatts ?? ""} style={inputStyle} />
+                <div style={{ fontSize: "10.5px", color: "var(--text-dim)", marginTop: "4px" }}>
+                  {pamWho && day(cfgUser?.pvo2maxUpdatedAt) ? `${pamWho} · ${day(cfgUser?.pvo2maxUpdatedAt)}` : "\u00A0"}{best5 ? ` · mejor 5 min (90 d): ${best5} W` : ""}
+                </div>
+              </div>
+              <SubmitButton style={{ ...btnStyle, gridColumn: "1 / -1" }}>Guardar</SubmitButton>
+            </ActionForm>
+          </div>
+        );
+      })()}
 
       {(cfgUser?.onboardingSubmittedAt || cfgSlots.length > 0) && (
         <div className="dash-card" style={{ marginBottom: "16px", borderColor: needsReview ? "var(--amber)" : undefined }}>
